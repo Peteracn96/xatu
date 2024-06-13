@@ -18,6 +18,8 @@ int main(int argc, char* argv[]){
 
     auto start = high_resolution_clock::now();
 
+    //Stupid change
+
     // Parse CLI arguments
     TCLAP::CmdLine cmd("Command line interface options of the Xatu binary. For a more detailed description, refer to the user guide or the API documentation.", ' ', "1.0");
 
