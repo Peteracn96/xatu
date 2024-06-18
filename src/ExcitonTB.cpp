@@ -381,6 +381,31 @@ double ExcitonTB::coulomb(double r){
 }
 
 /**
+ * RPA potential in real space.
+ * Implementation in progress, returns the same as keldysh.
+ */
+double ExcitonTB::rpa(double r){
+    double eps_bar = (eps_m + eps_s)/2;
+    double SH0;
+    double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
+    double R = abs(r)/r0;
+    double potential_value;
+    if(r == 0){
+        STVH0(regularization/r0, &SH0);
+        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(regularization/r0));
+    }
+    else if (r > cutoff){
+        potential_value = 0.0;
+    }
+    else{
+        STVH0(R, &SH0);
+        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(R));
+    };
+
+    return potential_value;
+};
+
+/**
  * Method to select the potential to be used in the of the exciton calculation.
  * @param potential Potential to be used in the direct term.
  * @return Pointer to function representing the potential.
@@ -393,8 +418,11 @@ potptr ExcitonTB::selectPotential(std::string potential){
     else if(potential == "coulomb"){
         return &ExcitonTB::coulomb;
     }
+    else if(potential == "rpa"){
+        return &ExcitonTB::coulomb;
+    }
     else{
-        throw std::invalid_argument("selectPotential(): potential must be either 'keldysh' or 'coulomb'");
+        throw std::invalid_argument("selectPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
     }
 }
 
@@ -408,6 +436,28 @@ potptr ExcitonTB::selectPotential(std::string potential){
  * @return Fourier transform of the potential at q, FT[V](q).
  */
 double ExcitonTB::keldyshFT(arma::rowvec q){
+    double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
+    double potential = 0;
+    double eps_bar = (eps_m + eps_s)/2;
+    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
+
+    double qnorm = arma::norm(q);
+    if (qnorm < eps){
+        potential = 0;
+    }
+    else{
+        potential = 1/(qnorm*(1 + r0*qnorm));
+    }
+    
+    potential = potential*ec*1E10/(2*eps0*eps_bar*system->unitCellArea*totalCells);
+    return potential;
+}
+
+/**
+ * Evaluates the RPA potential in reciprocal space.
+ * Implementation in progress, returns the same as keldysh.
+ */
+double ExcitonTB::rpaFT(arma::rowvec q){
     double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
     double potential = 0;
     double eps_bar = (eps_m + eps_s)/2;

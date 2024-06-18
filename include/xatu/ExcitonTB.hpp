@@ -102,10 +102,12 @@ class ExcitonTB : public Exciton<SystemTB> {
         double keldysh(double);
         void STVH0(double, double*);
         double coulomb(double);
+        double rpa(double); // In principle will accept more than a double
         potptr selectPotential(std::string);
 
         // Fourier transforms
         double keldyshFT(arma::rowvec);
+        double rpaFT(arma::rowvec); //in principle will accept more than one rowvec
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat motifFTMatrix(const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat extendMotifFT(const arma::cx_mat&);
