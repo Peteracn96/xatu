@@ -858,15 +858,53 @@ void ExcitonTB::initializeHamiltonian(){
     initializeResultsH0();
 }
 
+/*------------------------------------ Static dielectric function matrix elements ------------------------------------*/
+/**
+ * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
+ * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
+ * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
+ * kpoints coincides with the kmesh
+ * @return void
+*/
+double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) const {
+    return 2.3;
+}
 
 /**
  * Method to write to a file the static dielectric function on a set of kpoints specified on a file.
  * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
  * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
  * kpoints coincides with the kmesh
+ * @return void
 */
-void ExcitonTB::computeDielectricFunction(std::string) const{
-	//To be implemented
+void ExcitonTB::computeDielectricFunction(std::string kpointsfile) const{
+	std::ifstream inputfile;
+	std::string line;
+	double qx, qy, qz;
+    int G, G2;
+	arma::cx_mat eigvec;
+	std::string outputfilename = kpointsfile + ".screening";
+	FILE* screeningfile = fopen(outputfilename.c_str(), "w");
+	try{
+		inputfile.open(kpointsfile.c_str());
+        std::getline(inputfile, line);
+        std::istringstream firstline(line);
+        firstline >> G >> G2;
+
+		while(std::getline(inputfile, line)){
+			std::istringstream iss(line);
+			iss >> qx >> qy >> qz;
+			arma::rowvec qpoint{qx, qy, qz};
+			fprintf(screeningfile, "%12.6f\t", computeDielectricFunction(G, G2, qpoint));
+			
+			fprintf(screeningfile, "\n");
+		}
+	}
+	catch(const std::exception& e){
+		std::cerr << e.what() << std::endl;
+	}
+	fclose(screeningfile);
+	arma::cout << "Done" << arma::endl;
 }
 
 /**

@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
     TCLAP::ValuesConstraint<std::string> allowedMethods(methods);
     TCLAP::ValueArg<std::string> methodArg("m", "method", "Method to solve the Bethe-Salpeter equation.", false, "diag", &allowedMethods, cmd);
     TCLAP::ValueArg<std::string> bandsArg("b", "bands", "Computes the bands of the system on the specified kpoints.", false, "kpoints.txt", "Filename", cmd);
-    TCLAP::ValueArg<std::string> screeningArg("scr", "screening", "Computes the static dielectric function of the system on the specified kpoints.", false, "kpoints.txt", "Filename", cmd);
+    TCLAP::ValueArg<std::string> screeningArg("z", "screening", "Computes the static dielectric function of the system on the specified kpoints.", false, "kpoints.txt", "Filename", cmd);
     
     TCLAP::UnlabeledValueArg<std::string> systemArg("systemfile", "System file", true, "system.txt", "filename", cmd);
     TCLAP::UnlabeledValueArg<std::string> excitonArg("excitonfile", "Exciton file", false, "exciton.txt", "filename", cmd);
@@ -143,6 +143,8 @@ int main(int argc, char* argv[]){
 
     // If screening flag is present, computes the static dielectric function and exits.
     if(screeningArg.isSet()){
+        kpointsfile = screeningArg.getValue();
+
         bulkExciton.computeDielectricFunction(kpointsfile);
 
         return 0;
