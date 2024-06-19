@@ -138,8 +138,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         ResultTB* diagonalizeRaw(std::string method = "diag", int nstates = 8) override;
 
     public:
-        // BSE initialization and energies
+        // Static dielectric function, BSE initialization and energies
         void initializeHamiltonian();
+        void computeDielectricFunction(std::string) const;
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
         std::unique_ptr<ResultTB> diagonalize(std::string method = "diag", int nstates = 8);

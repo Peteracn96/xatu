@@ -858,6 +858,17 @@ void ExcitonTB::initializeHamiltonian(){
     initializeResultsH0();
 }
 
+
+/**
+ * Method to write to a file the static dielectric function on a set of kpoints specified on a file.
+ * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
+ * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
+ * kpoints coincides with the kmesh
+*/
+void ExcitonTB::computeDielectricFunction(std::string) const{
+	//To be implemented
+}
+
 /**
  * Method to initialize the BSE.
  * @details Calls the more general routine which allows
