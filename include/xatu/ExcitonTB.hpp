@@ -139,6 +139,7 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Static dielectric function
         double computeDielectricFunction(int, int, arma::rowvec&) const;
+        double computeDielectricFunction(int, int, arma::rowvec&, const arma::imat&) const;
 
     public:
         // Static dielectric function, BSE initialization and energies

@@ -860,13 +860,74 @@ void ExcitonTB::initializeHamiltonian(){
 
 /*------------------------------------ Static dielectric function matrix elements ------------------------------------*/
 /**
+ * Method to compute the dielectric function.
+ * @details Calls the more general routine which allows
+ * to specify a subset of the complete basis.
+ */ 
+double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) const {
+    arma::imat basis = {};
+
+    computeDielectricFunction(G, G2, q, basis);
+}
+
+/**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
  * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
  * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
  * kpoints coincides with the kmesh
  * @return void
 */
-double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) const {
+double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, const arma::imat& basis) const {
+
+    arma::imat basisStates = this->basisStates;
+    if (!basis.is_empty()){
+        basisStates = basis;
+    };
+
+    if(mode == "realspace"){
+        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+
+        std::exit(0);
+
+    } else if (mode == "reciprocalspace"){
+
+        arma::cx_vec coefskq, coefsk;
+
+        int nk = system->nk;
+
+        for (int ik = 0; ik < nk; ik++){
+
+            arma::rowvec k = system->kpoints.row(ik);
+            
+            for (int iv = 0; iv < ;)
+
+            uint32_t k_index = basisStates(i, 2);
+            int v = bandToIndex[basisStates(i, 0)];
+            int c = bandToIndex[basisStates(i, 1)];
+
+            
+
+            // Using the atomic gauge
+            if(gauge == "atomic"){
+                coefsk = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
+                coefskq = system_->latticeToAtomicGauge(eigvecKQStack.slice(kQ_index).col(c), system->kpoints.row(kQ_index));
+            }
+            else{
+                coefsk = eigvecKStack.slice(k_index).col(v);
+                coefskq = eigvecKQStack.slice(kQ_index).col(c);
+            }
+
+            std::complex<double> Ivc;
+            std::complex<double> term = 0;
+        
+            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
+        }
+    } else {
+        std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
+        std::exit(0);
+    }
+
     return 2.3;
 }
 
