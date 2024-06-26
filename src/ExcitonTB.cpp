@@ -864,7 +864,7 @@ void ExcitonTB::initializeHamiltonian(){
  * @details Calls the more general routine which allows
  * to specify a subset of the complete basis.
  */ 
-double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) const {
+double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) {
     arma::imat basis = {};
 
     computeDielectricFunction(G, G2, q, basis);
@@ -877,7 +877,7 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) cons
  * kpoints coincides with the kmesh
  * @return void
 */
-double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, const arma::imat& basis) const {
+double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, const arma::imat& basis) {
 
     arma::imat basisStates = this->basisStates;
     if (!basis.is_empty()){
@@ -938,7 +938,7 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
  * kpoints coincides with the kmesh
  * @return void
 */
-void ExcitonTB::computeDielectricFunction(std::string kpointsfile) const{
+void ExcitonTB::computeDielectricFunction(std::string kpointsfile) {
 	std::ifstream inputfile;
 	std::string line;
 	double qx, qy, qz;
