@@ -894,39 +894,117 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
 
         std::exit(0);
 
+    }
+
+    int nTotalBands = bandList.n_elem;
+    double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
+    arma::mat cells = system_->truncateSupercell(ncell, radius);
+
+    int nk = system->nk;
+    int natoms = system->natoms;
+    int basisdim = system->basisdim;
+    arma::ivec allbands(basisdim);
+
+    for (int bandindex = 0; bandindex < basisdim; bandindex++)
+    {
+        allbands[bandindex] = bandindex - (basisdim/2 - 1);
+    }
+    
+
+    this->eigvecKStack_  = arma::cx_cube(basisdim, nTotalBands, nk);
+    this->eigvecKQStack_ = arma::cx_cube(basisdim, nTotalBands, nk);
+    this->eigvalKStack_  = arma::mat(nTotalBands, nk);
+    this->eigvalKQStack_ = arma::mat(nTotalBands, nk);
+    this->ftMotifStack   = arma::cx_cube(natoms, natoms, system->meshBZ.n_rows);
+    this->ftMotifQ       = arma::cx_mat(natoms, natoms);
+
+    vec auxEigVal(basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);
+
+    std::cout << "Diagonalizing H0 for all k+q points... " << std::flush;
+    
+    if(arma::norm(q) == 0){
+        std::cout << "\nThe case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
+        std::exit(0);
+    };
+
+    for (int i = 0; i < nk; i++){
+        arma::rowvec k = system->kpoints.row(i);
+
+        if(arma::norm(q) != 0){
+            arma::rowvec kq = system->kpoints.row(i) + q;
+            // system->solveBands(kq, auxEigVal, auxEigvec);
+
+            // auxEigvec = fixGlobalPhase(auxEigvec);
+            // eigvalKQStack_.col(i) = auxEigVal(bandList);
+            // eigvecKQStack_.slice(i) = auxEigvec.cols(bandList);
+        }
+        else{
+            std::cout << "The case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
+            std::exit(0);
+            
+            // eigvecKQStack_.slice(i) = eigvecKStack.slice(i);
+            // eigvalKQStack_.col(i) = eigvalKStack.col(i);
+        };
+        
+    };
+    std::cout << "Done" << std::endl;
+    
+    std::cout << "Fermi level = " << system->fermiLevel << "\n";
+
+    std::cout << "Number of total bands = " << basisdim << "\n";
+
+    setBands(bands);
+
+    for(const auto& band : valenceBands_)
+    {
+        std::cout << "valence band # " << band << "\n";
+    }
+
+    for(const auto& band : conductionBands_)
+    {
+        std::cout << "conduction band # " << band << "\n";
+    }
+    
+    // std::cout << "Valence bands\n" << this->valenceBands_ << std::endl;
+
+    // std::cout << "Conduction bands\n " << this->conductionBands_ << std::endl;
+    
+    if(mode == "realspace"){
+        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+
+        std::exit(0);
+
     } else if (mode == "reciprocalspace"){
 
         arma::cx_vec coefskq, coefsk;
 
-        int nk = system->nk;
-
         for (int ik = 0; ik < nk; ik++){
-
             arma::rowvec k = system->kpoints.row(ik);
             
-            for (int iv = 0; iv < ;)
+            //for (int iv = 0; iv < ;)
 
-            uint32_t k_index = basisStates(i, 2);
-            int v = bandToIndex[basisStates(i, 0)];
-            int c = bandToIndex[basisStates(i, 1)];
+            // uint32_t k_index = basisStates(i, 2);
+            // int v = bandToIndex[basisStates(i, 0)];
+            // int c = bandToIndex[basisStates(i, 1)];
 
             
 
             // Using the atomic gauge
-            if(gauge == "atomic"){
-                coefsk = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
-                coefskq = system_->latticeToAtomicGauge(eigvecKQStack.slice(kQ_index).col(c), system->kpoints.row(kQ_index));
-            }
-            else{
-                coefsk = eigvecKStack.slice(k_index).col(v);
-                coefskq = eigvecKQStack.slice(kQ_index).col(c);
-            }
+            // if(gauge == "atomic"){
+            //     coefsk = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
+            //     coefskq = system_->latticeToAtomicGauge(eigvecKQStack.slice(kQ_index).col(c), system->kpoints.row(kQ_index));
+            // }
+            // else{
+            //     coefsk = eigvecKStack.slice(k_index).col(v);
+            //     coefskq = eigvecKQStack.slice(kQ_index).col(c);
+            // }
 
-            std::complex<double> Ivc;
-            std::complex<double> term = 0;
+            // std::complex<double> Ivc;
+            // std::complex<double> term = 0;
         
-            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
+            // Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+            // Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
         }
     } else {
         std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
@@ -962,7 +1040,6 @@ void ExcitonTB::computeDielectricFunction(std::string kpointsfile) {
 			iss >> qx >> qy >> qz;
 			arma::rowvec qpoint{qx, qy, qz};
 			fprintf(screeningfile, "%12.6f\t", computeDielectricFunction(G, G2, qpoint));
-			
 			fprintf(screeningfile, "\n");
 		}
 	}
