@@ -47,7 +47,11 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     arma::rowvec parameters = {cfg.excitonInfo.eps(0), cfg.excitonInfo.eps(1), cfg.excitonInfo.eps(2)};
     arma::rowvec Q   = cfg.excitonInfo.Q;
 
+    if (2*nbands > system->basisdim){
+        cout << "Error: Number of bands cannot be higher than actual material bands" << endl;
         exit(1);
+    }
+
     if (bands.empty()){
         bands = arma::regspace<arma::ivec>(- nbands + 1, nbands);
     }
