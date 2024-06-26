@@ -70,10 +70,11 @@ int main(int argc, char* argv[]){
     std::string systemfile  = systemArg.getValue();
     std::string excitonfile = excitonArg.getValue();
     std::string kpointsfile = bandsArg.getValue();
-
+    std::string screeningfile = screeningArg.getValue();
     // Init. configurations
     std::unique_ptr<xatu::SystemConfiguration> systemConfig;
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
+    std::unique_ptr<xatu::ExcitonConfiguration> screeningConfig;
 
     if (dftArg.isSet()){
         systemConfig.reset(new xatu::CRYSTALConfiguration(systemfile, ncells));
@@ -99,8 +100,9 @@ int main(int argc, char* argv[]){
         system.solveBands(kpointsfile);
 
         return 0;
-    }
-    else{
+    } else if (screeningArg.isSet() && !excitonArg.isSet()){
+        throw std::invalid_argument("Screening can not be computed without configuring the exciton. Provide both screening and exciton file");
+    } else {
         if (!excitonArg.isSet()){
             throw std::invalid_argument("Must provide exciton file.");
         }
