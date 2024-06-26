@@ -872,7 +872,7 @@ void ExcitonTB::initializeHamiltonian(){
 double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) {
     arma::imat basis = {};
 
-    computeDielectricFunction(G, G2, q, basis);
+    return computeDielectricFunction(G, G2, q, basis);
 }
 
 /**
