@@ -893,7 +893,6 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
 
         std::exit(0);
-
     }
 
     int nTotalBands = bandList.n_elem;
@@ -924,55 +923,44 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
 
-    std::cout << "Diagonalizing H0 for all k+q points... " << std::flush;
-    
     if(arma::norm(q) == 0){
         std::cout << "The case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
         std::exit(0);
     }
 
-    std::cout << "Diagonalizing H0 for all k and k+q points (storing all bands for now) ... " << std::flush;
+    std::cout << "Diagonalizing H0 for all k and k+q points (storing all bands for now) ... \n" << std::flush;
+
     for (int i = 0; i < nk; i++){
         arma::rowvec k = system->kpoints.row(i);
+        system->solveBands(k, auxEigVal, auxEigvec);
+        //std::cout << k << "\n";
+        auxEigvec = fixGlobalPhase(auxEigvec);
+        eigvalkStack_.col(i) = auxEigVal;  
+        eigveckStack_.slice(i) = auxEigvec;
 
-        if(arma::norm(q) != 0){
-            arma::rowvec kq = system->kpoints.row(i) + q;
-            // system->solveBands(kq, auxEigVal, auxEigvec);
+        // if (arma::norm(k) == 0){
+        //     for (auto element : auxEigVal)
+        //     {
+        //         std::cout << element << "\n";
+        //     }
+        // }
 
-            // auxEigvec = fixGlobalPhase(auxEigvec);
-            // eigvalKQStack_.col(i) = auxEigVal(bandList);
-            // eigvecKQStack_.slice(i) = auxEigvec.cols(bandList);
-        }
-        else{
-            std::cout << "The case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
-            std::exit(0);
-            
-            // eigvecKQStack_.slice(i) = eigvecKStack.slice(i);
-            // eigvalKQStack_.col(i) = eigvalKStack.col(i);
-        };
-        
+        arma::rowvec kq = k + q;
+        system->solveBands(kq, auxEigVal, auxEigvec);
+
+        auxEigvec = fixGlobalPhase(auxEigvec);
+        eigvalkqStack_.col(i) = auxEigVal;
+        eigveckqStack_.slice(i) = auxEigvec; 
+
+        if (arma::norm(k) == 0){
+            for (auto element : auxEigVal)
+            {
+                std::cout << element << "\n";
+            }
+        } 
     };
+
     std::cout << "Done" << std::endl;
-    
-    std::cout << "Fermi level = " << system->fermiLevel << "\n";
-
-    std::cout << "Number of total bands = " << basisdim << "\n";
-
-    setBands(bands);
-
-    for(const auto& band : valenceBands_)
-    {
-        std::cout << "valence band # " << band << "\n";
-    }
-
-    for(const auto& band : conductionBands_)
-    {
-        std::cout << "conduction band # " << band << "\n";
-    }
-    
-    // std::cout << "Valence bands\n" << this->valenceBands_ << std::endl;
-
-    // std::cout << "Conduction bands\n " << this->conductionBands_ << std::endl;
     
     if(mode == "realspace"){
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
@@ -986,7 +974,14 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
         for (int ik = 0; ik < nk; ik++){
             arma::rowvec k = system->kpoints.row(ik);
             
-            //for (int iv = 0; iv < ;)
+            for (int iv = 0; iv < basisdim/2 ; iv++){
+                
+                for (int ic = 0; ic < basisdim/2 ; ic++)
+                {
+                    /* code */
+                }
+                
+            }
 
             // uint32_t k_index = basisStates(i, 2);
             // int v = bandToIndex[basisStates(i, 0)];
