@@ -168,7 +168,7 @@ ExcitonTB::ExcitonTB(std::shared_ptr<SystemTB> sys, int ncell, const arma::ivec&
     initializeExcitonAttributes(ncell, bands, parameters, Q);
 
     if (bands.n_elem > system->basisdim){
-        cout << "Error: Number of bands cannot be higher than actual material bands" << endl;
+        std::cout << "Error: Number of bands cannot be higher than actual material bands" << std::endl;
         exit(1);
     }
 
@@ -1047,7 +1047,7 @@ void ExcitonTB::computeDielectricFunction(std::string kpointsfile) {
 		std::cerr << e.what() << std::endl;
 	}
 	fclose(screeningfile);
-	arma::cout << "Done" << arma::endl;
+	std::cout << "Done" << std::endl;
 }
 
 /**
