@@ -924,10 +924,11 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
     std::cout << "Diagonalizing H0 for all k+q points... " << std::flush;
     
     if(arma::norm(q) == 0){
-        std::cout << "\nThe case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
+        std::cout << "The case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
         std::exit(0);
-    };
+    }
 
+    std::cout << "Diagonalizing H0 for all k and k+q points (storing all bands for now) ... " << std::flush;
     for (int i = 0; i < nk; i++){
         arma::rowvec k = system->kpoints.row(i);
 
