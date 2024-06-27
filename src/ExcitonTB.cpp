@@ -903,19 +903,15 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
     int nk = system->nk;
     int natoms = system->natoms;
     int basisdim = system->basisdim;
-    arma::ivec allbands(basisdim);
-    arma::ivec valencebands(basisdim/2);
-    arma::ivec conductionbands(basisdim/2);
+    std::vector<int> valencebands, conductionbands;
 
-    for (int bandindex = 0; bandindex < basisdim; bandindex++)
-    {
-        allbands[bandindex] = bandindex - (basisdim/2 - 1); // Identification of bands. Highest valence band = 0
-    }
-
-    for (int bandindex = 0; bandindex < basisdim/2; bandindex++)
-    {
-        valencebands[bandindex] = allbands[bandindex]; // Identification of bands. Highest valence band = 0
-        conductionbands[bandindex] = allbands[bandindex + basisdim/2]; // Identification of conduction bands. Lowest conduction band = 1
+    for(int i = 0; i < basisdim; i++){
+        if (i <= system->fermiLevel){
+            valencebands.push_back(i);
+        }
+        else{
+            conductionbands.push_back(i);
+        }
     }
 
     this->eigveckStack_  = arma::cx_cube(basisdim, basisdim, nk);
