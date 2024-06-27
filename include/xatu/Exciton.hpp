@@ -42,6 +42,10 @@ class Exciton {
         // Flags
         bool exchange = false;
 
+        // Internals for dielectric fucntion
+        arma::mat eigvalkStack_, eigvalkqStack_;
+        arma::cx_cube eigveckStack_, eigveckqStack_;
+
         // Internals for BSE
         arma::mat eigvalKStack_, eigvalKQStack_;
         arma::cx_cube eigvecKStack_, eigvecKQStack_;

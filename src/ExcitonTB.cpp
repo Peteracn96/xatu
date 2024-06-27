@@ -918,10 +918,10 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
         conductionbands[bandindex] = allbands[bandindex + basisdim/2]; // Identification of conduction bands. Lowest conduction band = 1
     }
 
-    this->eigvecKStack_  = arma::cx_cube(basisdim, nTotalBands, nk);
-    this->eigvecKQStack_ = arma::cx_cube(basisdim, nTotalBands, nk);
-    this->eigvalKStack_  = arma::mat(nTotalBands, nk);
-    this->eigvalKQStack_ = arma::mat(nTotalBands, nk);
+    this->eigveckStack_  = arma::cx_cube(basisdim, basisdim, nk);
+    this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+    this->eigvalkStack_  = arma::mat(basisdim, nk);
+    this->eigvalkqStack_ = arma::mat(basisdim, nk);
     this->ftMotifStack   = arma::cx_cube(natoms, natoms, system->meshBZ.n_rows);
     this->ftMotifQ       = arma::cx_mat(natoms, natoms);
 
