@@ -913,6 +913,9 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
         }
     }
 
+    int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
     this->eigveckStack_  = arma::cx_cube(basisdim, basisdim, nk);
     this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
     this->eigvalkStack_  = arma::mat(basisdim, nk);
@@ -952,15 +955,20 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
         eigvalkqStack_.col(i) = auxEigVal;
         eigveckqStack_.slice(i) = auxEigvec; 
 
-        if (arma::norm(k) == 0){
-            for (auto element : auxEigVal)
-            {
-                std::cout << element << "\n";
-            }
-        } 
+        // if (arma::norm(k) == 0){
+        //     for (auto element : auxEigVal)
+        //     {
+        //         std::cout << element << "\n";
+        //     }
+        // } 
     };
 
+    arma::Row<double> g = {0, 0, 0}; // Temporary vectors. Later on make screening file read the reciprocal lattice vectors
+    arma::Row<double> g2 = {0, 0, 0};
+
     std::cout << "Done" << std::endl;
+
+    std::complex<double> term = 0.;
     
     if(mode == "realspace"){
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
@@ -973,44 +981,37 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
 
         for (int ik = 0; ik < nk; ik++){
             arma::rowvec k = system->kpoints.row(ik);
-            
-            for (int iv = 0; iv < basisdim/2 ; iv++){
+            arma::rowvec kq = system->kpoints.row(ik) + q;
+
+            for (int iv = 0; iv < nvbands ; iv++){
                 
-                for (int ic = 0; ic < basisdim/2 ; ic++)
+                for (int ic = 0; ic < ncbands ; ic++)
                 {
-                    /* code */
-                }
+                    // Using the atomic gauge
+                    if(gauge == "atomic"){
+                        coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                        coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    }
+                    else{
+                        coefskq = eigveckqStack_.slice(ik).col(iv);
+                        coefsk = eigveckStack_.slice(ik).col(ic);
+                    }
                 
+                    std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, g);
+                    std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, g2);
+
+                    term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+
+                    std::cout << "ik = " << ik << ", iv = " << iv << ", ic = " << ic << "\n"; 
+                }
             }
-
-            // uint32_t k_index = basisStates(i, 2);
-            // int v = bandToIndex[basisStates(i, 0)];
-            // int c = bandToIndex[basisStates(i, 1)];
-
-            
-
-            // Using the atomic gauge
-            // if(gauge == "atomic"){
-            //     coefsk = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
-            //     coefskq = system_->latticeToAtomicGauge(eigvecKQStack.slice(kQ_index).col(c), system->kpoints.row(kQ_index));
-            // }
-            // else{
-            //     coefsk = eigvecKStack.slice(k_index).col(v);
-            //     coefskq = eigvecKQStack.slice(kQ_index).col(c);
-            // }
-
-            // std::complex<double> Ivc;
-            // std::complex<double> term = 0;
-        
-            // Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-            // Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
         }
     } else {
         std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
         std::exit(0);
     }
 
-    return 2.3;
+    return real(term);
 }
 
 /**
@@ -1028,6 +1029,7 @@ void ExcitonTB::computeDielectricFunction(std::string kpointsfile) {
 	arma::cx_mat eigvec;
 	std::string outputfilename = kpointsfile + ".screening";
 	FILE* screeningfile = fopen(outputfilename.c_str(), "w");
+
 	try{
 		inputfile.open(kpointsfile.c_str());
 
