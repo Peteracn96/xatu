@@ -1030,6 +1030,12 @@ void ExcitonTB::computeDielectricFunction(std::string kpointsfile) {
 	FILE* screeningfile = fopen(outputfilename.c_str(), "w");
 	try{
 		inputfile.open(kpointsfile.c_str());
+
+        if (!inputfile.is_open()){
+            std::cout << "Input file failed to open or does not exist. Exiting." << std::endl;
+            std::exit(0);
+        }
+
         std::getline(inputfile, line);
         std::istringstream firstline(line);
         firstline >> G >> G2;
