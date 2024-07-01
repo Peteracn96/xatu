@@ -85,6 +85,49 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
 }
 
 /**
+ * Method to set the screening attributes of an exciton object from a ScreeningConfiguration object.
+ * @details Overload of the method to use a configuration object. Based on the parametric method.
+ * @param cfg ScreeningConfiguration object from parsed file.
+ * @return void
+ */
+void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg){
+
+    int nvalencebands        = cfg.screeningInfo.nvbands;
+    int nconductionbands     = cfg.screeningInfo.ncbands;
+    int nremovedbands        = cfg.screeningInfo.nrmcbands;
+    arma::rowvec q           = cfg.screeningInfo.q;
+    arma::ivec gs            = cfg.screeningInfo.Gs;
+
+    if (nvalencebands + nconductionbands > system->basisdim){
+        std::cout << "Error: Number of bands cannot be higher than actual material bands" << std::endl;
+        exit(1);
+    }
+
+    this->q_ = q;
+
+    this->nvalencebands_ = nvalencebands;
+    this->nconductionbands_ = nconductionbands;
+    this->nrmcbands_ = nremovedbands;
+
+    this->Gs_ = gs;
+
+    std::vector<arma::s64> valence, conduction;
+    int basisdim = system->basisdim - nremovedbands;
+
+    for(int i = 0; i < basisdim; i++){
+        if (i <= system->fermiLevel){
+            valence.push_back(i);
+        }
+        else{
+            conduction.push_back(i);
+        }
+    }
+    
+    this->valencebands_ = arma::ivec(valence);
+    this->conductionbands_ = arma::ivec(conduction);
+}
+
+/**
  * Exciton constructor from a SystemConfiguration object and a vector with the bands that form
  * the exciton, as well as the other parameters.
  * @param config SystemConfiguration object from config file.
@@ -158,6 +201,19 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, const ExcitonConfigurati
 
     system_.reset(new SystemTB(config));
     initializeExcitonAttributes(excitonConfig);
+}
+
+/**
+ * Exciton constructor from SystemConfiguration, ScreeningConfiguration and ExcitonConfiguration.
+ * @param config SystemConfiguration object.
+ * @param excitonConfig ExcitonConfiguration object.
+ * @param screeningConfig ExcitonConfiguration object.
+ */ 
+ExcitonTB::ExcitonTB(const SystemConfiguration& config, const ExcitonConfiguration& excitonConfig, const ScreeningConfiguration& screeningConfig){
+
+    system_.reset(new SystemTB(config));
+    initializeExcitonAttributes(excitonConfig);
+    initializeScreeningAttributes(screeningConfig);
 }
 
 ExcitonTB::ExcitonTB(std::shared_ptr<SystemTB> sys, int ncell, const arma::ivec& bands, 
@@ -1038,17 +1094,20 @@ void ExcitonTB::computeDielectricFunction(std::string kpointsfile) {
             std::exit(0);
         }
 
-        std::getline(inputfile, line);
-        std::istringstream firstline(line);
-        firstline >> G >> G2;
+        // std::getline(inputfile, line);
+        // std::istringstream firstline(line);
+        // firstline >> G >> G2;
+        
 
-		while(std::getline(inputfile, line)){
-			std::istringstream iss(line);
-			iss >> qx >> qy >> qz;
-			arma::rowvec qpoint{qx, qy, qz};
-			fprintf(screeningfile, "%12.6f\t", computeDielectricFunction(G, G2, qpoint));
-			fprintf(screeningfile, "\n");
-		}
+		// while(std::getline(inputfile, line)){
+		// 	std::istringstream iss(line);
+		// 	iss >> qx >> qy >> qz;
+		// 	arma::rowvec qpoint{qx, qy, qz};
+		// 	fprintf(screeningfile, "%12.6f\t", computeDielectricFunction(G, G2, qpoint));
+		// 	fprintf(screeningfile, "\n");
+		// }
+        fprintf(screeningfile, "%12.6f\t", computeDielectricFunction(this->Gs_(0), this->Gs_(1), this->q_));
+		fprintf(screeningfile, "\n");
 	}
 	catch(const std::exception& e){
 		std::cerr << e.what() << std::endl;

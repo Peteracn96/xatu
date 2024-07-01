@@ -74,7 +74,7 @@ int main(int argc, char* argv[]){
     // Init. configurations
     std::unique_ptr<xatu::SystemConfiguration> systemConfig;
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
-    std::unique_ptr<xatu::ExcitonConfiguration> screeningConfig;
+    std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
     if (dftArg.isSet()){
         systemConfig.reset(new xatu::CRYSTALConfiguration(systemfile, ncells));
@@ -102,11 +102,15 @@ int main(int argc, char* argv[]){
         return 0;
     } else if (screeningArg.isSet() && !excitonArg.isSet()){
         throw std::invalid_argument("Screening can not be computed without configuring the exciton. Provide both screening and exciton file");
-    } else {
+    } else if (!screeningArg.isSet() && excitonArg.isSet()) {
         if (!excitonArg.isSet()){
             throw std::invalid_argument("Must provide exciton file.");
         }
 
+        excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
+
+    } else {
+        screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
         excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
     }
 
@@ -121,6 +125,10 @@ int main(int argc, char* argv[]){
     xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(*systemConfig, *excitonConfig);
     bulkExciton.setMode(excitonConfig->excitonInfo.mode);
     bulkExciton.system->setAU(dftArg.isSet());
+
+    if (screeningArg.isSet()){
+        bulkExciton.initializeScreeningAttributes(*screeningConfig);
+    }
 
     cout << std::left << std::setw(30) << "System configuration file: " << std::setw(10) << systemfile << endl;
     cout << std::left << std::setw(30) << "Exciton configuration file: " << std::setw(10) << excitonfile << "\n" << endl;

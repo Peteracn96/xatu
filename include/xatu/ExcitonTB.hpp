@@ -5,6 +5,7 @@
 #include "xatu/SystemTB.hpp"
 #include "xatu/Exciton.hpp"
 #include "xatu/ExcitonConfiguration.hpp"
+#include "xatu/ScreeningConfiguration.hpp"
 #include "xatu/ResultTB.hpp"
 
 #ifndef constants
@@ -44,6 +45,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat potentialMat;
         int nReciprocalVectors_ = 1;
         
+        // Momentum and reciprocal lattice vectors to compute dielectric matrix at
+        arma::ivec Gs_;
+        arma::rowvec q_;
 
     public:
         // Returns dielectric constant of embedding medium
@@ -60,6 +64,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         const std::string& mode = mode_;
         // Return number of reciprocal lattice vectors to use in summations (mode="reciprocalspace")
         const int& nReciprocalVectors = nReciprocalVectors_;
+
+        // Return momentum to compute the dielectric matrix at
+        arma::rowvec q = q_;
+        arma::ivec Gs = Gs_;
 
     // ----------------------------------- Methods -----------------------------------
     // Constructor & Destructor
@@ -78,6 +86,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         
         // Use two files: the mandatory one for system config., and one for exciton config.
         ExcitonTB(const SystemConfiguration&, const ExcitonConfiguration&);
+
+        // Use three files: the mandatory one for system config., one for the screening config. and one for exciton config.
+        ExcitonTB(const SystemConfiguration&, const ExcitonConfiguration&, const ScreeningConfiguration&);
 
         // Initialize exciton passing directly a System object instead of a file using removed bands
         ExcitonTB(std::shared_ptr<SystemTB>, int ncell = 20, int nbands = 1, int nrmbands = 0, 
@@ -144,6 +155,8 @@ class ExcitonTB : public Exciton<SystemTB> {
     public:
         // Static dielectric function, BSE initialization and energies
         void initializeHamiltonian();
+
+        void initializeScreeningAttributes(const ScreeningConfiguration&);
         void computeDielectricFunction(std::string);
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);

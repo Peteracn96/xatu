@@ -19,7 +19,7 @@ ScreeningConfiguration::ScreeningConfiguration(){
  * @param filename Name of file with the exciton configuration.
  */
 ScreeningConfiguration::ScreeningConfiguration(std::string filename) : ConfigurationBase(filename){
-    this->expectedArguments = {"mode"};
+    this->expectedArguments = {"mode","removedbands"};
     parseContent();
     checkArguments();
     checkContentCoherence();
@@ -46,13 +46,25 @@ void ScreeningConfiguration::parseContent(){
         else if(content.size() != 1){
             throw std::logic_error("Expected only one line per field");
         }
-        else if(arg == "valence bands"){
+        else if(arg == "valencebands"){
             screeningInfo.nvbands = parseScalar<int>(content[0]);
         }
-        else if(arg == "conduction bands"){
-            screeningInfo.submeshFactor = parseScalar<int>(content[0]);
+        else if(arg == "conductionbands"){
+            screeningInfo.ncbands = parseScalar<int>(content[0]);
         }
-        else if(arg == "G cutoff"){
+        else if(arg == "removedbands"){
+            screeningInfo.nrmcbands = parseScalar<int>(content[0]);
+        }
+        else if(arg == "reciprocalvectors"){
+            std::vector<int> gs = parseLine<int>(content[0]);
+            screeningInfo.Gs(0) = gs[0];
+            screeningInfo.Gs(1) = gs[1];
+        }
+        else if(arg == "momentum"){
+            std::vector<double> momentum = parseLine<double>(content[0]);
+            screeningInfo.q = arma::rowvec(momentum);
+        }
+        else if(arg == "Gcutoff"){
             screeningInfo.Gcutoff = parseScalar<double>(content[0]);
         }
         else if(arg == "mode"){
@@ -80,7 +92,7 @@ void ScreeningConfiguration::parseContent(){
  * consistent and well-defined. 
  */
 void ScreeningConfiguration::checkContentCoherence(){
-    if(screeningInfo.ncell <= 0){
+    if(screeningInfo.ncell <= 0 && screeningInfo.mode == "realspace"){
         throw std::logic_error("'ncell' must be a positive number");
     };
     if(screeningInfo.nvbands <= 0){
@@ -89,10 +101,13 @@ void ScreeningConfiguration::checkContentCoherence(){
     if(screeningInfo.ncbands <= 0){
         throw std::logic_error("'ncbands' must be a positive number");
     }
+    if(screeningInfo.nrmcbands < 0){
+        throw std::logic_error("'nrmcbands' must not be a negative number");
+    }
     if(screeningInfo.nReciprocalVectors < 0){
         throw std::logic_error("'nReciprocalVectors' must be a non-negative number");
     }
-    if(screeningInfo.nLatticeVectors <= 0){
+    if(screeningInfo.nLatticeVectors <= 0 && screeningInfo.mode == "realspace"){
         throw std::logic_error("'nLatticeVectors' must be a positive number");
     }
     if (screeningInfo.mode != "realspace" && screeningInfo.mode != "reciprocalspace"){
