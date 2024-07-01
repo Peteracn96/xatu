@@ -149,8 +149,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         ResultTB* diagonalizeRaw(std::string method = "diag", int nstates = 8) override;
 
         // Static dielectric function
-        double computeDielectricFunction(int, int, arma::rowvec&);
-        double computeDielectricFunction(int, int, arma::rowvec&, const arma::imat&);
+        std::complex<double> computePolarizability(int, int, arma::rowvec&);
+        std::complex<double> computeDielectricFunction(int, int, arma::rowvec&);
+        std::complex<double> computeDielectricFunction(int, int, arma::rowvec&, const arma::imat&);
 
     public:
         // Static dielectric function, BSE initialization and energies

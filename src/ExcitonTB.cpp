@@ -480,7 +480,7 @@ potptr ExcitonTB::selectPotential(std::string potential){
         return &ExcitonTB::coulomb;
     }
     else if(potential == "rpa"){
-        return &ExcitonTB::coulomb;
+        return &ExcitonTB::keldysh;
     }
     else{
         throw std::invalid_argument("selectPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
@@ -925,7 +925,7 @@ void ExcitonTB::initializeHamiltonian(){
  * @details Calls the more general routine which allows
  * to specify a subset of the complete basis.
  */ 
-double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) {
+std::complex<double> ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) {
     arma::imat basis = {};
 
     return computeDielectricFunction(G, G2, q, basis);
@@ -938,12 +938,7 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) {
  * kpoints coincides with the kmesh
  * @return void
 */
-double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, const arma::imat& basis) {
-
-    arma::imat basisStates = this->basisStates;
-    if (!basis.is_empty()){
-        basisStates = basis;
-    };
+std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowvec& q) {
 
     if(mode == "realspace"){
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
@@ -951,23 +946,12 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
         std::exit(0);
     }
 
-    int nTotalBands = bandList.n_elem;
     double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
     arma::mat cells = system_->truncateSupercell(ncell, radius);
 
     int nk = system->nk;
     int natoms = system->natoms;
     int basisdim = system->basisdim;
-    std::vector<int> valencebands, conductionbands;
-
-    for(int i = 0; i < basisdim; i++){
-        if (i <= system->fermiLevel){
-            valencebands.push_back(i);
-        }
-        else{
-            conductionbands.push_back(i);
-        }
-    }
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
@@ -1066,8 +1050,56 @@ double ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, cons
         std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
         std::exit(0);
     }
+    std::cout << "system->unitCellArea*totalCells = " << system->unitCellArea*totalCells << "\n";
 
-    return real(term);
+    return term/(system->unitCellArea*totalCells);
+}
+
+/**
+ * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
+ * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
+ * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
+ * kpoints coincides with the kmesh
+ * @return void
+*/
+std::complex<double> ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, const arma::imat& basis) {
+
+    arma::imat basisStates = this->basisStates;
+    if (!basis.is_empty()){
+        basisStates = basis;
+    };
+
+    if(mode == "realspace"){
+        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+
+        std::exit(0);
+    }
+
+    std::complex<double> Chi;
+
+    arma::Row<double> g = {0, 0, 0}; // Temporary vectors
+    arma::Row<double> g2 = {0, 0, 0};
+
+
+    Chi = computePolarizability(G, G2, q);
+
+    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
+    double potential;
+
+    double qnorm = arma::norm(q + g);
+
+    if (qnorm < eps){
+        potential = 0;
+    }
+    else{
+        potential = 1/(qnorm*qnorm);
+    }
+    
+    potential = potential*ec*1E10/(eps0);
+    potential = 1;
+
+    return Chi;
+    //return  (G == G2 ? (1.0 + 0.*std::complex(0.0, 1.0) ) : 0. + 0.*std::complex(0.0, 1.0) ) - potential*Chi;
 }
 
 /**
