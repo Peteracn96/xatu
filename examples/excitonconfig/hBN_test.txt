@@ -1,0 +1,11 @@
+# label
+! Name to be used when writing
+hBN_N30
+# ncells
+30
+# bands
+1
+# Dielectric
+1 1 10
+# reciprocal
+4
