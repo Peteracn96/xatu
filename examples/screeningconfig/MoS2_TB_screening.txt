@@ -1,0 +1,13 @@
+# mode
+reciprocalspace
+# valence bands
+14
+# conduction bands
+8
+# removedbands
+0
+# reciprocal vectors
+1 0
+# momentum
+-0.3314  0.0383   0
+# 
