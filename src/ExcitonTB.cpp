@@ -962,6 +962,9 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
+    std::cout << "nvbands = " << nvbands << "\n";
+    std::cout << "ncbands = " << ncbands << "\n";
+    std::cout << "fermi level = " << system->fermiLevel << "\n";
 
     this->eigveckStack_  = arma::cx_cube(basisdim, basisdim, nk);
     this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
@@ -978,7 +981,7 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
         std::exit(0);
     }
 
-    std::cout << "Diagonalizing H0 for all k and k+q points (storing all bands for now) ... \n" << std::flush;
+    std::cout << "Diagonalizing H0 for all k and k+q points (storing all bands for now) ... " << std::flush;
 
     for (int i = 0; i < nk; i++){
         arma::rowvec k = system->kpoints.row(i);
@@ -1010,8 +1013,8 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
         // } 
     };
 
-    arma::Row<double> g = {0, 0, 0}; // Temporary vectors. Later on make screening file read the reciprocal lattice vectors
-    arma::Row<double> g2 = {0, 0, 0};
+    arma::rowvec g = {0, 0, 0}; // Temporary vectors. Later on make screening file read the reciprocal lattice vectors
+    arma::rowvec g2 = {0, 0, 0};
 
     std::cout << "Done" << std::endl;
 
@@ -1027,6 +1030,7 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
         arma::cx_vec coefskq, coefsk;
 
         for (int ik = 0; ik < nk; ik++){
+
             arma::rowvec k = system->kpoints.row(ik);
             arma::rowvec kq = system->kpoints.row(ik) + q;
 
@@ -1043,7 +1047,7 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
                         coefskq = eigveckqStack_.slice(ik).col(iv);
                         coefsk = eigveckStack_.slice(ik).col(ic);
                     }
-                
+
                     std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, g);
                     std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, g2);
 
