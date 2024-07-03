@@ -956,6 +956,7 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
     int checkconvergence = 1;
 
     std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
+    //std::ofstream polarfile("../examples/screeningconfig/kgrid.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
@@ -984,10 +985,10 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
 
-    if(arma::norm(q) == 0){
-        std::cout << "The case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
-        std::exit(0);
-    }
+    // if(arma::norm(q) == 0){
+    //     std::cout << "The case with q=0 might be sensitive, so we leave this part for later. Exiting." << std::endl;
+    //     std::exit(0);
+    // }
 
     std::cout << "Diagonalizing H0 for all k and k+q points (storing all bands for now) ... " << std::flush;
 
@@ -1023,9 +1024,9 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
 
         arma::cx_vec coefskq, coefsk;
 
-        for (int ic = nvbands; ic < basisdim ; ic++){
+        for (int ic = nvbands; ic < basisdim; ic++){
         
-            for (int iv = 0; iv < nvbands ; iv++){
+            for (int iv = 0; iv < nvbands; iv++){
 
                 for (int ik = 0; ik < nk; ik++){
 
@@ -1047,11 +1048,12 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
 
                     term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
 
-                    std::cout << "ik = " << ik << ", iv = " << iv << ", ic = " << ic << "\n"; 
+                    //std::cout << "ik = " << k << ", iv = " << iv << ", ic = " << ic << "\n"; 
                 }
             }
+            
             if (checkconvergence == 1){
-                polarfile << ic << " " << real(term) << " " << imag(term) << "\n";
+                polarfile << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
             }
         }
     } else {
@@ -1061,6 +1063,12 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
     std::cout << "totalCells = " << totalCells << "\n";
     std::cout << "system->unitCellArea = " << system->unitCellArea << "\n";
     std::cout << "system->unitCellArea*totalCells = " << system->unitCellArea*totalCells << "\n";
+    std::cout << "nk = " << nk << "\n";
+
+    // for (int ik = 0; ik < nk; ik++)
+    //     polarfile << system->kpoints.row(ik)(0) << " " << system->kpoints.row(ik)(1) << "\n";
+
+    polarfile.close();
 
     return term/(system->unitCellArea*totalCells);
 }
