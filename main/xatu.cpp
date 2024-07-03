@@ -153,11 +153,19 @@ int main(int argc, char* argv[]){
 
     // If screening flag is present, computes the static dielectric function and exits.
     if(screeningArg.isSet()){
-        kpointsfile = screeningArg.getValue();
 
-        bulkExciton.computeDielectricFunction(kpointsfile);
-
-        return 0;
+        if (screeningConfig->screeningInfo.function == "dielectric") {
+            bulkExciton.computeDielectricFunction(screeningfile);
+            return 0;
+        } else if (screeningConfig->screeningInfo.function == "polarizability") {
+            bulkExciton.computePolarizability(screeningfile);
+            return 0;
+        } else if (screeningConfig->screeningInfo.function == "none"){
+            std::cout << "\nProceeding with computation of the exciton\n" << std::endl;
+        } else {
+            std::cout << "\nValue for 'function' not recognized. Terminating program.\n" << std::endl;
+            return 0;
+        }
     }
 
     bulkExciton.BShamiltonian();
