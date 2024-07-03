@@ -39,6 +39,8 @@ class ScreeningConfiguration : public ConfigurationBase{
         int nLatticeVectors = 0;
         // Regularization distance
         double regularization = 0.0;
+        // Compute dielectric function or polarizability or none (in case of none it computes the exciton)
+        std::string function = "none";
     };
 
     public:

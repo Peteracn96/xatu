@@ -19,7 +19,7 @@ ScreeningConfiguration::ScreeningConfiguration(){
  * @param filename Name of file with the exciton configuration.
  */
 ScreeningConfiguration::ScreeningConfiguration(std::string filename) : ConfigurationBase(filename){
-    this->expectedArguments = {"mode","removedbands"};
+    this->expectedArguments = {"mode","removedbands","function"};
     parseContent();
     checkArguments();
     checkContentCoherence();
@@ -67,6 +67,9 @@ void ScreeningConfiguration::parseContent(){
         else if(arg == "Gcutoff"){
             screeningInfo.Gcutoff = parseScalar<double>(content[0]);
         }
+        else if(arg == "function"){
+            screeningInfo.function = parseWord(content[0]);
+        }
         else if(arg == "mode"){
             screeningInfo.mode = content[0];
             if (screeningInfo.mode == "reciprocalspace"){
@@ -109,6 +112,9 @@ void ScreeningConfiguration::checkContentCoherence(){
     }
     if(screeningInfo.nLatticeVectors <= 0 && screeningInfo.mode == "realspace"){
         throw std::logic_error("'nLatticeVectors' must be a positive number");
+    }
+    if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "none"){
+        throw std::logic_error("'function' must be 'dielectric', 'polarizability' or 'none'");
     }
     if (screeningInfo.mode != "realspace" && screeningInfo.mode != "reciprocalspace"){
         throw std::invalid_argument("Invalid mode. Use 'realspace' or 'reciprocalspace'");
