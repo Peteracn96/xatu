@@ -132,6 +132,8 @@ int main(int argc, char* argv[]){
 
     cout << std::left << std::setw(30) << "System configuration file: " << std::setw(10) << systemfile << endl;
     cout << std::left << std::setw(30) << "Exciton configuration file: " << std::setw(10) << excitonfile << "\n" << endl;
+    cout << std::left << std::setw(30) << "Screening configuration file: " << std::setw(10) << screeningfile << "\n" << endl;
+
     bulkExciton.printInformation();
     
     cout << "+---------------------------------------------------------------------------+" << endl;

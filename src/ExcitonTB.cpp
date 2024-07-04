@@ -99,7 +99,9 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::ivec gs            = cfg.screeningInfo.Gs;
 
     if (nvalencebands + nconductionbands > system->basisdim){
-        std::cout << "Error: Number of bands cannot be higher than actual material bands" << std::endl;
+        std::cout << "Error: Number of bands cannot be higher than actual material" << std::endl;
+        std::cout << "Total number of bands is " << system->basisdim << std::endl;
+
         exit(1);
     }
 
