@@ -1084,6 +1084,18 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
     //     polarfile << system->kpoints.row(ik)(0) << " " << system->kpoints.row(ik)(1) << "\n";
 
     polarfile.close();
+        
+    
+
+    for(int i = 0; i < reciprocalVectors.n_rows; i++){
+        auto G = reciprocalVectors.row(i);
+
+        std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
+    }
+
+    std::cout << "Chi = " << term/(system->unitCellArea*totalCells) << std::endl;
+    std::cout << "G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
+    std::cout << "G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
 
     return term/(system->unitCellArea*totalCells);
 }
