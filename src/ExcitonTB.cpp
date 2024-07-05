@@ -981,6 +981,9 @@ std::complex<double> ExcitonTB::computePolarizability(int G, int G2, arma::rowve
     int natoms = system->natoms;
     int basisdim = system->basisdim;
 
+    arma::rowvec g = reciprocalVectors.row(this->Gs_(0)); // Sets G
+    arma::rowvec g2 = reciprocalVectors.row(this->Gs_(0)); // Sets G'
+
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
     std::cout << "nvbands = " << nvbands << "\n";
