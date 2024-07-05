@@ -158,7 +158,7 @@ int main(int argc, char* argv[]){
             bulkExciton.computeDielectricFunction(screeningfile);
             return 0;
         } else if (screeningConfig->screeningInfo.function == "polarizability") {
-            bulkExciton.computePolarizability(screeningfile);
+            bulkExciton.computesinglePolarizability(screeningfile);
             return 0;
         } else if (screeningConfig->screeningInfo.function == "none"){
             std::cout << "\nProceeding with computation of the exciton\n" << std::endl;

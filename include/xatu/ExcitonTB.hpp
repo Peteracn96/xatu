@@ -149,7 +149,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         ResultTB* diagonalizeRaw(std::string method = "diag", int nstates = 8) override;
 
         // Static dielectric function
-        std::complex<double> computePolarizability(int, int, arma::rowvec&);
+        std::complex<double> computesinglePolarizability(arma::rowvec&);
         std::complex<double> computeDielectricFunction(int, int, arma::rowvec&);
         std::complex<double> computeDielectricFunction(int, int, arma::rowvec&, const arma::imat&);
 
@@ -159,7 +159,7 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         void initializeScreeningAttributes(const ScreeningConfiguration&);
         void computeDielectricFunction(std::string);
-        void computePolarizability(std::string);
+        void computesinglePolarizability(std::string);
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
         std::unique_ptr<ResultTB> diagonalize(std::string method = "diag", int nstates = 8);
