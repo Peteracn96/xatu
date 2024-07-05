@@ -41,6 +41,8 @@ class ScreeningConfiguration : public ConfigurationBase{
         double regularization = 0.0;
         // Compute dielectric function or polarizability or none (in case of none it computes the exciton)
         std::string function = "none";
+        // Bool that is true/false when the dielectric function is/is not used
+        bool isscreeningset = "false";
     };
 
     public:

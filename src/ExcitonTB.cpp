@@ -98,6 +98,8 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::rowvec q           = cfg.screeningInfo.q;
     arma::ivec gs            = cfg.screeningInfo.Gs;
 
+    this->isscreeningset = true;
+
     if (nvalencebands + nconductionbands > system->basisdim){
         std::cout << "Error: Number of bands cannot be higher than actual material bands" << std::endl;
         exit(1);
@@ -833,6 +835,11 @@ void ExcitonTB::initializeResultsH0(){
     this->ftMotifStack   = arma::cx_cube(natoms, natoms, system->meshBZ.n_rows);
     this->ftMotifQ       = arma::cx_mat(natoms, natoms);
 
+    if (this->isscreeningset == true){
+        this->eigveckStack_  = arma::cx_cube(basisdim, basisdim, nk); // For the dielectric function
+        this->eigvalkStack_  = arma::mat(basisdim, nk);
+    }
+
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
     arma::cx_mat h;
@@ -854,6 +861,11 @@ void ExcitonTB::initializeResultsH0(){
         eigvalKStack_.col(i) = auxEigVal(bandList);
         eigvecKStack_.slice(i) = auxEigvec.cols(bandList);
 
+        if (this->isscreeningset == true){
+            eigvalkStack_.col(i) = auxEigVal;
+            eigveckStack_.slice(i) = auxEigvec;
+        }
+        
         if(arma::norm(Q) != 0){
             arma::rowvec kQ = system->kpoints.row(i) + Q;
             system->solveBands(kQ, auxEigVal, auxEigvec);
