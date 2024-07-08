@@ -1082,6 +1082,14 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     return term/(system->unitCellArea*totalCells);
 }
 
+arma::mat generatecombinations(int nvbands, int basisdim, int nks){
+    arma::mat vbands(1,nvbands,arma::fill::zeros);
+    arma::mat cbands(1,basisdim-nvbands,arma::fill::zeros);
+    arma::mat kindices(1,nks,arma::fill::zeros);
+
+    arma::mat bands = arma::kron(vbands,cbands);
+}
+
 /**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q.
  * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
@@ -1104,6 +1112,8 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
     arma::cx_vec coefskq, coefsk;
 
     std::complex<double> term = 0.;
+
+
 
     for (int ic = nvbands; ic < basisdim; ic++){
         
