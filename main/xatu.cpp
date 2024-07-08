@@ -161,7 +161,10 @@ int main(int argc, char* argv[]){
             bulkExciton.computesinglePolarizability(screeningfile);
             return 0;
         } else if (screeningConfig->screeningInfo.function == "none"){
-            std::cout << "\nProceeding with computation of the exciton\n" << std::endl;
+            std::cout << "Proceeding with computation of the exciton...\n" << std::endl;
+            bulkExciton.PolarizabilityMesh();
+            std::cout << "\nComputation of the exciton with screening not implemented yet. Exiting.\n" << std::endl;
+            return 0;
         } else {
             std::cout << "\nValue for 'function' not recognized. Terminating program.\n" << std::endl;
             return 0;
