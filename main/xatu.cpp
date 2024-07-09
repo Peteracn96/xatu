@@ -157,7 +157,7 @@ int main(int argc, char* argv[]){
     if(screeningArg.isSet()){
 
         if (screeningConfig->screeningInfo.function == "dielectric") {
-            bulkExciton.computeDielectricFunction(screeningfile);
+            bulkExciton.computesingleDielectricFunction(screeningfile);
             return 0;
         } else if (screeningConfig->screeningInfo.function == "polarizability") {
             bulkExciton.computesinglePolarizability(screeningfile);

@@ -941,17 +941,6 @@ void ExcitonTB::initializeHamiltonian(){
 
 /*------------------------------------ Static dielectric function matrix elements ------------------------------------*/
 /**
- * Method to compute the dielectric function.
- * @details Calls the more general routine which allows
- * to specify a subset of the complete basis.
- */ 
-std::complex<double> ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q) {
-    arma::imat basis = {};
-
-    return computeDielectricFunction(G, G2, q, basis);
-}
-
-/**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file.
  * @details Writes the polarizability in the file polarizability_convergence.dat as a function of the number of included conduction bands, if checkconvergence = 1
  * @param q Momentum vector q specified in the input file
@@ -1203,12 +1192,7 @@ void ExcitonTB::PolarizabilityMesh(){
  * kpoints coincides with the kmesh
  * @return void
 */
-std::complex<double> ExcitonTB::computeDielectricFunction(int G, int G2, arma::rowvec& q, const arma::imat& basis) {
-
-    arma::imat basisStates = this->basisStates;
-    if (!basis.is_empty()){
-        basisStates = basis;
-    };
+std::complex<double> ExcitonTB::computesingleDielectricFunction(int G, int G2, arma::rowvec& q) {
 
     if(mode == "realspace"){
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
@@ -1282,36 +1266,24 @@ void ExcitonTB::computesinglePolarizability(std::string screeningfilename) {
  * kpoints coincides with the kmesh
  * @return void
 */
-void ExcitonTB::computeDielectricFunction(std::string kpointsfile) {
+void ExcitonTB::computesingleDielectricFunction(std::string screenfile) {
 	std::ifstream inputfile;
 	std::string line;
 	double qx, qy, qz;
     int G, G2;
 	arma::cx_mat eigvec;
-	std::string outputfilename = kpointsfile + ".screening";
+	std::string outputfilename = screenfile + ".screening";
 	FILE* screeningfile = fopen(outputfilename.c_str(), "w");
 
 	try{
-		inputfile.open(kpointsfile.c_str());
+		inputfile.open(screenfile.c_str());
 
         if (!inputfile.is_open()){
             std::cout << "Input file failed to open or does not exist. Exiting." << std::endl;
             std::exit(0);
         }
 
-        // std::getline(inputfile, line);
-        // std::istringstream firstline(line);
-        // firstline >> G >> G2;
-        
-
-		// while(std::getline(inputfile, line)){
-		// 	std::istringstream iss(line);
-		// 	iss >> qx >> qy >> qz;
-		// 	arma::rowvec qpoint{qx, qy, qz};
-		// 	fprintf(screeningfile, "%12.6f\t", computeDielectricFunction(G, G2, qpoint));
-		// 	fprintf(screeningfile, "\n");
-		// }
-        fprintf(screeningfile, "%12.6f\t", computeDielectricFunction(this->Gs_(0), this->Gs_(1), this->q_));
+        fprintf(screeningfile, "%12.6f\t", computesingleDielectricFunction(this->Gs_(0), this->Gs_(1), this->q_));
 		fprintf(screeningfile, "\n");
 	}
 	catch(const std::exception& e){
