@@ -42,6 +42,7 @@ class Exciton {
         // General Screening attributes
         int nvalencebands_, nconductionbands_, nrmcbands_;
         arma::ivec valencebands_, conductionbands_;
+        bool isscreeningset = false;
 
         arma::rowvec q_;
         arma::ivec Gs_;
