@@ -968,7 +968,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
-    int checkconvergence = 0;
+    int checkconvergence = 1;
 
     std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
     //std::ofstream polarfile("../examples/screeningconfig/kgrid.dat"); 
@@ -1168,17 +1168,24 @@ void ExcitonTB::PolarizabilityMesh(){
 
     int nq = system->nk;
 
+    arma::cx_vec Chi(nq, arma::fill::zeros);
+
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
     arma::rowvec g = reciprocalVectors.row(this->Gs_(0)); // Sets G
     arma::rowvec g2 = reciprocalVectors.row(this->Gs_(1)); // Sets G'
 
+    #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
-        std::complex<double> Chi = reciprocalPolarizabilityMatrixElement(g, g2, iq);
+        Chi(iq) = reciprocalPolarizabilityMatrixElement(g, g2, iq);
         auto q = system_->kpoints.row(iq);
         std::cout << "iq = " << iq << "\n";
-        polarfile << q(0) << " " << q(1) << " " << q(2) << " " << real(Chi) << " " << imag(Chi) << "\n";
+    }
+    std::cout << "Chi computed " << std::endl;
+    for (int iq = 0; iq < nq; iq++){
+        auto q = system_->kpoints.row(iq);
+        polarfile << q(0) << " " << q(1) << " " << q(2) << " " << real(Chi(iq)) << " " << imag(Chi(iq)) << "\n";
     }
 
     polarfile.close();
