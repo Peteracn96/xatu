@@ -117,6 +117,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         potptr selectPotential(std::string);
 
         // Fourier transforms
+        double coulombFT(arma::rowvec);
         double keldyshFT(arma::rowvec);
         double rpaFT(arma::rowvec); //in principle will accept more than one rowvec
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
@@ -151,7 +152,6 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Static dielectric function
         std::complex<double> computesinglePolarizability(arma::rowvec&);
         std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int);
-        std::complex<double> computesingleDielectricFunction(int, int, arma::rowvec&);
         std::complex<double> computeDielectricFunction(int, int, arma::rowvec&, const arma::imat&);
 
     public:
@@ -159,8 +159,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void initializeHamiltonian();
 
         void initializeScreeningAttributes(const ScreeningConfiguration&);
-        void computesingleDielectricFunction(std::string);
-        void computesinglePolarizability(std::string);
+        void computesingleDielectricFunction();
+        void computesinglePolarizability();
         void PolarizabilityMesh();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);

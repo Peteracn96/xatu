@@ -493,6 +493,27 @@ potptr ExcitonTB::selectPotential(std::string potential){
 
 
 /*---------------------------------------- Fourier transforms ----------------------------------------*/
+/**
+ * Evaluates the Fourier transform of the Keldysh potential, which is an analytical expression.
+ * @param q kpoint where we evaluate the FT.
+ * @return Fourier transform of the potential at q, FT[V](q).
+ */
+double ExcitonTB::coulombFT(arma::rowvec q){
+    double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
+    double potential = 0;
+    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
+
+    double qnorm = arma::norm(q);
+    if (qnorm < eps){
+        potential = 0;
+    }
+    else{
+        potential = 1/(qnorm);
+    }
+    
+    potential = potential*ec*1E10/(2*eps0);
+    return potential;
+}  
 
 /**
  * Evaluates the Fourier transform of the Keldysh potential, which is an analytical expression.
@@ -941,8 +962,18 @@ void ExcitonTB::initializeHamiltonian(){
 
 /*------------------------------------ Static dielectric function matrix elements ------------------------------------*/
 /**
+ * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file and print it.
+ * @return void
+*/
+void ExcitonTB::computesinglePolarizability(){
+    std::complex<double> Chi = computesinglePolarizability(this->q_);
+    std::cout << "Polarizability = " << Chi << std::endl;
+}
+
+/**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file.
- * @details Writes the polarizability in the file polarizability_convergence.dat as a function of the number of included conduction bands, if checkconvergence = 1
+ * @details Writes the polarizability in the file polarizability_convergence.dat as a 
+ * function of the number of included conduction bands, if checkconvergence = 1
  * @param q Momentum vector q specified in the input file
  * @return Polarizability
 */
@@ -957,7 +988,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
-    int checkconvergence = 1;
+    int checkconvergence = 0;
 
     std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
     //std::ofstream polarfile("../examples/screeningconfig/kgrid.dat"); 
@@ -975,9 +1006,9 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
-    std::cout << "nvbands = " << nvbands << "\n";
-    std::cout << "ncbands = " << ncbands << "\n";
-    std::cout << "fermi level = " << system->fermiLevel << "\n";
+    // std::cout << "nvbands = " << nvbands << "\n";
+    // std::cout << "ncbands = " << ncbands << "\n";
+    // std::cout << "fermi level = " << system->fermiLevel << "\n";
 
     this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
     this->eigvalkqStack_ = arma::mat(basisdim, nk);
@@ -987,7 +1018,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
 
-    std::cout << "Diagonalizing H0 for all k+q points (storing all bands for now) ... " << std::flush;
+    std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
 
     for (int i = 0; i < nk; i++){
         arma::rowvec kq = system->kpoints.row(i) + q;
@@ -1057,8 +1088,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     //     polarfile << system->kpoints.row(ik)(0) << " " << system->kpoints.row(ik)(1) << "\n";
 
     polarfile.close();
-        
-    
 
     for(int i = 0; i < reciprocalVectors.n_rows; i++){
         auto G = reciprocalVectors.row(i);
@@ -1066,9 +1095,9 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
         std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
     }
 
-    std::cout << "Chi = " << term/(system->unitCellArea*totalCells) << std::endl;
     std::cout << "G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
     std::cout << "G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
+    //std::cout << "Chi = " << term/(system->unitCellArea*totalCells) << std::endl;
 
     return term/(system->unitCellArea*totalCells);
 }
@@ -1083,9 +1112,7 @@ arma::mat generatecombinations(int nvbands, int basisdim, int nks){
 
 /**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q.
- * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
- * @param coefskq Coefficients at the vector k+q
- * @param coefsk Coefficients at the vector k
+ * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh
  * @param G Reciprocal lattice vector G
  * @param G2 Reciprocal lattice vector G2
  * @param q Momentum vector q
@@ -1103,8 +1130,6 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
     arma::cx_vec coefskq, coefsk;
 
     std::complex<double> term = 0.;
-
-
 
     for (int ic = nvbands; ic < basisdim; ic++){
         
@@ -1138,7 +1163,7 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
 }
 
 /**
- * Method to compute the (0,0) static polarizability in the BZ mesh.
+ * Method to compute the (G,G') static polarizability in the BZ mesh.
  * @details Opens 'polarizability_mesh.dat' file and writes in it the values of the polarizability at each point in the BZ mesh
  * @return void
 */
@@ -1192,7 +1217,7 @@ void ExcitonTB::PolarizabilityMesh(){
  * kpoints coincides with the kmesh
  * @return void
 */
-std::complex<double> ExcitonTB::computesingleDielectricFunction(int G, int G2, arma::rowvec& q) {
+void ExcitonTB::computesingleDielectricFunction() {
 
     if(mode == "realspace"){
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
@@ -1202,97 +1227,26 @@ std::complex<double> ExcitonTB::computesingleDielectricFunction(int G, int G2, a
 
     std::complex<double> Chi;
 
-    arma::Row<double> g = {0, 0, 0}; // Temporary vectors
-    arma::Row<double> g2 = {0, 0, 0};
+    arma::rowvec q = this->q_;
 
+    double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
+    arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+
+    arma::rowvec g = reciprocalVectors.row(this->Gs_(0)); // Sets G
+    arma::rowvec g2 = reciprocalVectors.row(this->Gs_(1)); // Sets G'
 
     Chi = computesinglePolarizability(q);
 
     double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
-    double potential;
+    double potential = coulombFT(q);
 
-    double qnorm = arma::norm(q + g);
+    double kroneckerdelta = 0;
 
-    if (qnorm < eps){
-        potential = 0;
-    }
-    else{
-        potential = 1/(qnorm*qnorm);
-    }
-    
-    potential = potential*ec*1E10/(eps0);
-    potential = 1;
+    if (g(0) == g2(0) && g(1) == g2(1) && g(2) == g2(2))
+        kroneckerdelta = 1;
 
-    return Chi;
-    //return  (G == G2 ? (1.0 + 0.*std::complex(0.0, 1.0) ) : 0. + 0.*std::complex(0.0, 1.0) ) - potential*Chi;
+    std::cout << "Dielectric functiona at q = " << kroneckerdelta - potential*Chi << std::endl;
 }
-
-/**
- * Method to write to a file the static dielectric function on a set of kpoints specified on a file.
- * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
- * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
- * kpoints coincides with the kmesh
- * @return void
-*/
-void ExcitonTB::computesinglePolarizability(std::string screeningfilename) {
-	std::ifstream inputfile;
-    
-    arma::cx_mat eigvec;
-	std::string outputfilename = screeningfilename + ".screening";
-	FILE* screeningfile = fopen(outputfilename.c_str(), "w");
-
-	try{
-		inputfile.open(screeningfilename.c_str());
-
-        if (!inputfile.is_open()){
-            std::cout << "Input file failed to open or does not exist. Exiting." << std::endl;
-            std::exit(0);
-        }
-
-        fprintf(screeningfile, "%12.6f\t", computesinglePolarizability(this->q_));
-		fprintf(screeningfile, "\n");
-	}
-	catch(const std::exception& e){
-		std::cerr << e.what() << std::endl;
-	}
-	fclose(screeningfile);
-	std::cout << "Done" << std::endl;
-}
-
-/**
- * Method to write to a file the static dielectric function on a set of kpoints specified on a file.
- * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
- * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
- * kpoints coincides with the kmesh
- * @return void
-*/
-void ExcitonTB::computesingleDielectricFunction(std::string screenfile) {
-	std::ifstream inputfile;
-	std::string line;
-	double qx, qy, qz;
-    int G, G2;
-	arma::cx_mat eigvec;
-	std::string outputfilename = screenfile + ".screening";
-	FILE* screeningfile = fopen(outputfilename.c_str(), "w");
-
-	try{
-		inputfile.open(screenfile.c_str());
-
-        if (!inputfile.is_open()){
-            std::cout << "Input file failed to open or does not exist. Exiting." << std::endl;
-            std::exit(0);
-        }
-
-        fprintf(screeningfile, "%12.6f\t", computesingleDielectricFunction(this->Gs_(0), this->Gs_(1), this->q_));
-		fprintf(screeningfile, "\n");
-	}
-	catch(const std::exception& e){
-		std::cerr << e.what() << std::endl;
-	}
-	fclose(screeningfile);
-	std::cout << "Done" << std::endl;
-}
-
 
 /**
  * Method to initialize the BSE.
