@@ -106,6 +106,15 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         exit(1);
     }
 
+    int nGs = this->nReciprocalVectors_;
+
+    if (gs(0) >= nGs*nGs || gs(1) >= nGs*nGs){
+        std::cout << "Error: Index of the reciprocal vector must not be higher than number of reciprocal vectors" << std::endl;
+        std::cout << "Number of reciprocal vectors is " << nGs << std::endl;
+
+        exit(1);
+    }
+
     this->q_ = q;
 
     this->nvalencebands_ = nvalencebands;
@@ -128,6 +137,11 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     
     this->valencebands_ = arma::ivec(valence);
     this->conductionbands_ = arma::ivec(conduction);
+
+    if (cfg.screeningInfo.function == "none"){
+        int nks = this->ncell*this->ncell;
+        this->Chimatrix_ = arma::cx_cube(nGs*nGs, nGs*nGs, nks, arma::fill::zeros);
+    }
 }
 
 /**
@@ -973,7 +987,7 @@ void ExcitonTB::computesinglePolarizability(){
 /**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file.
  * @details Writes the polarizability in the file polarizability_convergence.dat as a 
- * function of the number of included conduction bands, if checkconvergence = 1
+ * function of the number of included conduction bands
  * @param q Momentum vector q specified in the input file
  * @return Polarizability
 */
@@ -988,10 +1002,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
-    int checkconvergence = 0;
-
     std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
-    //std::ofstream polarfile("../examples/screeningconfig/kgrid.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
@@ -1006,9 +1017,11 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
-    // std::cout << "nvbands = " << nvbands << "\n";
-    // std::cout << "ncbands = " << ncbands << "\n";
-    // std::cout << "fermi level = " << system->fermiLevel << "\n";
+    std::cout << "nvbands = " << nvbands << "\n";
+    std::cout << "ncbands = " << ncbands << "\n";
+    std::cout << "fermi level = " << system->fermiLevel << "\n";
+
+    std::complex<double> term = 0.;
 
     this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
     this->eigvalkqStack_ = arma::mat(basisdim, nk);
@@ -1029,10 +1042,10 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
         eigveckqStack_.slice(i) = auxEigvec;
     };
 
+    for (auto& eigenvalue : eigvalkqStack_.col(0))
+        std::cout << "eigenvalue = "<< eigenvalue << "\n";
 
-    std::cout << "Done" << std::endl;
-
-    std::complex<double> term = 0.;
+    std::cout << "Done \n";
     
     if(mode == "realspace"){
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
@@ -1070,22 +1083,13 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
                     //std::cout << "ik = " << k << ", iv = " << iv << ", ic = " << ic << "\n"; 
                 }
             }
-            
-            if (checkconvergence == 1){
-                polarfile << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
-            }
+
+            polarfile << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
         }
     } else {
         std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
         std::exit(0);
     }
-    std::cout << "totalCells = " << totalCells << "\n";
-    std::cout << "system->unitCellArea = " << system->unitCellArea << "\n";
-    std::cout << "system->unitCellArea*totalCells = " << system->unitCellArea*totalCells << "\n";
-    std::cout << "nk = " << nk << "\n";
-
-    // for (int ik = 0; ik < nk; ik++)
-    //     polarfile << system->kpoints.row(ik)(0) << " " << system->kpoints.row(ik)(1) << "\n";
 
     polarfile.close();
 
@@ -1094,10 +1098,9 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
         std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
     }
-
-    std::cout << "G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
-    std::cout << "G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
-    //std::cout << "Chi = " << term/(system->unitCellArea*totalCells) << std::endl;
+    std::cout << "Selected (G,G') pair:" << "\n";
+    std::cout << "G = G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
+    std::cout << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
 
     return term/(system->unitCellArea*totalCells);
 }
@@ -1209,6 +1212,47 @@ void ExcitonTB::PolarizabilityMesh(){
 
     std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
 }
+
+/**
+ * Method to compute the static polarizability matrix in the BZ mesh.
+ * @return void
+*/
+void ExcitonTB::computePolarizabilityMatrix(){
+
+    auto start = high_resolution_clock::now();
+
+    std::cout << "Computing polarizability matrix in the BZ mesh... \n" << std::flush;
+
+    int nq = system->nk;
+
+    double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
+    
+    arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    int nGs = reciprocalVectors.n_rows;
+    #pragma omp parallel for
+    for (int iq = 0; iq < nq; iq++){
+
+        for (int g = 0; g < nGs; g++){
+
+            for (int g2 = 0; g2 < nGs; g2++){
+
+                this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(reciprocalVectors.row(g), reciprocalVectors.row(g2), iq);
+
+            }
+        }
+        //std::cout << "iq = " << iq << "\n"; 
+    }
+
+    std::cout << "q = " << system->kpoints.row(0) << std::endl;
+    std::cout << "Chi_00 (0) = " << this->Chimatrix_.slice(0).row(3)(3) << std::endl;
+    std::cout << "Polarizability matrix computed " << std::endl;
+
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(stop - start);
+
+    std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
+}
+
 
 /**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.

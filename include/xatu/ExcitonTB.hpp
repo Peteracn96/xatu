@@ -45,9 +45,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat potentialMat;
         int nReciprocalVectors_ = 1;
         
-        // Momentum and reciprocal lattice vectors to compute dielectric matrix at
+        // Internals for dielectric function
         arma::ivec Gs_;
         arma::rowvec q_;
+        arma::cx_cube Chimatrix_;
 
     public:
         // Returns dielectric constant of embedding medium
@@ -162,6 +163,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void computesingleDielectricFunction();
         void computesinglePolarizability();
         void PolarizabilityMesh();
+        void computePolarizabilityMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
         std::unique_ptr<ResultTB> diagonalize(std::string method = "diag", int nstates = 8);

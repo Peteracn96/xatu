@@ -1,0 +1,96 @@
+// int nk = system->nk;
+    // int natoms = system->natoms;
+    // int basisdim = system->basisdim;
+
+    // int nvbands = valencebands.size();
+    // int ncbands = conductionbands.size();
+
+    // arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    // int nGs = reciprocalVectors.n_rows;
+
+    // arma::cx_vec coefskq, coefsk;
+
+    // std::complex<double> term = 0.;
+
+    // #pragma omp parallel for
+    // for (int iq = 0; iq < nq; iq++){
+
+    //     for (int ic = nvbands; ic < basisdim; ic++){
+        
+    //         for (int iv = 0; iv < nvbands; iv++){
+
+    //             for (int ik = 0; ik < nk; ik++){
+
+    //                 arma::rowvec k = system->kpoints.row(ik);
+    //                 arma::rowvec kq = system->kpoints.row(ik) + system->kpoints.row(iq);
+
+    //                 int kqindex = system_->findEquivalentPointBZ(kq, ncell);
+
+    //                 // Using the atomic gauge
+    //                 if(gauge == "atomic"){
+    //                     coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+    //                     coefskq = system_->latticeToAtomicGauge(eigveckStack_.slice(kqindex).col(iv), system->kpoints.row(kqindex));
+    //                 } else {                            
+    //                     coefsk = eigveckStack_.slice(ik).col(ic);
+    //                     coefskq = eigveckStack_.slice(kqindex).col(iv);
+    //                 }
+
+                    
+    //                 for (int g = 0; g < nGs; g++){
+
+    //                     for (int g2 = 0; g2 < nGs; g2++){
+
+    //                         std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, reciprocalVectors.row(g));
+    //                         std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, reciprocalVectors.row(g2));
+
+    //                         this->Chimatrix_.slice(iq).row(g)(g2) += IvcG*std::conj(IvcG2) / (eigvalkStack_.col(kqindex)(iv) - eigvalkStack_.col(ik)(ic));
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     std::cout << "iq = " << iq << "\n"; 
+    // }
+
+    // arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    // int nGs = reciprocalVectors.n_rows;
+
+    // int iq = 0;
+    // int iG = 0;
+    // int iG2 = 0;
+    // int niterations = nq*nGs*nGs;
+
+    // arma::imat combinations(niterations, 3, arma::fill::zeros);
+
+    // for (int i = 0; i < niterations; i++){
+
+    //     combinations.row(i)(0) = iq;
+    //     combinations.row(i)(1) = iG;
+    //     combinations.row(i)(2) = iG2;
+
+    //     iG++;
+
+    //     if (iG == nGs){
+    //         iG2++;
+    //         iG = 0;
+    //         if (iG2 == nGs){
+    //             iq++;
+    //             iG = 0;
+    //             iG2 = 0;
+    //         }
+    //     }
+
+    //     //std::cout << "iq = " << iq << ", iG = " << iG << ", iG2 = " << iG2 << "\n"; 
+    // }
+
+    // #pragma omp parallel for
+    // for (int i = 0; i < niterations; i++){
+
+    //     int iq = combinations.row(i)(0);
+    //     int ig = combinations.row(i)(1);
+    //     int ig2 = combinations.row(i)(2);
+        
+    //     this->Chimatrix_.slice(iq).row(ig)(ig2) = reciprocalPolarizabilityMatrixElement(reciprocalVectors.row(ig), reciprocalVectors.row(ig2), iq);
+
+    //     std::cout << "iq = " << iq << "\n"; 
+    // }
