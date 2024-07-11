@@ -102,7 +102,17 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     if (nvalencebands + nconductionbands > system->basisdim){
         std::cout << "Error: Number of bands cannot be higher than actual material" << std::endl;
         std::cout << "Total number of bands is " << system->basisdim << std::endl;
+        exit(1);
+    }
 
+    int totalvbands = system->fermiLevel + 1;
+    int totalcbands = system->basisdim - totalvbands;
+
+    if (nvalencebands > totalvbands  || nconductionbands > totalcbands){
+        std::cout << "Number of included bands cannot be higher than the number of material bands" << std::endl;
+        std::cout << "Number of total valence bands = " << totalvbands<< std::endl;
+        std::cout << "Number of total conduction bands = " << totalcbands << std::endl;
+    
         exit(1);
     }
 
@@ -1017,8 +1027,15 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
-    std::cout << "nvbands = " << nvbands << "\n";
-    std::cout << "ncbands = " << ncbands << "\n";
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
+    std::cout << "Total of valence bands = " << nvbands << "\n";
+    std::cout << "Total of conduction bands = " << ncbands << "\n";
     std::cout << "fermi level = " << system->fermiLevel << "\n";
 
     std::complex<double> term = 0.;
@@ -1042,9 +1059,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
         eigveckqStack_.slice(i) = auxEigvec;
     };
 
-    for (auto& eigenvalue : eigvalkqStack_.col(0))
-        std::cout << "eigenvalue = "<< eigenvalue << "\n";
-
     std::cout << "Done \n";
     
     if(mode == "realspace"){
@@ -1056,9 +1070,9 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
         arma::cx_vec coefskq, coefsk;
 
-        for (int ic = nvbands; ic < basisdim; ic++){
+        for (int ic = nvbands; ic <= upperindexcband; ic++){
         
-            for (int iv = 0; iv < nvbands; iv++){
+            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
 
                 for (int ik = 0; ik < nk; ik++){
 
@@ -1082,9 +1096,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
                     //std::cout << "ik = " << k << ", iv = " << iv << ", ic = " << ic << "\n"; 
                 }
+                    polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
             }
-
-            polarfile << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
         }
     } else {
         std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
@@ -1866,6 +1879,12 @@ void ExcitonTB::printInformation(){
         cout << endl;
     }
     cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << endl;
+
+    if (this->isscreeningset == true){
+        std::cout<< std::left << std::setw(30) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
+        std::cout<< std::left << std::setw(30) << "Number of valenceconduction bands included: " << this->nconductionbands_ << std::endl;
+
+    }
 }
 
 }
