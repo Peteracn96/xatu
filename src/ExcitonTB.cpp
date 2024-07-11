@@ -1309,7 +1309,9 @@ void ExcitonTB::computesingleDielectricFunction() {
 
     if (g(0) == g2(0) && g(1) == g2(1) && g(2) == g2(2))
         kroneckerdelta = 1;
-
+        
+        
+    std::cout << "Polarizability at q = " << Chi << std::endl;
     std::cout << "Dielectric functiona at q = " << kroneckerdelta - potential*Chi << std::endl;
 }
 
