@@ -1250,20 +1250,22 @@ void ExcitonTB::computePolarizabilityMatrix(){
     int nGs = reciprocalVectors.n_rows;
     #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
-
+        std::cout << "iq = " << iq << "\n"; 
         for (int g = 0; g < nGs; g++){
 
-            for (int g2 = 0; g2 < nGs; g2++){
+            for (int g2 = g; g2 < nGs; g2++){
 
                 this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(reciprocalVectors.row(g), reciprocalVectors.row(g2), iq);
+                this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
             }
         }
-        //std::cout << "iq = " << iq << "\n"; 
+        
     }
 
     std::cout << "q = " << system->kpoints.row(0) << std::endl;
-    std::cout << "Chi_00 (0) = " << this->Chimatrix_.slice(0).row(3)(3) << std::endl;
+    std::cout << "Chi_21 (0) = " << this->Chimatrix_.slice(0).row(2)(1) << std::endl;
+    std::cout << "Chi_12 (0) = " << this->Chimatrix_.slice(0).row(1)(2) << std::endl;
     std::cout << "Polarizability matrix computed " << std::endl;
 
     auto stop = high_resolution_clock::now();
