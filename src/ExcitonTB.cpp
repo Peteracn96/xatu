@@ -1143,13 +1143,19 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
 
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
     arma::cx_vec coefskq, coefsk;
 
     std::complex<double> term = 0.;
 
-    for (int ic = nvbands; ic < basisdim; ic++){
+    for (int ic = nvbands; ic < upperindexcband; ic++){
         
-        for (int iv = 0; iv < nvbands; iv++){
+        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
 
             for (int ik = 0; ik < nk; ik++){
 
