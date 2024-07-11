@@ -1,13 +1,14 @@
 # mode
 reciprocalspace
 # valence bands
-14
+26
 # conduction bands
 8
 # removedbands
 0
 # reciprocal vectors
-1 0
+3 3
 # momentum
--0.3314  0.0383   0
-# 
+0.5 0.   0
+# function
+polarizability
