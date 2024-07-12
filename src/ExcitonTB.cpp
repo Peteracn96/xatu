@@ -7,6 +7,26 @@
 using namespace arma;
 using namespace std::chrono;
 
+/** 
+ *Method to sort rows in a matrix by norm
+ *@return void 
+*/
+void sortVectors(arma::mat& vectors){
+
+    std::vector<arma::rowvec> vecs;
+
+    for (int i = 0; i < vectors.n_rows; ++i)
+        vecs.push_back(vectors.row(i));
+
+    std::sort(vecs.begin(), vecs.end(), [](const arma::rowvec & a, const arma::rowvec & b){ return arma::norm(a) < arma::norm(b); });
+
+    for (int i = 0; i < vectors.n_rows; ++i){
+        vectors.row(i)(0) = vecs[i][0];
+        vectors.row(i)(1) = vecs[i][1];
+        vectors.row(i)(2) = vecs[i][2];
+    }
+}
+
 namespace xatu {
 
 /**
@@ -98,7 +118,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::ivec gs            = cfg.screeningInfo.Gs;
 
     this->isscreeningset = true;
-
+   
     if (nvalencebands + nconductionbands > system->basisdim){
         std::cout << "Error: Number of bands cannot be higher than actual material" << std::endl;
         std::cout << "Total number of bands is " << system->basisdim << std::endl;
@@ -148,9 +168,32 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     this->valencebands_ = arma::ivec(valence);
     this->conductionbands_ = arma::ivec(conduction);
 
+    if (cfg.screeningInfo.Gcutoff_found == true){
+        if (cfg.screeningInfo.Gcutoff > (this->ncell)/2.5){
+            std::cout << "Number of reciprocal vectors for the screening must not be higher than that for the exciton." << std::endl;
+            std::cout << "Gcutoff = " << cfg.screeningInfo.Gcutoff << ", while gcutoff for exciton = " << (this->ncell)/2.5 << std::endl;
+            exit(1);
+        }
+        this->Gcutoff_ = cfg.screeningInfo.Gcutoff;
+    } else {
+        this->Gcutoff_ = this->cutoff_;
+    }
+
+    double radius = this->cutoff * arma::norm(system->reciprocalLattice.row(0));
+    this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+
+    sortVectors(this->trunreciprocalLattice_);
+    std::cout << "system->reciprocalLattice.n_rows = " << system->reciprocalLattice.n_rows << std::endl;
+    std::cout << "this->trunreciprocalLattice_.n_rows = " << this->trunreciprocalLattice_.n_rows << std::endl;
+    std::cout << "||system->reciprocalLattice.row(0)|| = " << arma::norm(system->reciprocalLattice.row(0)) << std::endl;
+    std::cout << "radius as of Gcutoff = " << radius << std::endl;
+    std::cout << "radius as of cutoff =  = " << cutoff_ * arma::norm(system->reciprocalLattice.row(0)) << std::endl;
+
     if (cfg.screeningInfo.function == "none"){
         int nks = this->ncell*this->ncell;
         this->Chimatrix_ = arma::cx_cube(nGs*nGs, nGs*nGs, nks, arma::fill::zeros);
+        this->epsilonmatrix_ = arma::cx_cube(nGs*nGs, nGs*nGs, nks, arma::fill::zeros);
+        this->Invepsilonmatrix_ = arma::cx_cube(nGs*nGs, nGs*nGs, nks, arma::fill::zeros);
     }
 }
 
@@ -189,26 +232,6 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, const arma::i
     this->conductionBands_ = arma::ivec(conduction);
     this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
 };
-
-/** 
- *Method to sort rows in a matrix by norm
- *@return void 
-*/
-void sortVectors(arma::mat& vectors){
-
-    std::vector<arma::rowvec> vecs;
-
-    for (int i = 0; i < vectors.n_rows; ++i)
-        vecs.push_back(vectors.row(i));
-
-    std::sort(vecs.begin(), vecs.end(), [](const arma::rowvec & a, const arma::rowvec & b){ return arma::norm(a) < arma::norm(b); });
-
-    for (int i = 0; i < vectors.n_rows; ++i){
-        vectors.row(i)(0) = vecs[i][0];
-        vectors.row(i)(1) = vecs[i][1];
-        vectors.row(i)(2) = vecs[i][2];
-    }
-}
 
 /**
  * Exciton constructor from a SystemConfiguration object. One specifies the number of valence and conduction
@@ -1028,11 +1051,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
         std::exit(0);
     }
-
-    double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
-    arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
-
-    sortVectors(reciprocalVectors);
+    std::cout << "cutoff = " << cutoff << "\n";
 
     std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
 
@@ -1044,8 +1063,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     int natoms = system->natoms;
     int basisdim = system->basisdim;
 
-    arma::rowvec g = reciprocalVectors.row(this->Gs_(0)); // Sets G
-    arma::rowvec g2 = reciprocalVectors.row(this->Gs_(1)); // Sets G'
+    arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
+    arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
@@ -1128,8 +1147,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
     polarfile.close();
 
-    for(int i = 0; i < reciprocalVectors.n_rows; i++){
-        auto G = reciprocalVectors.row(i);
+    for(int i = 0; i < this->trunreciprocalLattice_.n_rows; i++){
+        auto G = this->trunreciprocalLattice_.row(i);
 
         std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
     }
@@ -1271,9 +1290,10 @@ void ExcitonTB::computeDielectricMatrix(){
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
     sortVectors(reciprocalVectors);
     int nGs = reciprocalVectors.n_rows;
+
     #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
-        std::cout << "iq = " << iq << "\n"; 
+        //std::cout << "iq = " << iq << "\n"; 
         for (int g = 0; g < nGs; g++){
 
             for (int g2 = g; g2 < nGs; g2++){
@@ -1281,15 +1301,36 @@ void ExcitonTB::computeDielectricMatrix(){
                 this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(reciprocalVectors.row(g), reciprocalVectors.row(g2), iq);
                 this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
+                double potentialg = coulombFT(system->kpoints.row(iq) + reciprocalVectors.row(g));
+                double potentialg2 = coulombFT(system->kpoints.row(iq) + reciprocalVectors.row(g2));
+                double kroneckerdelta = g == g2? 1 : 0;
+
+                this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
             }
         }
-        
+
+        this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
     }
 
-    std::cout << "q = " << system->kpoints.row(0) << std::endl;
-    std::cout << "Chi_21 (0) = " << this->Chimatrix_.slice(0).row(2)(1) << std::endl;
-    std::cout << "Chi_12 (0) = " << this->Chimatrix_.slice(0).row(1)(2) << std::endl;
-    std::cout << "Polarizability matrix computed " << std::endl;
+    // for(int i = 0; i < reciprocalVectors.n_rows; i++){
+    //     auto G = reciprocalVectors.row(i);
+
+    //     std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
+    // }
+
+    // std::cout << "q = " << system->kpoints.row(0)(0) << " " << system->kpoints.row(0)(1) << " " << system->kpoints.row(0)(2) << std::endl;
+    std::cout << "\nChi_00 (0) = " << this->Chimatrix_.slice(0).row(0)(0) << std::endl;
+    std::cout << "\nepsilon_00 (0) = " << this->epsilonmatrix_.slice(0).row(0)(0) << std::endl;
+    std::cout << "\nepsilon^(-1)_00 (0) = " << this->Invepsilonmatrix_.slice(0).row(0)(0) << std::endl;
+    arma::cx_mat I = this->Invepsilonmatrix_.slice(0)*this->epsilonmatrix_.slice(0);
+    I.print("I:");
+
+    // std::cout << "Chi_10 (0) = " << this->Chimatrix_.slice(0).row(1)(0) << std::endl;
+    // std::cout << "Chi_01 (0) = " << this->Chimatrix_.slice(0).row(0)(1) << std::endl;
+    // std::cout << "Chi_33 (0) = " << this->Chimatrix_.slice(0).row(3)(3) << std::endl;
+
+    //std::cout << "Polarizability matrix computed " << std::endl;
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
@@ -1330,11 +1371,7 @@ void ExcitonTB::computesingleDielectricFunction() {
     double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
     double potential = coulombFT(q);
 
-    double kroneckerdelta = 0;
-
-    if (g(0) == g2(0) && g(1) == g2(1) && g(2) == g2(2))
-        kroneckerdelta = 1;
-        
+    double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
         
     std::cout << "Polarizability at q = " << Chi << std::endl;
     std::cout << "Dielectric functiona at q = " << kroneckerdelta - potential*Chi << std::endl;
@@ -1916,9 +1953,9 @@ void ExcitonTB::printInformation(){
     cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << endl;
 
     if (this->isscreeningset == true){
-        std::cout<< std::left << std::setw(30) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
-        std::cout<< std::left << std::setw(30) << "Number of valenceconduction bands included: " << this->nconductionbands_ << std::endl;
-
+        std::cout<< std::left << std::setw(40) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
+        std::cout<< std::left << std::setw(40) << "Number of conduction bands included: " << this->nconductionbands_ << std::endl;
+        std::cout<< std::left << std::setw(40) << "Gcutoff: " << this->Gcutoff_ << std::endl;
     }
 }
 

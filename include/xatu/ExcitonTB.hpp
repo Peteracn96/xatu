@@ -48,7 +48,11 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Internals for dielectric function
         arma::ivec Gs_;
         arma::rowvec q_;
+        double Gcutoff_ = 0;
+        arma::mat trunreciprocalLattice_;
         arma::cx_cube Chimatrix_;
+        arma::cx_cube epsilonmatrix_;
+        arma::cx_cube Invepsilonmatrix_;
 
     public:
         // Returns dielectric constant of embedding medium
