@@ -1286,10 +1286,8 @@ void ExcitonTB::computeDielectricMatrix(){
     int nq = system->nk;
 
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
-    
-    arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
-    sortVectors(reciprocalVectors);
-    int nGs = reciprocalVectors.n_rows;
+
+    int nGs = this->trunreciprocalLattice_.n_rows;
 
     #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
@@ -1298,17 +1296,29 @@ void ExcitonTB::computeDielectricMatrix(){
 
             for (int g2 = g; g2 < nGs; g2++){
 
-                this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(reciprocalVectors.row(g), reciprocalVectors.row(g2), iq);
+                arma::rowvec G = this->trunreciprocalLattice_.row(g);                
+                arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
+
+                this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
                 this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
-                double potentialg = coulombFT(system->kpoints.row(iq) + reciprocalVectors.row(g));
-                double potentialg2 = coulombFT(system->kpoints.row(iq) + reciprocalVectors.row(g2));
+                double potentialg = coulombFT(system->kpoints.row(iq) + G);
+                double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
                 double kroneckerdelta = g == g2? 1 : 0;
 
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
                 this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
             }
         }
+
+        //this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
+    }
+
+    std::cout << "Inverting the dielectric matrix... " << std::flush;
+
+    //#pragma omp parallel for
+    for (int iq = 0; iq < nq; iq++){
+        std::cout << "iq = " << iq << "\n"; 
 
         this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
     }
@@ -1358,13 +1368,8 @@ void ExcitonTB::computesingleDielectricFunction() {
 
     arma::rowvec q = this->q_;
 
-    double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
-    arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
-
-    sortVectors(reciprocalVectors);
-
-    arma::rowvec g = reciprocalVectors.row(this->Gs_(0)); // Sets G
-    arma::rowvec g2 = reciprocalVectors.row(this->Gs_(1)); // Sets G'
+    arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
+    arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
 
     Chi = computesinglePolarizability(q);
 
