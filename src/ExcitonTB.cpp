@@ -190,6 +190,26 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, const arma::i
     this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
 };
 
+/** 
+ *Method to sort rows in a matrix by norm
+ *@return void 
+*/
+void sortVectors(arma::mat& vectors){
+
+    std::vector<arma::rowvec> vecs;
+
+    for (int i = 0; i < vectors.n_rows; ++i)
+        vecs.push_back(vectors.row(i));
+
+    std::sort(vecs.begin(), vecs.end(), [](const arma::rowvec & a, const arma::rowvec & b){ return arma::norm(a) < arma::norm(b); });
+
+    for (int i = 0; i < vectors.n_rows; ++i){
+        vectors.row(i)(0) = vecs[i][0];
+        vectors.row(i)(1) = vecs[i][1];
+        vectors.row(i)(2) = vecs[i][2];
+    }
+}
+
 /**
  * Exciton constructor from a SystemConfiguration object. One specifies the number of valence and conduction
  * bands, as well as the other parameters.
@@ -1012,6 +1032,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
+    sortVectors(reciprocalVectors);
+
     std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
@@ -1247,6 +1269,7 @@ void ExcitonTB::computePolarizabilityMatrix(){
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    sortVectors(reciprocalVectors);
     int nGs = reciprocalVectors.n_rows;
     #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
@@ -1296,6 +1319,8 @@ void ExcitonTB::computesingleDielectricFunction() {
 
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+
+    sortVectors(reciprocalVectors);
 
     arma::rowvec g = reciprocalVectors.row(this->Gs_(0)); // Sets G
     arma::rowvec g2 = reciprocalVectors.row(this->Gs_(1)); // Sets G'
