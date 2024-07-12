@@ -163,7 +163,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void computesingleDielectricFunction();
         void computesinglePolarizability();
         void PolarizabilityMesh();
-        void computePolarizabilityMatrix();
+        void computeDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
         std::unique_ptr<ResultTB> diagonalize(std::string method = "diag", int nstates = 8);

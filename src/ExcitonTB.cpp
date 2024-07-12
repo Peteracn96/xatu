@@ -1258,11 +1258,11 @@ void ExcitonTB::PolarizabilityMesh(){
  * Method to compute the static polarizability matrix in the BZ mesh.
  * @return void
 */
-void ExcitonTB::computePolarizabilityMatrix(){
+void ExcitonTB::computeDielectricMatrix(){
 
     auto start = high_resolution_clock::now();
 
-    std::cout << "Computing polarizability matrix in the BZ mesh... \n" << std::flush;
+    std::cout << "Computing polarizability and dielectric matrices in the BZ mesh... " << std::flush;
 
     int nq = system->nk;
 
