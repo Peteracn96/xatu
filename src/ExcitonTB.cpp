@@ -118,12 +118,6 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::ivec gs            = cfg.screeningInfo.Gs;
 
     this->isscreeningset = true;
-   
-    if (nvalencebands + nconductionbands > system->basisdim){
-        std::cout << "Error: Number of bands cannot be higher than actual material" << std::endl;
-        std::cout << "Total number of bands is " << system->basisdim << std::endl;
-        exit(1);
-    }
 
     int totalvbands = system->fermiLevel + 1;
     int totalcbands = system->basisdim - totalvbands;
@@ -133,6 +127,12 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         std::cout << "Number of total valence bands = " << totalvbands<< std::endl;
         std::cout << "Number of total conduction bands = " << totalcbands << std::endl;
     
+        exit(1);
+    }
+
+    if (nvalencebands + nconductionbands > system->basisdim){
+        std::cout << "Error: Number of bands cannot be higher than actual material" << std::endl;
+        std::cout << "Total number of bands is " << system->basisdim << std::endl;
         exit(1);
     }
 
@@ -167,13 +167,13 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     
     this->valencebands_ = arma::ivec(valence);
     this->conductionbands_ = arma::ivec(conduction);
-
-    if (cfg.screeningInfo.Gcutoff_found == true){
-        if (cfg.screeningInfo.Gcutoff > (this->ncell)/2.5){
-            std::cout << "Number of reciprocal vectors for the screening must not be higher than that for the exciton." << std::endl;
-            std::cout << "Gcutoff = " << cfg.screeningInfo.Gcutoff << ", while gcutoff for exciton = " << (this->ncell)/2.5 << std::endl;
-            exit(1);
-        }
+    std::cout << "cfg.screeningInfo.Gcutoff = " << cfg.screeningInfo.Gcutoff << std::endl;
+    if (cfg.screeningInfo.Gcutoff_found){
+        // if (cfg.screeningInfo.Gcutoff > (this->ncell)/2.5){
+        //     std::cout << "Number of reciprocal vectors for the screening must not be higher than that for the exciton." << std::endl;
+        //     std::cout << "Gcutoff = " << cfg.screeningInfo.Gcutoff << ", while gcutoff for exciton = " << (this->ncell)/2.5 << std::endl;
+        //     exit(1);
+        // }
         this->Gcutoff_ = cfg.screeningInfo.Gcutoff;
     } else {
         this->Gcutoff_ = this->cutoff_;
@@ -181,6 +181,8 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     double radius = this->cutoff * arma::norm(system->reciprocalLattice.row(0));
     this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+
+    int ngs = this->trunreciprocalLattice_.n_rows;
 
     sortVectors(this->trunreciprocalLattice_);
     std::cout << "system->reciprocalLattice.n_rows = " << system->reciprocalLattice.n_rows << std::endl;
@@ -191,9 +193,9 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     if (cfg.screeningInfo.function == "none"){
         int nks = this->ncell*this->ncell;
-        this->Chimatrix_ = arma::cx_cube(nGs*nGs, nGs*nGs, nks, arma::fill::zeros);
-        this->epsilonmatrix_ = arma::cx_cube(nGs*nGs, nGs*nGs, nks, arma::fill::zeros);
-        this->Invepsilonmatrix_ = arma::cx_cube(nGs*nGs, nGs*nGs, nks, arma::fill::zeros);
+        this->Chimatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
+        this->epsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
+        this->Invepsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
     }
 }
 
@@ -1281,47 +1283,100 @@ void ExcitonTB::computeDielectricMatrix(){
 
     auto start = high_resolution_clock::now();
 
-    std::cout << "Computing polarizability and dielectric matrices in the BZ mesh... " << std::flush;
+    std::cout << "Computing polarizability and dielectric matrices in the BZ mesh... \n" << std::flush;
 
     int nq = system->nk;
 
-    double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
+    std::cout << "cutoff = " << cutoff << std::endl;
+    std::cout << "Gcutoff = " << this->Gcutoff_ << std::endl;
+
+    double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
 
     int nGs = this->trunreciprocalLattice_.n_rows;
 
-    #pragma omp parallel for
-    for (int iq = 0; iq < nq; iq++){
+    for (int g = nGs-10; g < nGs; g++){
+
+        arma::rowvec G = this->trunreciprocalLattice_.row(g);                
+
+        std::cout << "G(" << g << ") = " << G(0) << " " << G(1) << " " << G(2) << std::endl;
+    }
+    int iq = 14;
+    // #pragma omp parallel for
+    // for (int iq = 0; iq < nq; iq++){
         //std::cout << "iq = " << iq << "\n"; 
+
+    arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
+    arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+
+    arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
+    int i=0;
+
         for (int g = 0; g < nGs; g++){
 
             for (int g2 = g; g2 < nGs; g2++){
-
-                arma::rowvec G = this->trunreciprocalLattice_.row(g);                
-                arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
-
-                this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
-                this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
-
-                double potentialg = coulombFT(system->kpoints.row(iq) + G);
-                double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
-                double kroneckerdelta = g == g2? 1 : 0;
-
-                this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
-                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+                indecesg.row(i)(0) = g;
+                indecesg.row(i)(1) = g2;
+                i++;
             }
         }
 
-        //this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
-    }
+
+        #pragma omp parallel for
+        for (int i = 0; i < nGs*(nGs+1)/2; i++){
+
+            int g = indecesg.row(i)(0);
+            int g2 = indecesg.row(i)(1);
+
+            arma::rowvec G = this->trunreciprocalLattice_.row(g);                
+            arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
+
+            this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+            this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
+
+            double potentialg = coulombFT(system->kpoints.row(iq) + G);
+            double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
+            double kroneckerdelta = g == g2? 1 : 0;
+
+            this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+            this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+        }
+
+
+        // #pragma omp parallel for
+        // for (int g = 0; g < nGs; g++){
+
+        //     for (int g2 = g; g2 < nGs; g2++){
+
+        //         arma::rowvec G = this->trunreciprocalLattice_.row(g);                
+        //         arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
+
+        //         this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+        //         this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
+
+        //         double potentialg = coulombFT(system->kpoints.row(iq) + G);
+        //         double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
+        //         double kroneckerdelta = g == g2? 1 : 0;
+
+        //         this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+        //         this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+        //     }
+        // }
+
+        
+    //}
 
     std::cout << "Inverting the dielectric matrix... " << std::flush;
 
-    //#pragma omp parallel for
-    for (int iq = 0; iq < nq; iq++){
-        std::cout << "iq = " << iq << "\n"; 
+    auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
-        this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
-    }
+    //this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
+
+    //#pragma omp parallel for
+    // for (int iq = 0; iq < nq; iq++){
+    //     //std::cout << "iq = " << iq << "\n"; 
+
+    //     this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
+    // }
 
     // for(int i = 0; i < reciprocalVectors.n_rows; i++){
     //     auto G = reciprocalVectors.row(i);
@@ -1329,12 +1384,13 @@ void ExcitonTB::computeDielectricMatrix(){
     //     std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
     // }
 
-    // std::cout << "q = " << system->kpoints.row(0)(0) << " " << system->kpoints.row(0)(1) << " " << system->kpoints.row(0)(2) << std::endl;
-    std::cout << "\nChi_00 (0) = " << this->Chimatrix_.slice(0).row(0)(0) << std::endl;
-    std::cout << "\nepsilon_00 (0) = " << this->epsilonmatrix_.slice(0).row(0)(0) << std::endl;
-    std::cout << "\nepsilon^(-1)_00 (0) = " << this->Invepsilonmatrix_.slice(0).row(0)(0) << std::endl;
-    arma::cx_mat I = this->Invepsilonmatrix_.slice(0)*this->epsilonmatrix_.slice(0);
-    I.print("I:");
+    std::cout << "q = " << system->kpoints.row(iq)(0) << " " << system->kpoints.row(iq)(1) << " " << system->kpoints.row(iq)(2) << std::endl;
+    std::cout << "\nChi_00 (iq) = " << this->Chimatrix_.slice(iq).row(0)(0) << std::endl;
+    std::cout << "\nepsilon_00 (iq) = " << this->epsilonmatrix_.slice(iq).row(0)(0) << std::endl;
+    std::cout << "\nepsilon^(-1)_00 (iq) = " << auxvecsol.row(0)(0) << std::endl;
+    //std::cout << "\nepsilon^(-1)_00 (iq) = " << this->Invepsilonmatrix_.slice(iq).row(0)(0) << std::endl;
+    // arma::cx_mat I = this->Invepsilonmatrix_.slice(0)*this->epsilonmatrix_.slice(0);
+    // I.print("I:");
 
     // std::cout << "Chi_10 (0) = " << this->Chimatrix_.slice(0).row(1)(0) << std::endl;
     // std::cout << "Chi_01 (0) = " << this->Chimatrix_.slice(0).row(0)(1) << std::endl;
