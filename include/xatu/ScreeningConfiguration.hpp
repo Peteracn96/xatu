@@ -26,7 +26,7 @@ class ScreeningConfiguration : public ConfigurationBase{
         // Cut off for G vectors
         double Gcutoff;
         // Bool true/false if Gcutoff was/was not found
-        bool Gcutoff_found = "false";
+        bool Gcutoff_found = false;
         // Reduction factor of the BZ mesh. Defaults to 1.
         int submeshFactor = 1;
         // Calculation mode (either 'realspace' or 'reciprocalspace')
