@@ -1196,7 +1196,7 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
 
     std::complex<double> term = 0.;
 
-    for (int ic = nvbands; ic < upperindexcband; ic++){
+    for (int ic = nvbands; ic <= upperindexcband; ic++){
         
         for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
 
