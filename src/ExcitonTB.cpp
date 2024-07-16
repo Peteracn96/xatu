@@ -1429,13 +1429,12 @@ void ExcitonTB::computesingleDielectricFunction() {
 
     Chi = computesinglePolarizability(q);
 
-    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
-    double potential = coulombFT(q);
+    double potential = coulombFT(q + g);
 
     double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
         
     std::cout << "Polarizability at q = " << Chi << std::endl;
-    std::cout << "Dielectric functiona at q = " << kroneckerdelta - potential*Chi << std::endl;
+    std::cout << "Dielectric function at q = " << kroneckerdelta - potential*Chi << std::endl;
 }
 
 /**
