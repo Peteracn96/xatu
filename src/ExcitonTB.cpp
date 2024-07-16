@@ -167,7 +167,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     
     this->valencebands_ = arma::ivec(valence);
     this->conductionbands_ = arma::ivec(conduction);
-    std::cout << "cfg.screeningInfo.Gcutoff = " << cfg.screeningInfo.Gcutoff << std::endl;
+    std::cout << "passes through here " << cfg.screeningInfo.Gcutoff_found << std::endl;
     if (cfg.screeningInfo.Gcutoff_found){
         // if (cfg.screeningInfo.Gcutoff > (this->ncell)/2.5){
         //     std::cout << "Number of reciprocal vectors for the screening must not be higher than that for the exciton." << std::endl;
@@ -176,20 +176,21 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         // }
         this->Gcutoff_ = cfg.screeningInfo.Gcutoff;
     } else {
-        this->Gcutoff_ = this->cutoff_;
+        this->Gcutoff_ = (this->ncell)/2.5;
+        std::cout << "passes through here" << this->Gcutoff_ << std::endl;
     }
 
-    double radius = this->cutoff * arma::norm(system->reciprocalLattice.row(0));
+    double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
     this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
     int ngs = this->trunreciprocalLattice_.n_rows;
 
     sortVectors(this->trunreciprocalLattice_);
-    std::cout << "system->reciprocalLattice.n_rows = " << system->reciprocalLattice.n_rows << std::endl;
-    std::cout << "this->trunreciprocalLattice_.n_rows = " << this->trunreciprocalLattice_.n_rows << std::endl;
-    std::cout << "||system->reciprocalLattice.row(0)|| = " << arma::norm(system->reciprocalLattice.row(0)) << std::endl;
-    std::cout << "radius as of Gcutoff = " << radius << std::endl;
-    std::cout << "radius as of cutoff =  = " << cutoff_ * arma::norm(system->reciprocalLattice.row(0)) << std::endl;
+    std::cout << "nGs = " << ngs << std::endl;
+    // std::cout << "this->trunreciprocalLattice_.n_rows = " << this->trunreciprocalLattice_.n_rows << std::endl;
+    // std::cout << "||system->reciprocalLattice.row(0)|| = " << arma::norm(system->reciprocalLattice.row(0)) << std::endl;
+    // std::cout << "radius as of Gcutoff = " << radius << std::endl;
+    // std::cout << "radius as of cutoff =  = " << cutoff_ * arma::norm(system->reciprocalLattice.row(0)) << std::endl;
 
     if (cfg.screeningInfo.function == "none"){
         int nks = this->ncell*this->ncell;
@@ -1290,17 +1291,16 @@ void ExcitonTB::computeDielectricMatrix(){
     std::cout << "cutoff = " << cutoff << std::endl;
     std::cout << "Gcutoff = " << this->Gcutoff_ << std::endl;
 
-    double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
-
     int nGs = this->trunreciprocalLattice_.n_rows;
 
-    for (int g = nGs-10; g < nGs; g++){
 
-        arma::rowvec G = this->trunreciprocalLattice_.row(g);                
+    // for (int g = nGs; g < nGs; g++){
 
-        std::cout << "G(" << g << ") = " << G(0) << " " << G(1) << " " << G(2) << std::endl;
-    }
-    int iq = 14;
+    //     arma::rowvec G = trunreciprocalLattice.row(g);                
+
+    //     std::cout << "G(" << g << ") = " << G(0) << " " << G(1) << " " << G(2) << std::endl;
+    // }
+    int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), ncell);;
     // #pragma omp parallel for
     // for (int iq = 0; iq < nq; iq++){
         //std::cout << "iq = " << iq << "\n"; 
@@ -1340,7 +1340,7 @@ void ExcitonTB::computeDielectricMatrix(){
             this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
             this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
         }
-
+        arma::rowvec Gmax = this->trunreciprocalLattice_.row(nGs-1);     
 
         // #pragma omp parallel for
         // for (int g = 0; g < nGs; g++){
@@ -1384,14 +1384,24 @@ void ExcitonTB::computeDielectricMatrix(){
     //     std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
     // }
 
+    arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0));
+    arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1));
+
+    std::cout << "Selected (G,G') pair:" << "\n";
+    std::cout << "G = G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
+    std::cout << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
+    std::cout << "Gmax = (" << Gmax(0) << ", " << Gmax(1) << ", " << Gmax(2) << ")" << std::endl;
+    std::cout << "||Gmax|| = (" << arma::norm(Gmax) << ")" << std::endl;
     std::cout << "q = " << system->kpoints.row(iq)(0) << " " << system->kpoints.row(iq)(1) << " " << system->kpoints.row(iq)(2) << std::endl;
-    std::cout << "\nChi_00 (iq) = " << this->Chimatrix_.slice(iq).row(0)(0) << std::endl;
-    std::cout << "\nepsilon_00 (iq) = " << this->epsilonmatrix_.slice(iq).row(0)(0) << std::endl;
+    std::cout << "\nChi_ (" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->Chimatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
+    std::cout << "\nepsilon_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->epsilonmatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
     std::cout << "\nepsilon^(-1)_00 (iq) = " << auxvecsol.row(0)(0) << std::endl;
+    std::cout << "\nepsilon^(-1)_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << auxvecsol.row(this->Gs_(0))(this->Gs_(1)) << std::endl;
     //std::cout << "\nepsilon^(-1)_00 (iq) = " << this->Invepsilonmatrix_.slice(iq).row(0)(0) << std::endl;
     // arma::cx_mat I = this->Invepsilonmatrix_.slice(0)*this->epsilonmatrix_.slice(0);
     // I.print("I:");
-
+    // this->epsilonmatrix_.slice(iq).print("epsilon matrix:");
+    // arma::inv(this->epsilonmatrix_.slice(iq)).print("epsilon^-1 matrix:");
     // std::cout << "Chi_10 (0) = " << this->Chimatrix_.slice(0).row(1)(0) << std::endl;
     // std::cout << "Chi_01 (0) = " << this->Chimatrix_.slice(0).row(0)(1) << std::endl;
     // std::cout << "Chi_33 (0) = " << this->Chimatrix_.slice(0).row(3)(3) << std::endl;
