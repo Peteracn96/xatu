@@ -105,6 +105,83 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
 }
 
 /**
+ * Method to generate the reciprocal lattice vectors.
+ * @details Every reciprocal lattice vectors is G = l G1 + k G2, where (l,k) is a pair of signed integers
+ * @param nreciprocal number of reciprocal vectors in each direction.
+ * @return matrix with the list of reciprocal lattive vectors organized in rows.
+*/
+
+arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
+
+    int nls = 2*nreciprocal + 1;
+    int nks = 2*nreciprocal + 1;
+    int ncombinations = nls*nks;
+    arma::mat ReciprocalVectors(ncombinations,3,arma::fill::zeros);
+    arma::imat listl(nls,1,arma::fill::zeros);
+    arma::imat listk(nks,1,arma::fill::zeros);
+    //arma::imat combinations(ncombinations,2,arma::fill::zeros);
+    std:: vector<std::array<int, 2>> combinations;
+
+    arma::rowvec G1 = system_->reciprocalLattice.row(0);
+    arma::rowvec G2 = system_->reciprocalLattice.row(1);
+
+    for (int i = 1; i <= nreciprocal; ++i){
+        listl(2*i - 1) = -i;
+        listl(2*i) = i;
+    }
+
+    for (int i = 1; i <= nreciprocal; ++i){
+        listk(2*i - 1) = -i;
+        listk(2*i) = i;
+    }
+
+    combinations.push_back({0,0});
+
+    for (int i = 1; i <= nreciprocal; i=i+1){
+        for (int j = 0; j <= i; ++j){
+
+            if (j == 0){
+                combinations.push_back({-i,j});
+                combinations.push_back({i,j});
+                combinations.push_back({j,-i});
+                combinations.push_back({j,i});
+            }
+            
+
+            if (j != 0 && j != i){
+                combinations.push_back({-i,j});
+                combinations.push_back({j,-i});
+                combinations.push_back({i,-j});
+                combinations.push_back({-j,i});
+                combinations.push_back({-j,-i});
+                combinations.push_back({-i,-j});
+                combinations.push_back({j,i});
+                combinations.push_back({i,j});
+            }
+            
+            if (j == i){
+                combinations.push_back({-i,j});
+                combinations.push_back({i,-j});
+                combinations.push_back({-j,-i});
+                combinations.push_back({j,i});
+            }
+        }
+    }
+
+    if (ncombinations != combinations.size()){
+        std::cout << "Length of combinations vector different from the number of combinations" << std::endl;
+        exit(0);
+    }
+
+    for (int i = 0; i < ncombinations; ++i){
+        int l = combinations[i][0];
+        int k = combinations[i][1];
+        ReciprocalVectors.row(i) = l*G1 + k*G2;
+    }
+
+    return ReciprocalVectors;
+}
+/**
  * Method to set the screening attributes of an exciton object from a ScreeningConfiguration object.
  * @details Overload of the method to use a configuration object. Based on the parametric method.
  * @param cfg ScreeningConfiguration object from parsed file.
