@@ -312,6 +312,65 @@ arma::mat Lattice::generateCombinations(int nvalues, int ndim, bool centered){
 }
 
 /**
+ * Method to generate a list with combinations of Bravais vectors, ordered in a specific way.
+ * @details Each row of the list stores the integers which correspond
+ * to the coefficients of the linear combinations of Bravais basis vectors.
+ * @param nvalues Number of cells in one direction.
+ * @param ndim Dimension of the system.
+ * @returns List of cell combinations.
+*/
+arma::imat Lattice::generateOrderedCombinations(int nvalues, int ndim){
+	
+	int ncombinations = 0;
+	if (ndim == 2){ //For now implements only 2D systems
+		ncombinations = (2*nvalues + 1)*(2*nvalues + 1);
+	}
+	std:: vector<std::array<int, 2>> combinationsvector;
+
+	arma::imat combinations(ncombinations, ndim);
+	
+	//This piece of code generates all the combinations of (l,k) pairs to generate any reciprocal lattice vector l*G1 + k*G2 in a specific order.
+	combinationsvector.push_back({0,0});
+
+	for (int i = 1; i <= nvalues; i=i+1){
+		for (int j = 0; j <= i; ++j){
+
+			if (j == 0){
+				combinationsvector.push_back({-i,j});
+				combinationsvector.push_back({i,j});
+				combinationsvector.push_back({j,-i});
+				combinationsvector.push_back({j,i});
+			}
+
+			if (j != 0 && j != i){
+				combinationsvector.push_back({-i,j});
+				combinationsvector.push_back({j,-i});
+				combinationsvector.push_back({i,-j});
+				combinationsvector.push_back({-j,i});
+				combinationsvector.push_back({-j,-i});
+				combinationsvector.push_back({-i,-j});
+				combinationsvector.push_back({j,i});
+				combinationsvector.push_back({i,j});
+			}
+			
+			if (j == i){
+				combinationsvector.push_back({-i,j});
+				combinationsvector.push_back({i,-j});
+				combinationsvector.push_back({-j,-i});
+				combinationsvector.push_back({j,i});
+			}
+		}
+	}
+
+	for (int i = 0; i < ncombinations; ++i){
+		combinations.row(i)(0) = combinationsvector[i][0];
+		combinations.row(i)(1) = combinationsvector[i][1];
+	}
+
+	return combinations;
+}
+
+/**
  * Method to generate a list of cells within a sphere of specified radius.
  * @param ncell List of cells along one axis.
  * @param radius Cutoff radius of the sphere.
@@ -348,7 +407,7 @@ arma::mat Lattice::truncateSupercell(int ncell, double radius){
 */
 arma::mat Lattice::truncateReciprocalSupercell(int ncell, double radius){
 
-	arma::mat combinations = generateCombinations(ncell, ndim, true);
+	arma::imat combinations = generateOrderedCombinations(ncell, ndim);
 	std::vector<arma::rowvec> cells_vector;
 	for (int i = 0; i < combinations.n_rows; i++){
 		arma::rowvec lattice_vector = arma::zeros<arma::rowvec>(3);

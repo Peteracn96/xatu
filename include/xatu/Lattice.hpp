@@ -80,6 +80,7 @@ class Lattice {
         arma::mat truncateSupercell(int, double);
         arma::mat truncateReciprocalSupercell(int, double);
         arma::mat generateCombinations(int n, int ndim, bool centered = false);
+        arma::imat generateOrderedCombinations(int, int);
 
         /* Crystal operations */
         arma::rowvec rotateC3(const arma::rowvec&);
