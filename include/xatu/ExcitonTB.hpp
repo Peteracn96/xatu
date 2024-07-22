@@ -71,8 +71,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         const int& nReciprocalVectors = nReciprocalVectors_;
 
         // Return momentum to compute the dielectric matrix at
-        arma::rowvec q = q_;
-        arma::ivec Gs = Gs_;
+        const arma::rowvec& q = q_;
+        const arma::ivec& Gs = Gs_;
 
     // ----------------------------------- Methods -----------------------------------
     // Constructor & Destructor
