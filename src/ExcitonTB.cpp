@@ -1140,8 +1140,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     int natoms = system->natoms;
     int basisdim = system->basisdim;
 
-    arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
-    arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
+    arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs(0)); // Sets G
+    arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs(1)); // Sets G'
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
@@ -1230,8 +1230,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
         std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
     }
     std::cout << "Selected (G,G') pair:" << "\n";
-    std::cout << "G = G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
-    std::cout << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
+    std::cout << "G = G(" << this->Gs(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
+    std::cout << "G' = G(" << this->Gs(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
 
     return term/(system->unitCellArea*totalCells);
 }
@@ -1313,11 +1313,15 @@ void ExcitonTB::PolarizabilityMesh(){
 
     std::cout << "Computing polarizability in the BZ mesh... \n" << std::flush;
 
-    std::ofstream polarfile("../examples/screeningconfig/polarizability_mesh.dat"); 
+    std::ofstream polarfile; 
 
+    polarfile.open("../examples/screeningconfig/polarizability_mesh.dat");
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
+        std::cerr << errno << "\n";
+        
+        exit(1);
     }
 
     int nq = system->nk;
@@ -1327,8 +1331,8 @@ void ExcitonTB::PolarizabilityMesh(){
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
-    arma::rowvec g = reciprocalVectors.row(this->Gs_(0)); // Sets G
-    arma::rowvec g2 = reciprocalVectors.row(this->Gs_(1)); // Sets G'
+    arma::rowvec g = reciprocalVectors.row(this->Gs(0)); // Sets G
+    arma::rowvec g2 = reciprocalVectors.row(this->Gs(1)); // Sets G'
 
     #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
@@ -1336,7 +1340,7 @@ void ExcitonTB::PolarizabilityMesh(){
         auto q = system_->kpoints.row(iq);
         std::cout << "iq = " << iq << "\n";
     }
-    std::cout << "Chi computed " << std::endl;
+    std::cout << "Chi computed" << std::endl;
     for (int iq = 0; iq < nq; iq++){
         auto q = system_->kpoints.row(iq);
         polarfile << q(0) << " " << q(1) << " " << q(2) << " " << real(Chi(iq)) << " " << imag(Chi(iq)) << "\n";
