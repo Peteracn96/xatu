@@ -1364,7 +1364,10 @@ void ExcitonTB::computeDielectricMatrix(){
 
     std::cout << "Computing polarizability and dielectric matrices in the BZ mesh... \n" << std::flush;
 
-    std::ofstream dielectricfile("../examples/screeningconfig/inversedielectric.txt"); 
+    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+    int nGs = ReciprocalVectors.n_rows;
+    
+    std::ofstream dielectricfile("../examples/screeningconfig/inversedielectric" + std::to_string(nGs) + ".txt"); 
 
 
     if (!dielectricfile.is_open()) { // check if the file was opened successfully
@@ -1376,13 +1379,6 @@ void ExcitonTB::computeDielectricMatrix(){
     std::cout << "cutoff = " << cutoff << std::endl;
     std::cout << "Gcutoff = " << this->Gcutoff_ << std::endl;
 
-    dielectricfile << "cutoff = " << cutoff << std::endl;
-    dielectricfile << "Gcutoff = " << this->Gcutoff_ << std::endl;
-
-    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-
-
-    int nGs = ReciprocalVectors.n_rows;
     arma::rowvec g = ReciprocalVectors.row(this->Gs_(0));
     arma::rowvec g2 = ReciprocalVectors.row(this->Gs_(1));
 
@@ -1393,16 +1389,9 @@ void ExcitonTB::computeDielectricMatrix(){
     std::cout << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
     // std::cout << "Gmax = (" << Gmax(0) << ", " << Gmax(1) << ", " << Gmax(2) << ")" << std::endl;
     // std::cout << "||Gmax|| = (" << arma::norm(Gmax) << ")" << std::endl;
-    
-
-    dielectricfile << "Number of reciprocal vectors included: " << nGs << "\n";
-    dielectricfile << "Selected (G,G') pair:" << "\n";
-    dielectricfile << "G = G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
-    dielectricfile << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
-    // std::cout << "Gmax = (" << Gmax(0) << ", " << Gmax(1) << ", " << Gmax(2) << ")" << std::endl;
-    // std::cout << "||Gmax|| = (" << arma::norm(Gmax) << ")" << std::endl;
 
     int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), ncell);
+    iq = 210;
     std::cout << "q = " << system->kpoints.row(iq)(0) << " " << system->kpoints.row(iq)(1) << " " << system->kpoints.row(iq)(2) << std::endl;
     
     arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
@@ -1493,12 +1482,22 @@ void ExcitonTB::computeDielectricMatrix(){
     std::cout << "\nepsilon^(-1)_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << auxvecsol.row(this->Gs_(0))(this->Gs_(1)) << std::endl;
     std::cout << "\nepsilon^(-1)_(" << 3 << "," << 2 << ")" << "(" << (iq) << ") = " << auxvecsol.row(3)(2) << std::endl;
 
-    dielectricfile << "\nChi_ (" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->Chimatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
-    dielectricfile << "\nepsilon_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->epsilonmatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
-    dielectricfile << "\nepsilon^(-1)_00 (iq) = " << auxvecsol.row(0)(0) << std::endl;
-    dielectricfile << "\nepsilon^(-1)_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << auxvecsol.row(this->Gs_(0))(this->Gs_(1)) << std::endl;
-    dielectricfile << "\nepsilon^(-1)_(" << 3 << "," << 2 << ")" << "(" << (iq) << ") = " << auxvecsol.row(3)(2) << std::endl;
+    int maxg = 9;
+    int precision = 7;
+    for (int g1 = 0; g1 < maxg; ++g1){
+        for (int g2 = 0; g2 < maxg; ++g2){
+            const char* Resign = real(auxvecsol.row(g1)(g2)) >= 0 ? "+":"";
+            const char* Imsign = imag(auxvecsol.row(g1)(g2)) >= 0 ? "+":"";
+            dielectricfile << std::fixed << std::setprecision(precision) << Resign << real(auxvecsol.row(g1)(g2)) << " ";
+            dielectricfile << std::fixed << std::setprecision(precision) << Imsign << imag(auxvecsol.row(g1)(g2)) << "  ";
+        }
+        dielectricfile << "\n";
+    }
 
+    dielectricfile << "Number of cells each direction: " << this->ncell << "\n";
+    dielectricfile << "Number of reciprocal vectors included: " << nGs << "\n";
+    dielectricfile << "Number of valence/conduction bands included: " << nvalencebands_ << "/" << nconductionbands_ << "\n";
+    dielectricfile << "Dielectric matrix at q = " << system->kpoints.row(iq) << "\n";
     
     //std::cout << "\nepsilon^(-1)_00 (iq) = " << this->Invepsilonmatrix_.slice(iq).row(0)(0) << std::endl;
     // arma::cx_mat I = this->Invepsilonmatrix_.slice(0)*this->epsilonmatrix_.slice(0);
