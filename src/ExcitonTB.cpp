@@ -1377,10 +1377,6 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
 
     std::complex<double> term = 0.;
 
-    for (int ic = nvbands; ic <= upperindexcband; ic++){
-        
-        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
-
     for (int ik = 0; ik < nk; ik++){
 
         arma::rowvec k = system->kpoints.row(ik);
@@ -1455,10 +1451,11 @@ void ExcitonTB::PolarizabilityMesh(){
     #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
         Chi(iq) = reciprocalPolarizabilityMatrixElement(g, g2, iq);
-        auto q = system_->kpoints.row(iq);
         std::cout << "iq = " << iq << "\n";
     }
+
     std::cout << "Chi computed" << std::endl;
+    
     for (int iq = 0; iq < nq; iq++){
         auto q = system_->kpoints.row(iq);
         polarfile << q(0) << " " << q(1) << " " << q(2) << " " << real(Chi(iq)) << " " << imag(Chi(iq)) << "\n";
