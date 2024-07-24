@@ -1381,19 +1381,31 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
         
         for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
 
-            for (int ik = 0; ik < nk; ik++){
+    for (int ik = 0; ik < nk; ik++){
 
-                arma::rowvec k = system->kpoints.row(ik);
-                arma::rowvec kq = system->kpoints.row(ik) + system->kpoints.row(iq);
+        arma::rowvec k = system->kpoints.row(ik);
+        arma::rowvec kq = system->kpoints.row(ik) + system->kpoints.row(iq);
 
-                int kqindex = system_->findEquivalentPointBZ(kq, ncell);
+        int kqindex = system_->findEquivalentPointBZ(kq, ncell);
+
+        arma::cx_dmat auxk_slice = eigveckStack_.slice(ik);
+        arma::cx_dmat auxkq_slice = eigveckStack_.slice(kqindex);
+
+        for (int ic = nvbands; ic <= upperindexcband; ic++){
+
+            // Using the atomic gauge
+            if(gauge == "atomic"){
+                coefsk = system_->latticeToAtomicGauge(auxk_slice.col(ic), system->kpoints.row(ik));
+            } else {                            
+                coefsk = eigveckStack_.slice(ik).col(ic);
+            }
+        
+            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
 
                 // Using the atomic gauge
                 if(gauge == "atomic"){
-                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
-                    coefskq = system_->latticeToAtomicGauge(eigveckStack_.slice(kqindex).col(iv), system->kpoints.row(kqindex));
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(kqindex).col(iv), system->kpoints.row(kqindex));
                 } else {                            
-                    coefsk = eigveckStack_.slice(ik).col(ic);
                     coefskq = eigveckStack_.slice(kqindex).col(iv);
                 }
 
