@@ -1226,9 +1226,9 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
     for(int i = 0; i < this->trunreciprocalLattice_.n_rows; i++){
         auto G = this->trunreciprocalLattice_.row(i);
-
-        std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;  
+        std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << "), |G| = " << arma::norm(G) << std::endl;  
     }
+    
     std::cout << "Selected (G,G') pair:" << "\n";
     std::cout << "G = G(" << this->Gs(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
     std::cout << "G' = G(" << this->Gs(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
@@ -1486,10 +1486,10 @@ void ExcitonTB::computeDielectricMatrix(){
     int precision = 7;
     for (int g1 = 0; g1 < maxg; ++g1){
         for (int g2 = 0; g2 < maxg; ++g2){
-            const char* Resign = real(auxvecsol.row(g1)(g2)) >= 0 ? "+":"";
-            const char* Imsign = imag(auxvecsol.row(g1)(g2)) >= 0 ? "+":"";
-            dielectricfile << std::fixed << std::setprecision(precision) << Resign << real(auxvecsol.row(g1)(g2)) << " ";
-            dielectricfile << std::fixed << std::setprecision(precision) << Imsign << imag(auxvecsol.row(g1)(g2)) << "  ";
+            const char* Resign = real(auxvecsol.row(g1)(g2)) >= 0 ? "+":"-";
+            const char* Imsign = imag(auxvecsol.row(g1)(g2)) >= 0 ? "+":"-";
+            dielectricfile << std::fixed << std::setprecision(precision) << Resign << abs(real(auxvecsol.row(g1)(g2))) << " ";
+            dielectricfile << std::fixed << std::setprecision(precision) << Imsign << abs(imag(auxvecsol.row(g1)(g2))) << "  ";
         }
         dielectricfile << "\n";
     }
