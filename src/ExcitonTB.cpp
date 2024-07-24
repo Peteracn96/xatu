@@ -1115,6 +1115,112 @@ void ExcitonTB::computesinglePolarizability(){
 }
 
 /**
+ * Method to compute the matrix element of the static polarizability at the specified pair the (R + t_i, R' + t_j) from an input file.
+ * @details Writes the polarizability in the file polarizability_convergence.dat as a 
+ * function of the number of included conduction bands
+ * @param R 1st Lattice vector
+ * @param R2 2nd Lattice vector
+ * @param t_i 1st atom of the motif
+ * @param t_j 2nd atom of the motif
+ * @return Polarizability
+*/
+std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const arma::rowvec& t_i, const arma::rowvec& t_j) {
+
+
+    std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
+
+    if (!polarfile.is_open()) { // check if the file was opened successfully
+        std::cerr << "Error opening file\n";
+    }
+
+    int nk = system->nk;
+    int natoms = system->natoms;
+    int basisdim = system->basisdim;
+
+    int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
+    std::cout << "Total of valence bands = " << nvbands << "\n";
+    std::cout << "Total of conduction bands = " << ncbands << "\n";
+    std::cout << "fermi level = " << system->fermiLevel << "\n";
+
+    std::complex<double> term = 0.;
+
+    this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+    this->ftMotifStack   = arma::cx_cube(natoms, natoms, system->meshBZ.n_rows);
+    this->ftMotifQ       = arma::cx_mat(natoms, natoms);
+
+    vec auxEigVal(basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);
+
+    std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
+
+    for (int i = 0; i < nk; i++){
+        arma::rowvec kq = system->kpoints.row(i) + q;
+        system->solveBands(kq, auxEigVal, auxEigvec);
+
+        auxEigvec = fixGlobalPhase(auxEigvec);
+        eigvalkqStack_.col(i) = auxEigVal;
+        eigveckqStack_.slice(i) = auxEigvec;
+    };
+
+    std::cout << "Done \n";
+    
+    if(mode == "realspace"){
+        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+
+        std::exit(0);
+
+    } else if (mode == "reciprocalspace"){
+
+        arma::cx_vec coefskq, coefsk;
+
+        for (int ic = nvbands; ic <= upperindexcband; ic++){
+        
+            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
+
+                for (int ik = 0; ik < nk; ik++){
+
+                    arma::rowvec k = system->kpoints.row(ik);
+                    arma::rowvec kq = system->kpoints.row(ik) + q;
+            
+                    // Using the atomic gauge
+                    if(gauge == "atomic"){
+                        coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                        coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    }
+                    else{                            
+                        coefskq = eigveckqStack_.slice(ik).col(iv);
+                        coefsk = eigveckStack_.slice(ik).col(ic);
+                    }
+
+                    std::complex<double> IvcG = 0;
+                    std::complex<double> IvcG2 = 0;
+
+                    term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+
+                    //std::cout << "ik = " << k << ", iv = " << iv << ", ic = " << ic << "\n"; 
+                }
+                    polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
+            }
+        }
+    } else {
+        std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
+        std::exit(0);
+    }
+
+    polarfile.close();
+
+    return term/(system->unitCellArea*totalCells);
+}
+
+/**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file.
  * @details Writes the polarizability in the file polarizability_convergence.dat as a 
  * function of the number of included conduction bands
