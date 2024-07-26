@@ -1110,7 +1110,12 @@ void ExcitonTB::initializeHamiltonian(){
  * @return void
 */
 void ExcitonTB::computesinglePolarizability(){
-    std::complex<double> Chi = computesinglePolarizability(this->q_);
+    std::complex<double> Chi = 0;
+    
+    if (this->mode == "reciprocalspace") {
+        Chi = computesinglePolarizability(this->q_);
+    }// acabr esta condicionante 
+
     std::cout << "Polarizability = " << Chi << std::endl;
 }
 
@@ -1124,14 +1129,16 @@ void ExcitonTB::computesinglePolarizability(){
  * @param t_j 2nd atom of the motif
  * @return Polarizability
 */
-std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const arma::rowvec& t_i, const arma::rowvec& t_j) {
+std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) {
 
 
-    std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
+    std::ofstream polarfile("../examples/screeningconfig/realspace_polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
     }
+
+    std::complex<double> I(0, 1);
 
     int nk = system->nk;
     int natoms = system->natoms;
@@ -1159,65 +1166,78 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
 
-    std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
-
-    for (int i = 0; i < nk; i++){
-        arma::rowvec kq = system->kpoints.row(i) + q;
-        system->solveBands(kq, auxEigVal, auxEigvec);
-
-        auxEigvec = fixGlobalPhase(auxEigvec);
-        eigvalkqStack_.col(i) = auxEigVal;
-        eigveckqStack_.slice(i) = auxEigvec;
-    };
-
-    std::cout << "Done \n";
     
-    if(mode == "realspace"){
-        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+    arma::cx_vec coefsk, coefsk2;
 
-        std::exit(0);
+    int i_index = 0;
+    int j_index = 0;
+    
+    for(unsigned int atom_index = 0; atom_index < i; atom_index++){
+        int norbitals = system->orbitals(system->motif.row(atom_index)(3));
 
-    } else if (mode == "reciprocalspace"){
+        i_index += norbitals;
+    }
 
-        arma::cx_vec coefskq, coefsk;
+    for(unsigned int atom_index = 0; atom_index < j; atom_index++){
+        int norbitals = system->orbitals(system->motif.row(atom_index)(3));
 
-        for (int ic = nvbands; ic <= upperindexcband; ic++){
-        
-            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
+        j_index += norbitals;
+    }
 
-                for (int ik = 0; ik < nk; ik++){
+    arma::vec t_i = system->motif.row(i);
+    arma::vec t_j = system->motif.row(j);
 
-                    arma::rowvec k = system->kpoints.row(ik);
-                    arma::rowvec kq = system->kpoints.row(ik) + q;
-            
+    int norbitals_alpha = system->orbitals(system->motif.row(i)(3));
+    int norbitals_beta = system->orbitals(system->motif.row(j)(3));
+
+    for (int ic = nvbands; ic <= upperindexcband; ic++){
+    
+        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
+
+            for (int ik = 0; ik < nk; ik++){
+
+                arma::rowvec k = system->kpoints.row(ik);
+
+                // Using the atomic gauge
+                if(gauge == "atomic"){
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                }
+                else{                            
+                    coefsk = eigveckStack_.slice(ik).col(iv);
+                }
+                
+                for (int ik2 = 0; ik2 < nk; ik2++){
+
+                    arma::rowvec k2 = system->kpoints.row(ik2);
+
                     // Using the atomic gauge
                     if(gauge == "atomic"){
-                        coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
-                        coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                        coefsk2 = system_->latticeToAtomicGauge(eigveckStack_.slice(ik2).col(ic), system->kpoints.row(ik));
                     }
                     else{                            
-                        coefskq = eigveckqStack_.slice(ik).col(iv);
-                        coefsk = eigveckStack_.slice(ik).col(ic);
+                        coefsk2 = eigveckStack_.slice(ik2).col(ic);
                     }
 
-                    std::complex<double> IvcG = 0;
-                    std::complex<double> IvcG2 = 0;
+                    arma::cx_vec CoefArray =  arma::conj(coefsk) % coefsk2;
 
-                    term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+                    std::complex<double> sum_alpha, sum_beta = 0;
+
+                    sum_alpha = arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1));
+                    sum_beta = arma::sum(CoefArray.subvec(j_index, j_index + norbitals_beta - 1));
+
+                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));
 
                     //std::cout << "ik = " << k << ", iv = " << iv << ", ic = " << ic << "\n"; 
+                
                 }
-                    polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
             }
+                polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(totalCells) << " " << imag(term)/(totalCells) << "\n";
         }
-    } else {
-        std::cout << "Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting." << std::endl;
-        std::exit(0);
     }
 
     polarfile.close();
 
-    return term/(system->unitCellArea*totalCells);
+    return term/((std::complex<double>)totalCells);
 }
 
 /**
@@ -1801,7 +1821,7 @@ ResultTB* ExcitonTB::diagonalizeRaw(std::string method, int nstates){
         std::cout << "Lanczos method..." << std::flush;
 
         arma::cx_vec cx_eigval;
-        arma::eigs_gen(cx_eigval, eigvec, arma::sp_cx_mat(HBS), nstates, "sr");
+        //arma::eigs_gen(cx_eigval, eigvec, arma::sp_cx_mat(HBS), nstates, "sr");
         eigval = arma::real(cx_eigval);
     }
     

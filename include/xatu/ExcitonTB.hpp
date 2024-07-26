@@ -157,7 +157,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Static dielectric function
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizability(arma::rowvec&);
-        std::complex<double> computesinglePolarizability(const arma::rowvec&,const arma::rowvec&,const arma::rowvec&,const arma::rowvec&);
+        std::complex<double> computesinglePolarizability(const arma::rowvec&,const arma::rowvec&,const int, const int);
         std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int);
         std::complex<double> computeDielectricFunction(int, int, arma::rowvec&, const arma::imat&);
 
