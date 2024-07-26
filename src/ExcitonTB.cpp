@@ -1384,25 +1384,25 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
 
         int kqindex = system_->findEquivalentPointBZ(kq, ncell);
 
-        arma::cx_dmat auxk_slice = eigveckStack_.slice(ik);
-        arma::cx_dmat auxkq_slice = eigveckStack_.slice(kqindex);
+        arma::cx_dmat *auxk_slice = &eigveckStack_.slice(ik);
+        arma::cx_dmat *auxkq_slice = &eigveckStack_.slice(kqindex);
 
         for (int ic = nvbands; ic <= upperindexcband; ic++){
 
             // Using the atomic gauge
             if(gauge == "atomic"){
-                coefsk = system_->latticeToAtomicGauge(auxk_slice.col(ic), system->kpoints.row(ik));
+                coefsk = system_->latticeToAtomicGauge(auxk_slice->col(ic), system->kpoints.row(ik));
             } else {                            
-                coefsk = eigveckStack_.slice(ik).col(ic);
+                coefsk = auxk_slice->col(ic);
             }
         
             for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
 
                 // Using the atomic gauge
                 if(gauge == "atomic"){
-                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(kqindex).col(iv), system->kpoints.row(kqindex));
+                    coefskq = system_->latticeToAtomicGauge(auxkq_slice->col(iv), system->kpoints.row(kqindex));
                 } else {                            
-                    coefskq = eigveckStack_.slice(kqindex).col(iv);
+                    coefskq = auxkq_slice->col(iv);
                 }
 
                 std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
