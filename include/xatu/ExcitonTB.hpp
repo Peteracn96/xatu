@@ -186,6 +186,9 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Print information
         void printInformation();
+
+        // Write inverse of dielectric matrix in a file
+        void writeInverseDielectricMatrix(FILE*);     
 };
 
 }

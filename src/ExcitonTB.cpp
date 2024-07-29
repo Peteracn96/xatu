@@ -1106,20 +1106,6 @@ void ExcitonTB::initializeHamiltonian(){
 
 /*------------------------------------ Static dielectric function matrix elements ------------------------------------*/
 /**
- * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file and print it.
- * @return void
-*/
-void ExcitonTB::computesinglePolarizability(){
-    std::complex<double> Chi = 0;
-    
-    if (this->mode == "reciprocalspace") {
-        Chi = computesinglePolarizability(this->q_);
-    }// acabr esta condicionante 
-
-    std::cout << "Polarizability = " << Chi << std::endl;
-}
-
-/**
  * Method to compute the matrix element of the static polarizability at the specified pair the (R + t_i, R' + t_j) from an input file.
  * @details Writes the polarizability in the file polarizability_convergence.dat as a 
  * function of the number of included conduction bands
@@ -1497,37 +1483,33 @@ void ExcitonTB::computeDielectricMatrix(){
 
     auto start = high_resolution_clock::now();
 
-    std::cout << "Computing polarizability and dielectric matrices in the BZ mesh... \n" << std::flush;
+    std::cout << "Computing dielectric matrix in the BZ mesh... " << std::flush;
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     int nGs = ReciprocalVectors.n_rows;
-    
-    std::ofstream dielectricfile("../examples/screeningconfig/inversedielectric" + std::to_string(nGs) + ".txt"); 
-
-
-    if (!dielectricfile.is_open()) { // check if the file was opened successfully
-        std::cerr << "Error opening file\n";
-    }
-
     int nq = system->nk;
 
-    std::cout << "cutoff = " << cutoff << std::endl;
-    std::cout << "Gcutoff = " << this->Gcutoff_ << std::endl;
+    // std::ofstream dielectricfile("../examples/screeningconfig/inversedielectric" + std::to_string(nGs) + ".txt"); 
 
-    arma::rowvec g = ReciprocalVectors.row(this->Gs_(0));
-    arma::rowvec g2 = ReciprocalVectors.row(this->Gs_(1));
 
-    //arma::rowvec Gmax = ReciprocalVectors.row(nGs-1);    
+    // if (!dielectricfile.is_open()) { // check if the file was opened successfully
+    //     std::cerr << "Error opening file\n";
+    // }
 
-    std::cout << "Selected (G,G') pair:" << "\n";
-    std::cout << "G = G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
-    std::cout << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
-    // std::cout << "Gmax = (" << Gmax(0) << ", " << Gmax(1) << ", " << Gmax(2) << ")" << std::endl;
-    // std::cout << "||Gmax|| = (" << arma::norm(Gmax) << ")" << std::endl;
+    
+    // std::cout << "cutoff = " << cutoff << std::endl;
+    // std::cout << "Gcutoff = " << this->Gcutoff_ << std::endl;
 
-    int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), ncell);
-    iq = 210;
-    std::cout << "q = " << system->kpoints.row(iq)(0) << " " << system->kpoints.row(iq)(1) << " " << system->kpoints.row(iq)(2) << std::endl;
+    // arma::rowvec g = ReciprocalVectors.row(this->Gs_(0));
+    // arma::rowvec g2 = ReciprocalVectors.row(this->Gs_(1));
+
+    // std::cout << "Selected (G,G') pair:" << "\n";
+    // std::cout << "G = G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
+    // std::cout << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
+
+    // int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), ncell);
+    // iq = 210;
+    // std::cout << "q = " << system->kpoints.row(iq)(0) << " " << system->kpoints.row(iq)(1) << " " << system->kpoints.row(iq)(2) << std::endl;
     
     arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
     arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -1535,71 +1517,97 @@ void ExcitonTB::computeDielectricMatrix(){
     arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
     int i=0;
 
-    for (int g = 0; g < nGs; g++){
+    arma::imat indecesqg(nq*nGs*(nGs+1)/2,3,arma::fill::zeros);
 
-        for (int g2 = g; g2 < nGs; g2++){
-            indecesg.row(i)(0) = g;
-            indecesg.row(i)(1) = g2;
-            i++;
+    // for (int g = 0; g < nGs; g++){
+
+    //     for (int g2 = g; g2 < nGs; g2++){
+    //         indecesg.row(i)(0) = g;
+    //         indecesg.row(i)(1) = g2;
+    //         i++;
+    //     }
+    // }
+
+    for (int iq = 0; iq < nq; iq++){
+        for (int g = 0; g < nGs; g++){
+            for (int g2 = g; g2 < nGs; g2++){
+                indecesqg.row(i)(0) = iq;
+                indecesqg.row(i)(1) = g;
+                indecesqg.row(i)(2) = g2;
+                i++;
+            }
         }
     }
+    
 
-    for (int i = 0; i < nGs; i++){
+    // for (int i = 0; i < nGs; i++){
 
-        arma::rowvec G = ReciprocalVectors.row(i);                
+    //     arma::rowvec G = ReciprocalVectors.row(i);                
 
-        std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+    //     std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
 
-    }
-
-
-
-        #pragma omp parallel for
-        for (int i = 0; i < nGs*(nGs+1)/2; i++){
-
-            int g = indecesg.row(i)(0);
-            int g2 = indecesg.row(i)(1);
-
-            arma::rowvec G = ReciprocalVectors.row(g);                
-            arma::rowvec G2 = ReciprocalVectors.row(g2);
-
-            this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
-            this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
-
-            double potentialg = coulombFT(system->kpoints.row(iq) + G);
-            double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
-            double kroneckerdelta = g == g2? 1 : 0;
-
-            this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
-            this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
-        } 
-
-        // #pragma omp parallel for
-        // for (int g = 0; g < nGs; g++){
-
-        //     for (int g2 = g; g2 < nGs; g2++){
-
-        //         arma::rowvec G = this->trunreciprocalLattice_.row(g);                
-        //         arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
-
-        //         this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
-        //         this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
-
-        //         double potentialg = coulombFT(system->kpoints.row(iq) + G);
-        //         double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
-        //         double kroneckerdelta = g == g2? 1 : 0;
-
-        //         this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
-        //         this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
-        //     }
-        // }
-
-        
     //}
 
-    std::cout << "Inverting the dielectric matrix... " << std::flush;
 
-    auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+    // #pragma omp parallel for
+    // for (int i = 0; i < nGs*(nGs+1)/2; i++){
+
+    //     int g = indecesg.row(i)(0);
+    //     int g2 = indecesg.row(i)(1);
+
+    //     arma::rowvec G = ReciprocalVectors.row(g);                
+    //     arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+    //     this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+    //     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
+
+    //     double potentialg = coulombFT(system->kpoints.row(iq) + G);
+    //     double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
+    //     double kroneckerdelta = g == g2? 1 : 0;
+
+    //     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+    //     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+    // } 
+
+
+    #pragma omp parallel for
+    for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+
+        int iq = indecesqg.row(i)(0);
+        int g  = indecesqg.row(i)(1);
+        int g2 = indecesqg.row(i)(2);
+        
+        arma::rowvec G = ReciprocalVectors.row(g);                
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+        this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+        this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
+
+        double potentialg = coulombFT(system->kpoints.row(iq) + G);
+        double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
+        double kroneckerdelta = g == g2? 1 : 0;
+
+        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+
+        //std::cout << "Computing dielectric matrix in the BZ mesh..., i = " << i << std::endl;
+    } 
+
+    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
+    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+    auto start_dielectric_matrix_inversion = high_resolution_clock::now();
+
+    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << " s.\nInverting the dielectric matrix... " << std::flush;
+
+    #pragma omp parallel for
+    for (int iq = 0; iq < nq; iq++){
+
+        this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+
+        //std::cout << "Inverting the dielectric matrix..., i = " << iq << std::endl;
+    } 
+
+    // auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
     //this->Invepsilonmatrix_.slice(iq) = arma::inv(this->epsilonmatrix_.slice(iq));
 
@@ -1611,46 +1619,38 @@ void ExcitonTB::computeDielectricMatrix(){
     // }
 
 
-    std::cout << "\nChi_ (" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->Chimatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
-    std::cout << "\nepsilon_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->epsilonmatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
-    std::cout << "\nepsilon^(-1)_00 (iq) = " << auxvecsol.row(0)(0) << std::endl;
-    std::cout << "\nepsilon^(-1)_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << auxvecsol.row(this->Gs_(0))(this->Gs_(1)) << std::endl;
-    std::cout << "\nepsilon^(-1)_(" << 3 << "," << 2 << ")" << "(" << (iq) << ") = " << auxvecsol.row(3)(2) << std::endl;
+    // std::cout << "\nChi_ (" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->Chimatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
+    // std::cout << "\nepsilon_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << this->epsilonmatrix_.slice(iq).row(this->Gs_(0))(this->Gs_(1)) << std::endl;
+    // std::cout << "\nepsilon^(-1)_00 (iq) = " << auxvecsol.row(0)(0) << std::endl;
+    // std::cout << "\nepsilon^(-1)_(" << this->Gs_(0) << "," << this->Gs_(1) << ")" << "(" << (iq) << ") = " << auxvecsol.row(this->Gs_(0))(this->Gs_(1)) << std::endl;
+    // std::cout << "\nepsilon^(-1)_(" << 3 << "," << 2 << ")" << "(" << (iq) << ") = " << auxvecsol.row(3)(2) << std::endl;
 
-    int maxg = 9;
-    int precision = 7;
-    for (int g1 = 0; g1 < maxg; ++g1){
-        for (int g2 = 0; g2 < maxg; ++g2){
-            const char* Resign = real(auxvecsol.row(g1)(g2)) >= 0 ? "+":"-";
-            const char* Imsign = imag(auxvecsol.row(g1)(g2)) >= 0 ? "+":"-";
-            dielectricfile << std::fixed << std::setprecision(precision) << Resign << abs(real(auxvecsol.row(g1)(g2))) << " ";
-            dielectricfile << std::fixed << std::setprecision(precision) << Imsign << abs(imag(auxvecsol.row(g1)(g2))) << "  ";
-        }
-        dielectricfile << "\n";
-    }
+    // int maxg = 9;
+    // int precision = 7;
+    // for (int g1 = 0; g1 < maxg; ++g1){
+    //     for (int g2 = 0; g2 < maxg; ++g2){
+    //         const char* Resign = real(auxvecsol.row(g1)(g2)) >= 0 ? "+":"-";
+    //         const char* Imsign = imag(auxvecsol.row(g1)(g2)) >= 0 ? "+":"-";
+    //         dielectricfile << std::fixed << std::setprecision(precision) << Resign << abs(real(auxvecsol.row(g1)(g2))) << " ";
+    //         dielectricfile << std::fixed << std::setprecision(precision) << Imsign << abs(imag(auxvecsol.row(g1)(g2))) << "  ";
+    //     }
+    //     dielectricfile << "\n";
+    // }
 
-    dielectricfile << "Number of cells each direction: " << this->ncell << "\n";
-    dielectricfile << "Number of reciprocal vectors included: " << nGs << "\n";
-    dielectricfile << "Number of valence/conduction bands included: " << nvalencebands_ << "/" << nconductionbands_ << "\n";
-    dielectricfile << "Dielectric matrix at q = " << system->kpoints.row(iq) << "\n";
+    // dielectricfile << "Number of cells each direction: " << this->ncell << "\n";
+    // dielectricfile << "Number of reciprocal vectors included: " << nGs << "\n";
+    // dielectricfile << "Number of valence/conduction bands included: " << nvalencebands_ << "/" << nconductionbands_ << "\n";
+    // dielectricfile << "Dielectric matrix at q = " << system->kpoints.row(iq) << "\n";
     
-    //std::cout << "\nepsilon^(-1)_00 (iq) = " << this->Invepsilonmatrix_.slice(iq).row(0)(0) << std::endl;
-    // arma::cx_mat I = this->Invepsilonmatrix_.slice(0)*this->epsilonmatrix_.slice(0);
-    // I.print("I:");
-    // this->epsilonmatrix_.slice(iq).print("epsilon matrix:");
-    // arma::inv(this->epsilonmatrix_.slice(iq)).print("epsilon^-1 matrix:");
-    // std::cout << "Chi_10 (0) = " << this->Chimatrix_.slice(0).row(1)(0) << std::endl;
-    // std::cout << "Chi_01 (0) = " << this->Chimatrix_.slice(0).row(0)(1) << std::endl;
-    // std::cout << "Chi_33 (0) = " << this->Chimatrix_.slice(0).row(3)(3) << std::endl;
-
-    //std::cout << "Polarizability matrix computed " << std::endl;
 
     auto stop = high_resolution_clock::now();
+    auto duration_inversion = duration_cast<milliseconds>(stop - start_dielectric_matrix_inversion);
     auto duration = duration_cast<milliseconds>(stop - start);
 
-    std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
-    dielectricfile << "Done in " << duration.count()/1000.0 << " s." << std::endl;
-    dielectricfile.close();
+    std::cout << "Done in " << duration_inversion.count()/1000.0 << " s." << std::endl;
+    std::cout << "Total function run time: " << duration.count()/1000.0 << " s." << std::endl;
+    //dielectricfile << "Done in " << duration.count()/1000.0 << " s." << std::endl;
+    //dielectricfile.close();
 }
 
 
@@ -2268,4 +2268,41 @@ void ExcitonTB::printInformation(){
     }
 }
 
+/* Method to print information the inverse of the dielectric matrix in a file.
+ * @return void 
+ */
+void ExcitonTB::writeInverseDielectricMatrix(FILE* textfile){
+
+    int ngs = this->trunreciprocalLattice_.n_rows;
+    int nqs = system->nk;
+
+    for(unsigned int i = 0; i < nqs; i++){
+        for (unsigned int g = 0; g < ngs; g++){
+            for (unsigned int g2 = 0; g2 < ngs; g2++){
+                fprintf(textfile, "%11.7lf%11.7lf", real(this->Invepsilonmatrix_.slice(i).row(g)(g2)), imag(this->Invepsilonmatrix_.slice(i).row(g)(g2)));
+            }
+            fprintf(textfile, "\n");
+        }
+    }
+
+    // Prints the k points to plot the matrix elements in a grid
+    std::string filename_k_points = "kgrid" + std::to_string(this->ncell) + ".dat";
+
+    std::ofstream k_points_file; 
+
+    k_points_file.open(filename_k_points);
+
+    if (!k_points_file.is_open()) { // check if the file was opened successfully
+        std::cerr << "Error opening file\n";
+        std::cerr << errno << "\n";
+    }
+
+
+    for(unsigned int i = 0; i < nqs; i++){
+        auto k = system_->kpoints.row(i);
+        k_points_file << k(0) << " " << k(1) << " " << k(2) << std::endl;
+    }
+
+    k_points_file.close();
+}
 }
