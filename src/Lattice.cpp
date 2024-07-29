@@ -197,6 +197,51 @@ void Lattice::reducedBrillouinZoneMesh(int n, int factor){
 }
 
 /**
+ * Method to generate a refined kpoint mesh around the origin, which is a subset of the full BZ mesh. 
+ * @details If n is even, we substract one so that the mesh is symmetric under inversion.
+ * The reduction factor specifies is used to create a mesh of the full BZ of factor*n points,
+ * from which we extract the corresponding mesh for n points centered at Gamma.
+ * @param n Number of points along one axis.
+ * @param factor Reduction factor of the mesh.
+ * */
+arma::mat Lattice::refinedBZSubMesh(int n, int factor, double k_cutoff){
+
+	arma::mat kpoints_submesh(1,3,arma::fill::zeros);
+	int nrows_count = 1;
+
+	// First create mesh of whole BZ
+	brillouinZoneMesh(n*factor);
+
+	// Now create submesh
+	int nk = pow(n, ndim);
+
+	arma::mat combinations = generateCombinations(n, ndim);
+	if (n % 2 == 1){
+		combinations += 1./2;
+	}
+	
+	for (int i = 0; i < nk; i++){
+		arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+		for (int j = 0; j < ndim; j++){
+			kpoint += (2*combinations.row(i)(j) - n)/(2*n*factor)*reciprocalLattice_.row(j);
+		}
+
+		if (arma::norm(kpoint) < k_cutoff){
+			kpoints_submesh.insert_rows(nrows_count, kpoint);
+			nrows_count;
+		}
+	}
+
+	// Revert the BZ to the original one
+	brillouinZoneMesh(n);
+
+	std::cout << "Number of k points in refined submesh: " << nrows_count << std::endl;
+
+	return kpoints_submesh;
+}
+
+
+/**
  * Method to shift the center of the BZ mesh to a given point.
  * @param shift Vector to shift center of BZ mesh. 
  */

@@ -72,6 +72,7 @@ class Lattice {
         // Brillouin zone meshing & utilities
         void brillouinZoneMesh(int);
         void reducedBrillouinZoneMesh(int, int);
+        arma::mat refinedBZSubMesh(int, int, double);
         void shiftBZ(const arma::rowvec&);
         void calculateInverseReciprocalMatrix();
         int findEquivalentPointBZ(const arma::rowvec&, int);
