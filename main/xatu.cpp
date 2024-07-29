@@ -160,13 +160,25 @@ int main(int argc, char* argv[]){
             bulkExciton.computesingleDielectricFunction();
             return 0;
         } else if (screeningConfig->screeningInfo.function == "polarizability") {
-            bulkExciton.computesinglePolarizability();
+            bulkExciton.PolarizabilityMesh();
             return 0;
         } else if (screeningConfig->screeningInfo.function == "none"){
             std::cout << "Proceeding with computation of the polarizability (permittivity in the future for the exciton)...\n" << std::endl;
-            //bulkExciton.PolarizabilityMesh();
             bulkExciton.computeDielectricMatrix();
+            std::string filename_dielectric = excitonConfig->excitonInfo.label + ".dat";
+            FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
+
+            if (textfile_dielectric == NULL){
+                std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+                return 0;
+            }
+
+            std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
+            bulkExciton.writeInverseDielectricMatrix(textfile_dielectric);
             std::cout << "\nComputation of the exciton with screening not implemented yet. Exiting.\n" << std::endl;
+
+            fclose(textfile_dielectric);
+
             return 0;
         } else {
             std::cout << "\nValue for 'function' not recognized. Terminating program.\n" << std::endl;
@@ -262,6 +274,15 @@ int main(int argc, char* argv[]){
         std::cout << "Writing excitons spin fo file: " << filename_spin << std::endl;
         results->writeSpin(nstates, textfile_spin);
     }
+
+    // bool writeInverseDielectricMatrix = screeningArg.isSet();
+    // if(writeInverseDielectricMatrix){
+        // std::string filename_dielectric = output + ".dat";
+        // FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
+
+        // std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
+        // bulkExciton.writeInverseDielectricMatrix(textfile_dielectric);
+    // }
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
