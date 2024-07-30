@@ -168,6 +168,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void initializeScreeningAttributes(const ScreeningConfiguration&);
         void computesingleDielectricFunction();
         void computesinglePolarizability();
+        int findG(const arma::rowvec&);
         void PolarizabilityMesh();
         void computeDielectricMatrix();
         void BShamiltonian();

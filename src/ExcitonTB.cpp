@@ -1476,6 +1476,28 @@ void ExcitonTB::PolarizabilityMesh(){
 }
 
 /**
+ * Method to find a specific reciprocal lattice vector in the list of reciprocal lattice vectors
+ * @details Returns the index of the reciprocal lattice vector we are looking for. This function
+ * is used to exploit the symmetry of the polarizability Chi_(G,G')(q) = Chi_(-G',-G)(-q).
+ * If the vector is not found, the function returns 0.
+ * @return int
+*/
+int ExcitonTB::findG(const arma::rowvec& G){
+    int G_index = 0;
+    int nrows = this->trunreciprocalLattice_.n_rows;
+
+    while(G_index < nrows){      
+        arma::rowvec G_aux = this->trunreciprocalLattice_.row(G_index);
+        if (arma::sum(arma::abs(G-G_aux)) < 1e-8){
+            return G_index;
+        }
+        G_index++;
+    }
+
+    return -1; // G was not found
+}
+
+/**
  * Method to compute the static polarizability matrix in the BZ mesh.
  * @return void
 */
@@ -1517,7 +1539,7 @@ void ExcitonTB::computeDielectricMatrix(){
     arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
     int i=0;
 
-    arma::imat indecesqg(nq*nGs*(nGs+1)/2,3,arma::fill::zeros);
+    arma::imat indecesqg(nq*nGs*(nGs+1)/2,4,arma::fill::zeros);
 
     // for (int g = 0; g < nGs; g++){
 
@@ -1568,15 +1590,24 @@ void ExcitonTB::computeDielectricMatrix(){
     //     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
     //     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
     // } 
+    int iqzero = 0;
+    
+    if (this->ncell%2 == 0){
+        iqzero = this->ncell*(this->ncell+1)/2;
+    } else {
+        iqzero = (this->ncell*this->ncell-1)/2;
+    }
+    int equivalent_matrix_elements = 0;
 
+    std::cout << "iqzero = " << iqzero << std::endl;
 
     #pragma omp parallel for
-    for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+    for (int i = 0; i < (iqzero)*nGs*(nGs+1)/2; i++){ // at the moment computes the dielectric matrix in the first half of the BZ, I have to see if it includes the origin
 
         int iq = indecesqg.row(i)(0);
         int g  = indecesqg.row(i)(1);
         int g2 = indecesqg.row(i)(2);
-        
+
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
 
@@ -1590,8 +1621,57 @@ void ExcitonTB::computeDielectricMatrix(){
         this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
         this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
 
+        indecesqg.row(i)(3) = 1; // Set matrix element to calculated
+
+        int negativeG = findG(-G);
+        int negativeG2 = findG(-G2);
+
+        if (negativeG > -1 && negativeG2 > -1){ // If -G and -G' were found
+            int index_qgg2 = 0;
+            int negativeiq = nq - iq -1; // Given the index iq of q, the index of -q is nq-iq-1
+            for (unsigned int j = (iqzero)*nGs*(nGs+1)/2; j < indecesqg.n_rows; ++j){
+                 if (indecesqg.row(j)(0) == negativeiq && indecesqg.row(j)(1) == negativeG && indecesqg.row(j)(2) == negativeG2){
+                    index_qgg2 = j;
+                 }
+            }
+            indecesqg.row(index_qgg2)(3) = 1; // Means that an equivalent matrix element exists
+        }
+
+        // if (negativeG > 0 && negativeG2 > 0){ // If -G and -G' were found (and are not the null vector)
+        //     int negativeiq = nq - iq -1; // Given the index iq of q, the index of -q is nq-iq-1
+        //     arma::rowvec minusG = ReciprocalVectors.row(negativeG);                
+        //     arma::rowvec minusG2 = ReciprocalVectors.row(negativeG2);
+
+        //     this->Chimatrix_.slice(negativeiq).row(negativeG2)(negativeG) = this->Chimatrix_.slice(iq).row(g)(g2);
+        //     this->Chimatrix_.slice(negativeiq).row(negativeG)(negativeG2) = std::conj(this->Chimatrix_.slice(negativeiq).row(negativeG2)(negativeG));
+
+        //     double potentialnegativeG2 = coulombFT(system->kpoints.row(negativeiq) + minusG2);
+        //     double potentialnegativeG = coulombFT(system->kpoints.row(negativeiq) + minusG);
+
+        //     this->epsilonmatrix_.slice(negativeiq).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2*this->Chimatrix_.slice(negativeiq).row(negativeG2)(negativeG);
+        //     this->epsilonmatrix_.slice(negativeiq).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG*this->Chimatrix_.slice(negativeiq).row(negativeG)(negativeG2);
+        
+        //     int index_qgg2 = 0;
+
+            // for (unsigned int i = 0; indecesqg.n_rows; ++i){
+            //      if (indecesqg.row(i)(0) == negativeiq && indecesqg.row(i)(1) == negativeG2 && indecesqg.row(i)(2) == negativeG){
+            //         index_qgg2 = i;
+            //      }
+            // }
+
+        //     indecesqg.row(index_qgg2)(3) = 1; // Set matrix element to calculated
+        // }
+        //}
+
         //std::cout << "Computing dielectric matrix in the BZ mesh..., i = " << i << std::endl;
     } 
+
+    for (int j = (iqzero)*nGs*(nGs+1)/2; j < nq*nGs*(nGs+1)/2; ++j){
+        std::cout << "j = " << j  << ", k = " << system->kpoints.row(indecesqg.row(j)(0))<< std::endl;
+        equivalent_matrix_elements += indecesqg.row(j)(3);
+    }
+
+    std::cout << "#equivalent matrix elements = " << equivalent_matrix_elements << std::endl;
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
@@ -1599,13 +1679,12 @@ void ExcitonTB::computeDielectricMatrix(){
 
     std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << " s.\nInverting the dielectric matrix... " << std::flush;
 
-    #pragma omp parallel for
-    for (int iq = 0; iq < nq; iq++){
+    // #pragma omp parallel for
+    // for (int iq = 0; iq < nq; iq++){
 
-        this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+    //     this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
-        //std::cout << "Inverting the dielectric matrix..., i = " << iq << std::endl;
-    } 
+    // } 
 
     // auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
