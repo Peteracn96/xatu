@@ -150,12 +150,12 @@ arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
 
             if (j != 0 && j != i){
                 combinations.push_back({-i,j});
-                combinations.push_back({j,-i});
                 combinations.push_back({i,-j});
+                combinations.push_back({j,-i});
                 combinations.push_back({-j,i});
                 combinations.push_back({-j,-i});
-                combinations.push_back({-i,-j});
                 combinations.push_back({j,i});
+                combinations.push_back({-i,-j});
                 combinations.push_back({i,j});
             }
             
