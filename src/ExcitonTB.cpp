@@ -1486,7 +1486,10 @@ void ExcitonTB::computeDielectricMatrix(){
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     int nGs = ReciprocalVectors.n_rows;
-    int nq = system->nk;
+    int Ncells = system->ncells;
+    int odd = Ncells%2;
+    int nq = Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1; //Only half of the BZ
+    //int nq = system->nk;
 
     // std::ofstream dielectricfile("../examples/screeningconfig/inversedielectric" + std::to_string(nGs) + ".txt"); 
 
@@ -1506,7 +1509,7 @@ void ExcitonTB::computeDielectricMatrix(){
     // std::cout << "G = G(" << this->Gs_(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
     // std::cout << "G' = G(" << this->Gs_(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
 
-    // int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), ncell);
+    //int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), ncell);
     // iq = 210;
     // std::cout << "q = " << system->kpoints.row(iq)(0) << " " << system->kpoints.row(iq)(1) << " " << system->kpoints.row(iq)(2) << std::endl;
     
@@ -1538,6 +1541,7 @@ void ExcitonTB::computeDielectricMatrix(){
         }
     }
     
+    std::cout << "\nNks = " << nq << std::endl; 
 
     for (int i = 0; i < nGs; i++){
 
@@ -1589,7 +1593,7 @@ void ExcitonTB::computeDielectricMatrix(){
     //     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
     //     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
 
-    //     //std::cout << "Computing dielectric matrix in the BZ mesh..., i = " << i << std::endl;
+    //     std::cout << i << ",";
     // } 
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
@@ -1603,8 +1607,8 @@ void ExcitonTB::computeDielectricMatrix(){
 
     //     this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
-    //     std::cout << "Inverting the dielectric matrix..., i = " << iq << std::endl;
-    // } 
+    //     std::cout << iq << ",";
+    // }
 
     // auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
@@ -1639,7 +1643,7 @@ void ExcitonTB::computeDielectricMatrix(){
     // dielectricfile << "Number of cells each direction: " << this->ncell << "\n";
     // dielectricfile << "Number of reciprocal vectors included: " << nGs << "\n";
     // dielectricfile << "Number of valence/conduction bands included: " << nvalencebands_ << "/" << nconductionbands_ << "\n";
-    // dielectricfile << "Dielectric matrix at q = " << system->kpoints.row(iq) << "\n";
+    //dielectricfile << "Dielectric matrix at q = " << system->kpoints.row(iq) << "\n";
     
 
     auto stop = high_resolution_clock::now();
