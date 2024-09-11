@@ -389,12 +389,12 @@ arma::imat Lattice::generateOrderedCombinations(int nvalues, int ndim){
 
 			if (j != 0 && j != i){
 				combinationsvector.push_back({-i,j});
-				combinationsvector.push_back({j,-i});
 				combinationsvector.push_back({i,-j});
+				combinationsvector.push_back({j,-i});
 				combinationsvector.push_back({-j,i});
 				combinationsvector.push_back({-j,-i});
-				combinationsvector.push_back({-i,-j});
 				combinationsvector.push_back({j,i});
+				combinationsvector.push_back({-i,-j});
 				combinationsvector.push_back({i,j});
 			}
 			
