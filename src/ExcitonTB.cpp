@@ -193,8 +193,10 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     int nremovedbands        = cfg.screeningInfo.nrmcbands;
     arma::rowvec q           = cfg.screeningInfo.q;
     arma::ivec gs            = cfg.screeningInfo.Gs;
+    std::string function     = cfg.screeningInfo.function;
 
     this->isscreeningset = true;
+    this->function_ = function;
 
     int totalvbands = system->fermiLevel + 1;
     int totalcbands = system->basisdim - totalvbands;
@@ -212,8 +214,6 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         std::cout << "Total number of bands is " << system->basisdim << std::endl;
         exit(1);
     }
-
-    int nGs = this->nReciprocalVectors_;
 
     this->q_ = q;
 
@@ -249,7 +249,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     //sortVectors(this->trunreciprocalLattice_);
     
     //this->trunreciprocalLattice_ = generateReciprocalVectors(this->nReciprocalVectors);
-    int ngs = this->trunreciprocalLattice_.n_rows;
+    int ngs  = this->nGs = this->trunreciprocalLattice_.n_rows;
 
     if (gs(0) >= ngs || gs(1) >= ngs){
         std::cout << "Error: Index of the reciprocal vector must not be higher than number of reciprocal vectors" << std::endl;
@@ -259,7 +259,6 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     }
 
     
-    std::cout << "nGs = " << ngs << std::endl;
     // std::cout << "this->trunreciprocalLattice_.n_rows = " << this->trunreciprocalLattice_.n_rows << std::endl;
     // std::cout << "||system->reciprocalLattice.row(0)|| = " << arma::norm(system->reciprocalLattice.row(0)) << std::endl;
     // std::cout << "radius as of Gcutoff = " << radius << std::endl;
@@ -1540,13 +1539,13 @@ void ExcitonTB::computeDielectricMatrix(){
     }
     
 
-    // for (int i = 0; i < nGs; i++){
+    for (int i = 0; i < nGs; i++){
 
-    //     arma::rowvec G = ReciprocalVectors.row(i);                
+        arma::rowvec G = ReciprocalVectors.row(i);                
 
-    //     std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+        std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
 
-    //}
+    }
 
 
     // #pragma omp parallel for
@@ -1570,28 +1569,28 @@ void ExcitonTB::computeDielectricMatrix(){
     // } 
 
 
-    #pragma omp parallel for
-    for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+    // #pragma omp parallel for
+    // for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
 
-        int iq = indecesqg.row(i)(0);
-        int g  = indecesqg.row(i)(1);
-        int g2 = indecesqg.row(i)(2);
+    //     int iq = indecesqg.row(i)(0);
+    //     int g  = indecesqg.row(i)(1);
+    //     int g2 = indecesqg.row(i)(2);
         
-        arma::rowvec G = ReciprocalVectors.row(g);                
-        arma::rowvec G2 = ReciprocalVectors.row(g2);
+    //     arma::rowvec G = ReciprocalVectors.row(g);                
+    //     arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
-        this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
+    //     this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+    //     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
-        double potentialg = coulombFT(system->kpoints.row(iq) + G);
-        double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
-        double kroneckerdelta = g == g2? 1 : 0;
+    //     double potentialg = coulombFT(system->kpoints.row(iq) + G);
+    //     double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
+    //     double kroneckerdelta = g == g2? 1 : 0;
 
-        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
-        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+    //     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+    //     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
 
-        //std::cout << "Computing dielectric matrix in the BZ mesh..., i = " << i << std::endl;
-    } 
+    //     //std::cout << "Computing dielectric matrix in the BZ mesh..., i = " << i << std::endl;
+    // } 
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
@@ -1599,13 +1598,13 @@ void ExcitonTB::computeDielectricMatrix(){
 
     std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << " s.\nInverting the dielectric matrix... " << std::flush;
 
-    #pragma omp parallel for
-    for (int iq = 0; iq < nq; iq++){
+    // #pragma omp parallel for
+    // for (int iq = 0; iq < nq; iq++){
 
-        this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+    //     this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
-        //std::cout << "Inverting the dielectric matrix..., i = " << iq << std::endl;
-    } 
+    //     std::cout << "Inverting the dielectric matrix..., i = " << iq << std::endl;
+    // } 
 
     // auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
@@ -2262,9 +2261,20 @@ void ExcitonTB::printInformation(){
     cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << endl;
 
     if (this->isscreeningset == true){
-        std::cout<< std::left << std::setw(40) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
-        std::cout<< std::left << std::setw(40) << "Number of conduction bands included: " << this->nconductionbands_ << std::endl;
-        std::cout<< std::left << std::setw(40) << "Gcutoff: " << this->Gcutoff_ << std::endl;
+        std::cout << std::left << std::setw(40) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
+        std::cout << std::left << std::setw(40) << "Number of conduction bands included: " << this->nconductionbands_ << std::endl;
+        if (this->mode == "reciprocalspace"){
+            std::cout << std::left << std::setw(40) << "Number of reciprocal lattice vectors: " << this->trunreciprocalLattice_.n_rows << std::endl;
+        }
+        std::cout << std::left << std::setw(40) << "Gcutoff: " << this->Gcutoff_ << std::endl;
+        if (this->function_ == "dielectric" || this->function_ == "polarizability"){
+            arma::rowvec G(this->trunreciprocalLattice_ .row(this->Gs_(0)));
+            arma::rowvec Gprime(this->trunreciprocalLattice_ .row(this->Gs_(1)));
+            std::cout << std::left << std::setw(0) << "Selected G(" << std::setw(0) << this->Gs_(0) << "): " << G(0) << " " << G(1) << " " << G(2) << std::endl;
+            std::cout << std::left << std::setw(0) << "Selected G'(" << std::setw(0) << this->Gs_(1) << "): " << Gprime(0) << " " << Gprime(1) << " " << Gprime(2) << std::endl;
+        } else if (this->function_ == "none") {
+            std::cout << std::left << std::setw(40) << "Number of reciprocal vectors: " << this->nGs << std::endl;
+        }
     }
 }
 

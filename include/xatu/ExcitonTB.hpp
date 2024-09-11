@@ -46,8 +46,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         int nReciprocalVectors_ = 1;
         
         // Internals for dielectric function
+        std::string function_;
         arma::ivec Gs_;
         arma::rowvec q_;
+        int nGs;
         double Gcutoff_ = 0;
         arma::mat trunreciprocalLattice_;
         arma::cx_cube Chimatrix_;

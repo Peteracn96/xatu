@@ -163,7 +163,7 @@ int main(int argc, char* argv[]){
             bulkExciton.PolarizabilityMesh();
             return 0;
         } else if (screeningConfig->screeningInfo.function == "none"){
-            std::cout << "Proceeding with computation of the polarizability (permittivity in the future for the exciton)...\n" << std::endl;
+            std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
             bulkExciton.computeDielectricMatrix();
             std::string filename_dielectric = excitonConfig->excitonInfo.label + ".dat";
             FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
