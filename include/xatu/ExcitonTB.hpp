@@ -157,6 +157,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         ResultTB* diagonalizeRaw(std::string method = "diag", int nstates = 8) override;
 
         // Static dielectric function
+        int fecthReciprocalLatticeVector(arma::rowvec);
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizability(arma::rowvec&);
         std::complex<double> computesinglePolarizability(const arma::rowvec&,const arma::rowvec&,const int, const int);

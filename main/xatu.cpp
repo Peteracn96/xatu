@@ -151,6 +151,11 @@ int main(int argc, char* argv[]){
         bulkExciton.system->shiftBZ(excitonConfig->excitonInfo.shift);
     }
     
+    if (excitonConfig->excitonInfo.ncell%2 == 0 && screeningArg.isSet()){ // If computing the dielectric matrix, then the BZ mesh has to be centered around the origin
+        arma::rowvec kshift = (-bulkExciton.system->kpoints.row(0) - bulkExciton.system->kpoints.row(bulkExciton.system->kpoints.n_rows - 1))/2;
+        bulkExciton.system->shiftBZ(kshift);
+    }
+
     bulkExciton.initializeHamiltonian();
 
     // If screening flag is present, computes the static dielectric function and exits.
@@ -165,7 +170,7 @@ int main(int argc, char* argv[]){
         } else if (screeningConfig->screeningInfo.function == "none"){
             std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
             bulkExciton.computeDielectricMatrix();
-            std::string filename_dielectric = excitonConfig->excitonInfo.label + ".dat";
+            std::string filename_dielectric = excitonConfig->excitonInfo.label + "_screening.dat";
             FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
 
             if (textfile_dielectric == NULL){
