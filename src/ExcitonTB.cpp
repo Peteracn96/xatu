@@ -246,9 +246,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
     this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
-    //sortVectors(this->trunreciprocalLattice_);
     
-    //this->trunreciprocalLattice_ = generateReciprocalVectors(this->nReciprocalVectors);
     int ngs  = this->nGs = this->trunreciprocalLattice_.n_rows;
 
     if (gs(0) >= ngs || gs(1) >= ngs){
@@ -1475,6 +1473,24 @@ void ExcitonTB::PolarizabilityMesh(){
 }
 
 /**
+ * Method to fetch the index of a reciprocal lattice vector.
+ * @details returns -1 if not found.
+ * @return int
+*/
+int ExcitonTB::fecthReciprocalLatticeVector(arma::rowvec G){
+
+    int nGs = this->trunreciprocalLattice_.n_rows;
+
+	for (int i = 0; i < nGs; ++i){
+        if (arma::norm(G - this->trunreciprocalLattice_.row(i)) < 1E-7){
+            return i;
+        }
+    }
+
+    return -1; //G not found
+}
+
+/**
  * Method to compute the static polarizability matrix in the BZ mesh.
  * @return void
 */
@@ -1486,10 +1502,11 @@ void ExcitonTB::computeDielectricMatrix(){
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     int nGs = ReciprocalVectors.n_rows;
-    int Ncells = system->ncells;
+    int Ncells = this->ncell_;
     int odd = Ncells%2;
     int nq = Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1; //Only half of the BZ
-    //int nq = system->nk;
+    int Nktotal = system->nk;
+    nq = Nktotal;
 
     // std::ofstream dielectricfile("../examples/screeningconfig/inversedielectric" + std::to_string(nGs) + ".txt"); 
 
@@ -1540,8 +1557,6 @@ void ExcitonTB::computeDielectricMatrix(){
             }
         }
     }
-    
-    std::cout << "\nNks = " << nq << std::endl; 
 
     for (int i = 0; i < nGs; i++){
 
@@ -1550,7 +1565,6 @@ void ExcitonTB::computeDielectricMatrix(){
         std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
 
     }
-
 
     // #pragma omp parallel for
     // for (int i = 0; i < nGs*(nGs+1)/2; i++){
@@ -1573,28 +1587,40 @@ void ExcitonTB::computeDielectricMatrix(){
     // } 
 
 
-    // #pragma omp parallel for
-    // for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+    #pragma omp parallel for
+    for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
 
-    //     int iq = indecesqg.row(i)(0);
-    //     int g  = indecesqg.row(i)(1);
-    //     int g2 = indecesqg.row(i)(2);
-        
-    //     arma::rowvec G = ReciprocalVectors.row(g);                
-    //     arma::rowvec G2 = ReciprocalVectors.row(g2);
+        int iq = indecesqg.row(i)(0);
+        int g  = indecesqg.row(i)(1);
+        int g2 = indecesqg.row(i)(2);
 
-    //     this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
-    //     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
+        arma::rowvec G = ReciprocalVectors.row(g);                
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-    //     double potentialg = coulombFT(system->kpoints.row(iq) + G);
-    //     double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
-    //     double kroneckerdelta = g == g2? 1 : 0;
+        // int negativeG = fecthReciprocalLatticeVector(-G);
+        // int negativeG2 = fecthReciprocalLatticeVector(-G2);
 
-    //     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
-    //     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+        this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+        this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
-    //     std::cout << i << ",";
-    // } 
+        // this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = this->Chimatrix_.slice(iq).row(g)(g2);
+        // this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = this->Chimatrix_.slice(iq).row(g2)(g);
+
+        double potentialg = coulombFT(system->kpoints.row(iq) + G);
+        double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
+
+        // double potentialnegativeG = coulombFT(system->kpoints.row(Nktotal - iq - 1) - G);
+        // double potentialnegativeG2 = coulombFT(system->kpoints.row(Nktotal - iq - 1) - G2);
+        double kroneckerdelta = g == g2? 1 : 0;
+
+        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+
+        // this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2*this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG);
+        // this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG*this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2);
+
+        //std::cout << i << ",";
+    } 
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
@@ -1602,13 +1628,13 @@ void ExcitonTB::computeDielectricMatrix(){
 
     std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << " s.\nInverting the dielectric matrix... " << std::flush;
 
-    // #pragma omp parallel for
-    // for (int iq = 0; iq < nq; iq++){
+    #pragma omp parallel for
+    for (int iq = 0; iq < Nktotal; iq++){
 
-    //     this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+        this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
-    //     std::cout << iq << ",";
-    // }
+        //std::cout << iq << ",";
+    }
 
     // auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
 
@@ -2282,7 +2308,7 @@ void ExcitonTB::printInformation(){
     }
 }
 
-/* Method to print information the inverse of the dielectric matrix in a file.
+/* Method to print information of the inverse of the dielectric matrix in a file.
  * @return void 
  */
 void ExcitonTB::writeInverseDielectricMatrix(FILE* textfile){
