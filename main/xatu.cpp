@@ -153,7 +153,7 @@ int main(int argc, char* argv[]){
     
     if (excitonConfig->excitonInfo.ncell%2 == 0 && screeningArg.isSet()){ // If computing the dielectric matrix, then the BZ mesh has to be centered around the origin
         arma::rowvec kshift = (-bulkExciton.system->kpoints.row(0) - bulkExciton.system->kpoints.row(bulkExciton.system->kpoints.n_rows - 1))/2;
-        bulkExciton.system->shiftBZ(kshift);
+        //bulkExciton.system->shiftBZ(kshift);
     }
 
     bulkExciton.initializeHamiltonian();
