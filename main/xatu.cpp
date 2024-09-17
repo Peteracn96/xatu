@@ -194,11 +194,11 @@ int main(int argc, char* argv[]){
 
             std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
             bulkExciton.writeInverseDielectricMatrix(textfile_dielectric);
-            std::cout << "\nComputation of the exciton with screening not implemented yet. Exiting.\n" << std::endl;
+            std::cout << "\nComputation of the exciton with screening under testing.\n" << std::endl;
 
             fclose(textfile_dielectric);
 
-            return 0;
+            //return 0;
         } else {
             std::cout << "\nValue for 'function' not recognized. Terminating program.\n" << std::endl;
             return 0;

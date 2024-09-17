@@ -20,6 +20,9 @@ namespace xatu {
 
 // Define pointer to potential function type (f: R -> R) within those in ExcitonTB
 typedef double (ExcitonTB::*potptr)(double);
+// Define pointer to potential function (in reciprocal space) type (f: NxNxR -> R) within those in ExcitonTB
+typedef double (ExcitonTB::*recpotptr)(int, int, arma::rowvec);
+
 class ResultTB;
 
 class ExcitonTB : public Exciton<SystemTB> {
@@ -122,10 +125,11 @@ class ExcitonTB : public Exciton<SystemTB> {
         double coulomb(double);
         double rpa(double); // In principle will accept more than a double
         potptr selectPotential(std::string);
+        recpotptr selectReciprocalPotential(std::string);
 
         // Fourier transforms
-        double coulombFT(arma::rowvec);
-        double keldyshFT(arma::rowvec);
+        double coulombFT(int, int, arma::rowvec);
+        double keldyshFT(int, int, arma::rowvec);
         std::complex<double> rpaFT(int g, int g2, arma::rowvec);
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat motifFTMatrix(const arma::rowvec&, const arma::mat&, potptr);
@@ -138,7 +142,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> reciprocalInteractionTerm(const arma::cx_vec&, const arma::cx_vec&,
                                                        const arma::cx_vec&, const arma::cx_vec&,
                                                        const arma::rowvec&, const arma::rowvec&,
-                                                       const arma::rowvec&, const arma::rowvec&, int nrcells = 15);
+                                                       const arma::rowvec&, const arma::rowvec&, 
+                                                       recpotptr, int nrcells = 15);
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
                                                   const arma::rowvec&);
