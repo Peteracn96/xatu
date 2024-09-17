@@ -126,7 +126,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Fourier transforms
         double coulombFT(arma::rowvec);
         double keldyshFT(arma::rowvec);
-        double rpaFT(arma::rowvec); //in principle will accept more than one rowvec
+        std::complex<double> rpaFT(int g, int g2, arma::rowvec);
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat motifFTMatrix(const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat extendMotifFT(const arma::cx_mat&);

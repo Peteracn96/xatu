@@ -683,10 +683,13 @@ double ExcitonTB::keldyshFT(arma::rowvec q){
  * Evaluates the RPA potential in reciprocal space.
  * Implementation in progress, returns the same as keldysh.
  */
-double ExcitonTB::rpaFT(arma::rowvec q){
-    double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
-    double potential = 0;
-    double eps_bar = (eps_m + eps_s)/2;
+std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q){
+
+    if (this->Invepsilonmatrix_.is_empty()){
+        std::cerr << "Inverse of dielectric matrix has not been computed yet. Terminating." << std::endl;
+    }
+
+    std::complex<double> potential = 0;
     double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
 
     double qnorm = arma::norm(q);
@@ -694,10 +697,11 @@ double ExcitonTB::rpaFT(arma::rowvec q){
         potential = 0;
     }
     else{
-        potential = 1/(qnorm*(1 + r0*qnorm));
+        int iq = system->findEquivalentPointBZ(q, this->ncell_);
+        auto G2 = this->trunreciprocalLattice_.row(g2);
+        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(q + G2);
     }
-    
-    potential = potential*ec*1E10/(2*eps0*eps_bar*system->unitCellArea*totalCells);
+
     return potential;
 }
 
