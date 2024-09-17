@@ -114,7 +114,7 @@ void ScreeningConfiguration::checkContentCoherence(){
     if(screeningInfo.nLatticeVectors <= 0 && screeningInfo.mode == "realspace"){
         throw std::logic_error("'nLatticeVectors' must be a positive number");
     }
-    if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "none"){
+    if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "none"){
         throw std::logic_error("'function' must be 'dielectric', 'polarizability' or 'none'");
     }
     if (screeningInfo.mode != "realspace" && screeningInfo.mode != "reciprocalspace"){

@@ -1823,6 +1823,88 @@ void ExcitonTB::computesingleDielectricFunction() {
 }
 
 /**
+ * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
+ * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
+ * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
+ * kpoints coincides with the kmesh
+ * @return void
+*/
+void ExcitonTB::computesingleInverseDielectricMatrix() {
+
+    auto start = high_resolution_clock::now();
+
+    if(mode == "realspace"){
+        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+
+        std::exit(0);
+    }
+
+    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+    int nGs = ReciprocalVectors.n_rows;
+
+    std::string filename_dielectric = "invepsilon_" + std::to_string(nGs) + ".dat";
+    FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
+
+    if (textfile_dielectric == NULL){
+        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+        exit(1);
+    }
+
+    arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
+
+    int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell);
+      
+    arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
+    arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+
+    arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
+    
+    int i = 0;
+    for (int g = 0; g < nGs; g++){
+        for (int g2 = g; g2 < nGs; g2++){
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
+        
+    #pragma omp parallel for
+    for (int i = 0; i < nGs*(nGs+1)/2; i++){
+
+        int g = indecesg.row(i)(0);
+        int g2 = indecesg.row(i)(1);
+
+        arma::rowvec G = ReciprocalVectors.row(g);                
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+        std::complex<double> Chi = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+        
+        double potentialg = coulombFT(system->kpoints.row(iq) + G);
+        double potentialg2 = coulombFT(system->kpoints.row(iq) + G2);
+        double kroneckerdelta = g == g2? 1 : 0;
+        
+        dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+    }
+
+    auxvecsol = arma::solve(dielectric_matrix,auxvec);
+
+    for (unsigned int g = 0; g < nGs; g++){
+        for (unsigned int g2 = 0; g2 < nGs; g2++){
+            fprintf(textfile_dielectric, "%11.7lf%11.7lf", real(auxvecsol.row(g)(g2)), imag(auxvecsol.row(g)(g2)));
+        }
+        fprintf(textfile_dielectric, "\n");
+    }
+
+    fclose(textfile_dielectric);
+
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(stop - start);
+
+    std::cout << "Done in " << duration.count()/1000.0 << " s.\n" << std::flush;
+}
+
+/**
  * Method to initialize the BSE.
  * @details Calls the more general routine which allows
  * to specify a subset of the complete basis.
