@@ -1506,7 +1506,7 @@ void ExcitonTB::computeDielectricMatrix(){
     int odd = Ncells%2;
     int nq = odd == 1? Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1 : (2*Ncells -1) + (Ncells-1)*(Ncells-2)/2 + Ncells/2 + 1; //Only half of the BZ
     int Nktotal = system->nk;
-    //nq = Nktotal;
+    nq = Nktotal;
 
     // std::ofstream dielectricfile("../examples/screeningconfig/inversedielectric" + std::to_string(nGs) + ".txt"); 
 
@@ -1537,15 +1537,6 @@ void ExcitonTB::computeDielectricMatrix(){
 
     arma::imat indecesqg(nq*nGs*(nGs+1)/2,3,arma::fill::zeros);
 
-    // for (int g = 0; g < nGs; g++){
-
-    //     for (int g2 = g; g2 < nGs; g2++){
-    //         indecesg.row(i)(0) = g;
-    //         indecesg.row(i)(1) = g2;
-    //         i++;
-    //     }
-    // }
-
     if (odd == 0){ // If Ncells is even, then q points at the boundaries of the BZ with no symmetric counterpart are computed seperately
         int i=0;
         
@@ -1560,10 +1551,10 @@ void ExcitonTB::computeDielectricMatrix(){
             }
         }
 
-        for (int iq = 1; iq <= Ncells - 1; iq++){ // 2nd BZ boundary
+        for (int iq = 1; iq < Ncells; iq++){ // 2nd BZ boundary
             for (int g = 0; g < nGs; g++){
                 for (int g2 = g; g2 < nGs; g2++){
-                    indecesqg.row(i)(0) = iq*Ncells + 1;
+                    indecesqg.row(i)(0) = iq*Ncells;
                     indecesqg.row(i)(1) = g;
                     indecesqg.row(i)(2) = g2;
                     i++;
@@ -1584,7 +1575,7 @@ void ExcitonTB::computeDielectricMatrix(){
             }
         }
 
-        for (int iq = 0; iq <= Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
+        for (int iq = 0; iq < Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
             for (int g = 0; g < nGs; g++){
                 for (int g2 = g; g2 < nGs; g2++){
                     indecesqg.row(i)(0) = 1 + iq + Ncells*Ncells/2;
@@ -1594,7 +1585,6 @@ void ExcitonTB::computeDielectricMatrix(){
                 }
             }
         }
-    std::cout << "i_final = " << i << std::endl;
     } else if (odd == 1) { // If Ncells is odd, the full BZ mesh is automatically center-symmetric
         int i=0;
         
@@ -1609,13 +1599,12 @@ void ExcitonTB::computeDielectricMatrix(){
             }
         }
     }
-
+    
     for (int i = 0; i < nGs; i++){     
 
         arma::rowvec G = ReciprocalVectors.row(i);                
 
         std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
-
     }
 
     // #pragma omp parallel for
@@ -1636,7 +1625,7 @@ void ExcitonTB::computeDielectricMatrix(){
 
     //     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
     //     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
-    // } 
+    // }
 
     if (odd == 0){
         #pragma omp parallel for // Computes first the dielectric matrix at the points q with no symmetric counterpart 
