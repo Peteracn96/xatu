@@ -634,7 +634,7 @@ potptr ExcitonTB::selectPotential(std::string potential){
 
 /*---------------------------------------- Fourier transforms ----------------------------------------*/
 /**
- * Evaluates the Fourier transform of the Keldysh potential, which is an analytical expression.
+ * Evaluates the Fourier transform of the Coulomb potential, which is an analytical expression.
  * @param q kpoint where we evaluate the FT.
  * @return Fourier transform of the potential at q, FT[V](q).
  */
