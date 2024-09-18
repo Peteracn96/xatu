@@ -657,7 +657,7 @@ recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){
         return &ExcitonTB::coulombFT;
     }
     else if(potential == "rpa"){
-        return &ExcitonTB::keldyshFT;
+        return &ExcitonTB::rpaFT;
     }
     else{
         throw std::invalid_argument("selectPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
@@ -738,7 +738,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q){
     if (this->Invepsilonmatrix_.is_empty()){
         std::cerr << "Inverse of dielectric matrix has not been computed yet. Terminating." << std::endl;
     }
-
+    std::cout << "I'm being called!" << std::endl;
     std::complex<double> potential = 0;
     double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
 
