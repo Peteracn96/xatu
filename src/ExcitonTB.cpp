@@ -902,15 +902,13 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     std::complex<double> Ic, Iv;
     std::complex<double> term = 0;
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
-    arma::mat reciprocalVectors = this->trunreciprocalLattice_;//system_->truncateReciprocalSupercell(nrcells, radius);
+    arma::mat reciprocalVectors = this->trunreciprocalLattice_;
     //int Gcutoff = system_->truncateReciprocalSupercell(nrcells, radius).n_rows;
 
-    std::cout << "Number of Gs = " << reciprocalVectors.n_rows << std::endl;
-
-    for(int g = 0; g < reciprocalVectors.n_rows; g++){
+    for(int g = 0; g < nrcells; g++){
         auto G = reciprocalVectors.row(g);
 
-        for(int g2 = 0; g2 < reciprocalVectors.n_rows; g2++){
+        for(int g2 = 0; g2 < nrcells; g2++){
             auto G2 = reciprocalVectors.row(g2);
 
             Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
