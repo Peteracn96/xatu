@@ -249,11 +249,11 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     this->valencebands_ = arma::ivec(valence);
     this->conductionbands_ = arma::ivec(conduction);
 
-    if (cfg.screeningInfo.Gcutoff_found){
-        this->Gcutoff_ = cfg.screeningInfo.Gcutoff;
-    } else {
-        this->Gcutoff_ = (this->ncell)/2.5;
-    }
+    // if (cfg.screeningInfo.Gcutoff_found){
+    //     this->Gcutoff_ = cfg.screeningInfo.Gcutoff;
+    // } else {
+    //     this->Gcutoff_ = (this->ncell)/2.5;
+    // }
 
     if (this->trunreciprocalLattice_.is_empty()){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));

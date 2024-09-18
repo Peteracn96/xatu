@@ -64,10 +64,10 @@ void ScreeningConfiguration::parseContent(){
             std::vector<double> momentum = parseLine<double>(content[0]);
             screeningInfo.q = arma::rowvec(momentum);
         }
-        else if(arg == "gcutoff"){
-            screeningInfo.Gcutoff = parseScalar<double>(content[0]);
-            screeningInfo.Gcutoff_found = true;
-        }
+        // else if(arg == "gcutoff"){
+        //     screeningInfo.Gcutoff = parseScalar<double>(content[0]);
+        //     screeningInfo.Gcutoff_found = true;
+        // }
         else if(arg == "function"){
             screeningInfo.function = parseWord(content[0]);
         }
@@ -120,9 +120,9 @@ void ScreeningConfiguration::checkContentCoherence(){
     if (screeningInfo.mode != "realspace" && screeningInfo.mode != "reciprocalspace"){
         throw std::invalid_argument("Invalid mode. Use 'realspace' or 'reciprocalspace'");
     }
-    if (screeningInfo.Gcutoff < 0){
-        throw std::invalid_argument("Gcutoff must be a positive number");
-    }
+    // if (screeningInfo.Gcutoff < 0){
+    //     throw std::invalid_argument("Gcutoff must be a positive number");
+    // }
 };
 
 }
