@@ -40,7 +40,7 @@ int main(int argc, char* argv[]){
     std::vector<std::string> methods = {"diag", "davidson", "sparse"};
     TCLAP::ValuesConstraint<std::string> allowedMethods(methods);
     TCLAP::ValueArg<std::string> methodArg("m", "method", "Method to solve the Bethe-Salpeter equation.", false, "diag", &allowedMethods, cmd);
-    TCLAP::ValueArg<std::string> bandsArg("b", "bands", "Computes the bands of the system on the specified kpoints.", false, "kpoints.txt", "Filename", cmd);
+    TCLAP::ValueArg<std::string> bandsArg("b", "bands", "Computes the bands of the system on the specified kpoints.", false, "dummy.txt", "Filename", cmd);
     TCLAP::ValueArg<std::string> screeningArg("z", "screening", "Computes the static dielectric function of the system on the specified kpoints.", false, "kpoints.txt", "Filename", cmd);
     
     TCLAP::UnlabeledValueArg<std::string> systemArg("systemfile", "System file", true, "system.txt", "filename", cmd);
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]){
 
         return 0;
     } else if (screeningArg.isSet() && !excitonArg.isSet()){
-        throw std::invalid_argument("Screening can not be computed without configuring the exciton. Provide both screening and exciton file");
+        throw std::invalid_argument("Screening can not be computed without configuring the exciton. Must provide both screening and exciton files.");
     } else if (!screeningArg.isSet() && excitonArg.isSet()) {
         if (!excitonArg.isSet()){
             throw std::invalid_argument("Must provide exciton file.");
@@ -132,7 +132,11 @@ int main(int argc, char* argv[]){
 
     cout << std::left << std::setw(30) << "System configuration file: " << std::setw(10) << systemfile << endl;
     cout << std::left << std::setw(30) << "Exciton configuration file: " << std::setw(10) << excitonfile << endl;
-    cout << std::left << std::setw(30) << "Screening configuration file: " << std::setw(10) << screeningfile << "\n" << endl;
+    if (screeningArg.isSet()){
+        cout << std::left << std::setw(30) << "Screening configuration file: " << std::setw(10) << screeningfile << "\n" << endl;
+    } else {
+        cout << std::left << std::setw(30) << "Screening configuration file: " << std::setw(10) << "Not provided.\n" << endl;
+    }
 
     bulkExciton.printInformation();
     
