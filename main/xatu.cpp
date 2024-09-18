@@ -169,14 +169,6 @@ int main(int argc, char* argv[]){
             return 0;
         } else if (screeningConfig->screeningInfo.function =="inversedielectric") {
             std::cout << "Proceeding with computation of the inverse of a dielectric matrix...\n" << std::endl;
-            
-            std::string filename_dielectric = excitonConfig->excitonInfo.label + "_invepsilon.dat";
-            FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
-
-            if (textfile_dielectric == NULL){
-                std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
-                return 0;
-            }
 
             bulkExciton.computesingleInverseDielectricMatrix(excitonConfig->excitonInfo.label);
 
