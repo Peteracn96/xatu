@@ -1575,7 +1575,7 @@ void ExcitonTB::computeDielectricMatrix(){
 
     auto start = high_resolution_clock::now();
 
-    std::cout << "Computing dielectric matrix in the BZ mesh... " << std::flush;
+    std::cout << "Computing dielectric matrix in the BZ mesh... \n" << std::flush;
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     int nGs = ReciprocalVectors.n_rows;
@@ -1877,7 +1877,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
 
     int iq = system_->findEquivalentPointBZ(this->q_, this->ncell);//system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell);
-      
+    std::cout << "Computing inverse of dielectric matrix at momentum: q(" << iq << ") = " << system->kpoints.row(iq) << std::endl;  
     arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
     arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
