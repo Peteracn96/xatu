@@ -176,7 +176,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void initializeScreeningAttributes(const ScreeningConfiguration&);
         void computesingleDielectricFunction();
         void computesinglePolarizability();
-        void computesingleInverseDielectricMatrix();
+        void computesingleInverseDielectricMatrix(std::string);
         void PolarizabilityMesh();
         void computeDielectricMatrix();
         void BShamiltonian();

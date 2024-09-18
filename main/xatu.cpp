@@ -178,7 +178,7 @@ int main(int argc, char* argv[]){
                 return 0;
             }
 
-            bulkExciton.computesingleInverseDielectricMatrix();
+            bulkExciton.computesingleInverseDielectricMatrix(excitonConfig->excitonInfo.label);
 
             return 0;
 

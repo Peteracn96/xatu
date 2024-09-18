@@ -1135,8 +1135,8 @@ void ExcitonTB::initializeResultsH0(){
                    Fix it or remove it direcly? */
                 // percent = (100 * (i + 1)) / meshBZ.n_rows ;
                 // if (percent >= displayNext){
-                //     cout << "\r" << "[" << std::string(percent / 5, '|') << std::string(100 / 5 - percent / 5, ' ') << "]";
-                //     cout << percent << "%";
+                //    std::cout << "\r" << "[" << std::string(percent / 5, '|') << std::string(100 / 5 - percent / 5, ' ') << "]";
+                //     std::cout << percent << "%";
                 //     std::cout.flush();
                 //     displayNext += step;
                 // }
@@ -1838,7 +1838,7 @@ void ExcitonTB::computesingleDielectricFunction() {
  * kpoints coincides with the kmesh
  * @return void
 */
-void ExcitonTB::computesingleInverseDielectricMatrix() {
+void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
     auto start = high_resolution_clock::now();
 
@@ -1850,8 +1850,23 @@ void ExcitonTB::computesingleInverseDielectricMatrix() {
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     int nGs = ReciprocalVectors.n_rows;
+    std::string to_continue = "_";
 
-    std::string filename_dielectric = "invepsilon_" + std::to_string(nGs) + ".dat";
+    while(to_continue != "y" && to_continue != "n"){
+        std::cout << "The number of reciprocal vectors included is: " << nGs << ". Do you wish to procceed?[y/n]\n";
+        std::getline(std::cin, to_continue);
+        if (to_continue == "n"){
+            std::cout << "You have chosen not to continue. Exiting.\n";
+            exit(1);
+        } else if (to_continue == "y") {
+            continue;
+        } else {
+            std::cout << "Option not recognized. Please enter 'y' or 'n' (without the ticks).\n";
+            continue;
+        }
+    }
+
+    std::string filename_dielectric = label + "invepsilon_" + std::to_string(nGs) + ".dat";
     FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
 
     if (textfile_dielectric == NULL){
@@ -1861,7 +1876,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix() {
 
     arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
 
-    int iq = system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell);
+    int iq = system_->findEquivalentPointBZ(this->q_, this->ncell);//system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell);
       
     arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
     arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -2235,7 +2250,7 @@ double ExcitonTB::fermiGoldenRule(const ExcitonTB& targetExciton,
 
     double delta = 2.4/(2*ncell); // Adjust delta depending on number of k points
     double rho = targetExciton.pairDensityOfStates(energy, delta);
-    cout << "DoS value: " << rho << endl;
+    std::cout << "DoS value: " << rho << endl;
     double hbar = 6.582119624E-16; // Units are eV*s
 
     transitionRate = 2*PI*std::norm(arma::cdot(finalState, W*initialState))*rho/hbar;
@@ -2446,7 +2461,7 @@ double ExcitonTB::edgeFermiGoldenRule(const ExcitonTB& targetExciton,
 
     double delta = 2.0/targetExciton.system->nk; // Adjust delta depending on number of k points
     double rho = targetExciton.pairDensityOfStates(energy, delta);
-    cout << "DoS value: " << rho << endl;
+    std::cout << "DoS value: " << rho << endl;
     double hbar = 6.582119624E-16; // Units are eV*s
 
     transitionRate = (ncell*system->a)*2*PI*std::norm(arma::dot(W, initialState))*rho/hbar;
@@ -2460,37 +2475,37 @@ double ExcitonTB::edgeFermiGoldenRule(const ExcitonTB& targetExciton,
  * @return void 
  */
 void ExcitonTB::printInformation(){
-    cout << std::left << std::setw(30) << "Number of cells: " << ncell << endl;
-    cout << std::left << std::setw(30) << "Valence bands:";
+    std::cout << std::left << std::setw(30) << "Number of cells: " << ncell << endl;
+    std::cout << std::left << std::setw(30) << "Valence bands:";
     for (int i = 0; i < valenceBands.n_elem; i++){
-        cout << valenceBands(i) << " ";
+        std::cout << valenceBands(i) << " ";
     }
-    cout << endl;
+    std::cout << endl;
 
-    cout << std::left << std::setw(30) << "Conduction bands: ";
+    std::cout << std::left << std::setw(30) << "Conduction bands: ";
     for (int i = 0; i < conductionBands.n_elem; i++){
-        cout << conductionBands(i) << " ";
+        std::cout << conductionBands(i) << " ";
     }
-    cout << "\n" << endl;
+    std::cout << "\n" << endl;
 
-    cout << std::left << std::setw(30) << "Gauge used: " << gauge << endl;
-    cout << std::left << std::setw(30) << "Calculation mode: " << mode << endl;
+    std::cout << std::left << std::setw(30) << "Gauge used: " << gauge << endl;
+    std::cout << std::left << std::setw(30) << "Calculation mode: " << mode << endl;
     if(mode == "reciprocalspace"){
-        cout << std::left << std::setw(30) << "nG: " << nReciprocalVectors << endl;
+        std::cout << std::left << std::setw(30) << "nG: " << nReciprocalVectors << endl;
     }
-    cout << std::left << std::setw(30) << "Potential: " << potential_ << endl;
+    std::cout << std::left << std::setw(30) << "Potential: " << potential_ << endl;
     if(exchange){
-        cout << std::left << std::setw(30) << "Exchange: " << (exchange ? "True" : "False") << endl;
-        cout << std::left << std::setw(30) << "Exchange potential: " << exchangePotential_ << endl;
+        std::cout << std::left << std::setw(30) << "Exchange: " << (exchange ? "True" : "False") << endl;
+        std::cout << std::left << std::setw(30) << "Exchange potential: " << exchangePotential_ << endl;
     }
     if(arma::norm(Q) > 1E-7){
-        cout << std::left << std::setw(30) << "Q: "; 
+        std::cout << std::left << std::setw(30) << "Q: "; 
         for (auto qi : Q){
-            cout << qi << "  ";
+            std::cout << qi << "  ";
         }
-        cout << endl;
+        std::cout << endl;
     }
-    cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << endl;
+    std::cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << endl;
 
     if (this->isscreeningset == true){
         std::cout << std::left << std::setw(40) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
