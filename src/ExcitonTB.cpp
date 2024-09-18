@@ -102,6 +102,17 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     }
     this->potential_ = cfg.excitonInfo.potential;
     this->exchangePotential_ = cfg.excitonInfo.exchangePotential;
+
+    if (cfg.excitonInfo.Gcutoff_found){
+        this->Gcutoff_ = cfg.excitonInfo.Gcutoff;
+    } else {
+        this->Gcutoff_ = (this->ncell)/2.5;
+    }
+
+    if (this->trunreciprocalLattice_.is_empty()){
+        double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
+        this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    }
 }
 
 /**
@@ -244,8 +255,10 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         this->Gcutoff_ = (this->ncell)/2.5;
     }
 
-    double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
-    this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    if (this->trunreciprocalLattice_.is_empty()){
+        double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
+        this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    }
     
     int ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
@@ -889,14 +902,15 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     std::complex<double> Ic, Iv;
     std::complex<double> term = 0;
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
-    arma::mat reciprocalVectors = this->trunreciprocalLattice_;
-    int Gcutoff = system_->truncateReciprocalSupercell(nrcells, radius).n_rows;
-    std::cout << "Gcutoff at BSE Hamiltonian = " << Gcutoff << std::endl;
+    arma::mat reciprocalVectors = this->trunreciprocalLattice_;//system_->truncateReciprocalSupercell(nrcells, radius);
+    //int Gcutoff = system_->truncateReciprocalSupercell(nrcells, radius).n_rows;
 
-    for(int g = 0; g <= Gcutoff; g++){
+    std::cout << "Number of Gs = " << reciprocalVectors.n_rows << std::endl;
+
+    for(int g = 0; g < reciprocalVectors.n_rows; g++){
         auto G = reciprocalVectors.row(g);
 
-        for(int g2 = 0; g2 <= Gcutoff; g2++){
+        for(int g2 = 0; g2 < reciprocalVectors.n_rows; g2++){
             auto G2 = reciprocalVectors.row(g2);
 
             Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
@@ -905,6 +919,24 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
             term += Ic*(this->*potential)(g, g2, k - k2)*conj(Iv);
         }
     }
+
+    // int g = 0;
+    // int g2 = 0;
+    // arma::rowvec G = reciprocalVectors.row(g);
+    // arma::rowvec G2 = reciprocalVectors.row(g2);
+    // while(arma::norm(G) <= radius){
+    //     G = reciprocalVectors.row(g);
+    //     while(arma::norm(G2) <= radius){
+    //         G2 = reciprocalVectors.row(g2);
+    //         Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+    //         Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
+
+    //         term += Ic*(this->*potential)(g, g2, k - k2)*conj(Iv);
+
+    //         g2++;
+    //     }
+    //     g++;
+    // }
 
     return term;
 };

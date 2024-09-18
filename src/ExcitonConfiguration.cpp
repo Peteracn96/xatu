@@ -107,6 +107,10 @@ void ExcitonConfiguration::parseContent(){
         else if(arg == "regularization"){
             excitonInfo.regularization = parseScalar<double>(content[0]);
         }
+        else if(arg == "gcutoff"){
+            excitonInfo.Gcutoff = parseScalar<double>(content[0]);
+            excitonInfo.Gcutoff_found = true;
+        }
         else{    
             std::cout << "Unexpected argument: " << arg << ", skipping block..." << std::endl;
         }
@@ -152,6 +156,9 @@ void ExcitonConfiguration::checkContentCoherence(){
     }
     if (excitonInfo.mode != "realspace" && excitonInfo.mode != "reciprocalspace"){
         throw std::invalid_argument("Invalid mode. Use 'realspace' or 'reciprocalspace'");
+    }
+    if (excitonInfo.Gcutoff < 0){
+        throw std::invalid_argument("Gcutoff must be a positive number");
     }
 };
 

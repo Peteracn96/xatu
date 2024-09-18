@@ -28,6 +28,10 @@ class ExcitonConfiguration : public ConfigurationBase{
         arma::rowvec shift;
         // Cutoff to be used 
         double cutoff;
+        // Cut off for G vectors
+        double Gcutoff;
+        // Bool true/false if Gcutoff was/was not found
+        bool Gcutoff_found = false;
         // Dielectric constants
         arma::vec eps = {};
         // Screening length
