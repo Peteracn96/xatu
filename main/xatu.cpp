@@ -101,7 +101,7 @@ int main(int argc, char* argv[]){
 
         return 0;
     } else if (screeningArg.isSet() && !excitonArg.isSet()){
-        throw std::invalid_argument("Screening can not be computed without configuring the exciton. Must provide both screening and exciton files.");
+        throw std::invalid_argument("For screening, both screening and exciton files must be provided.");
     } else if (!screeningArg.isSet() && excitonArg.isSet()) {
         if (!excitonArg.isSet()){
             throw std::invalid_argument("Must provide exciton file.");
@@ -129,6 +129,8 @@ int main(int argc, char* argv[]){
     if (screeningArg.isSet()){
         bulkExciton.initializeScreeningAttributes(*screeningConfig);
     }
+    
+    bulkExciton.verifypotential();
 
     cout << std::left << std::setw(30) << "System configuration file: " << std::setw(10) << systemfile << endl;
     cout << std::left << std::setw(30) << "Exciton configuration file: " << std::setw(10) << excitonfile << endl;
@@ -194,7 +196,23 @@ int main(int argc, char* argv[]){
 
             fclose(textfile_dielectric);
 
-            //return 0;
+            std::string to_continue = "_";
+
+            while(to_continue != "y" && to_continue != "n"){
+                std::cout << "Do you wish to procceed with the computation of the exciton?[y/n]\n";
+                std::getline(std::cin, to_continue);
+                if (to_continue == "n"){
+                    std::cout << "You have chosen not to continue. Exiting.\n";
+                    return 0;
+                } else if (to_continue == "y") {
+                    continue;
+                } else {
+                    std::cout << "Option not recognized. Please enter 'y' or 'n' (without the ticks).\n";
+                    continue;
+                }
+            }
+            
+            // return 0;
         } else {
             std::cout << "\nValue for 'function' not recognized. Terminating program.\n" << std::endl;
             return 0;

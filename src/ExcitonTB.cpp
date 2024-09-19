@@ -115,6 +115,35 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     }
 }
 
+/*
+ * Method to verify if the chosen potential was 'rpa' while a screening file was provided or not
+ * @return void
+*/
+void ExcitonTB::verifypotential(){
+    if ((this->potential_ == "rpa" || this->exchangePotential_ == "rpa") && this->isscreeningset == false) {
+        std::cout << "To use the rpa potential, a screening configuration file must be provided." << std::endl;
+        exit(1);
+    }
+
+    if ((this->potential_ != "rpa" || (this->exchangePotential_ != "rpa" && this->exchange)) && this->isscreeningset == true && this->function_ == "none") {
+        std::string to_continue = "_";
+
+        while(to_continue != "y" && to_continue != "n"){
+            std::cout << "You have provided a screening file, yet you have not chosen the rpa potential.\nDo you wish to continue?[y/n]\n";
+            std::getline(std::cin, to_continue);
+            if (to_continue == "n"){
+                std::cout << "You have chosen not to continue. Exiting.\n";
+                exit(1);
+            } else if (to_continue == "y") {
+                continue;
+            } else {
+                std::cout << "Option not recognized. Please enter 'y' or 'n' (without the ticks).\n";
+                continue;
+            }
+        }
+    }
+}
+
 /**
  * Method to generate the reciprocal lattice vectors.
  * @details Every reciprocal lattice vectors is G = l G1 + k G2, where (l,k) is a pair of signed integers

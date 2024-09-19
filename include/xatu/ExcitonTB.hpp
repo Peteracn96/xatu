@@ -198,6 +198,9 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Write inverse of dielectric matrix in a file
         void writeInverseDielectricMatrix(FILE*);     
+
+        // Verifies if potential chosen is 'rpa' and if a screening file was not provided
+        void verifypotential();
 };
 
 }
