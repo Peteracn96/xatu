@@ -143,7 +143,7 @@ class ExcitonTB : public Exciton<SystemTB> {
                                                        const arma::cx_vec&, const arma::cx_vec&,
                                                        const arma::rowvec&, const arma::rowvec&,
                                                        const arma::rowvec&, const arma::rowvec&, 
-                                                       recpotptr, int nrcells = 15);
+                                                       std::string, int nrcells = 15);
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
                                                   const arma::rowvec&);

@@ -150,7 +150,6 @@ void ExcitonTB::verifypotential(){
  * @param nreciprocal number of reciprocal vectors in each direction.
  * @return matrix with the list of reciprocal lattive vectors organized in rows.
 */
-
 arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
 
     int nls = 2*nreciprocal + 1;
@@ -221,6 +220,7 @@ arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
 
     return ReciprocalVectors;
 }
+
 /**
  * Method to set the screening attributes of an exciton object from a ScreeningConfiguration object.
  * @details Overload of the method to use a configuration object. Based on the parametric method.
@@ -678,7 +678,7 @@ potptr ExcitonTB::selectPotential(std::string potential){
  * @return Pointer to function representing the potential.
  */
 
-recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){
+recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This function is not being used for now, as rpaFT returns a std::complex<double> and not double.
     if(potential == "keldysh"){
         return &ExcitonTB::keldyshFT;
     }
@@ -686,7 +686,7 @@ recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){
         return &ExcitonTB::coulombFT;
     }
     else if(potential == "rpa"){
-        return &ExcitonTB::rpaFT;
+        return &ExcitonTB::keldyshFT;
     }
     else{
         throw std::invalid_argument("selectPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
@@ -767,7 +767,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q){
     if (this->Invepsilonmatrix_.is_empty()){
         std::cerr << "Inverse of dielectric matrix has not been computed yet. Terminating." << std::endl;
     }
-    std::cout << "I'm being called!" << std::endl;
+
     std::complex<double> potential = 0;
     double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
 
@@ -777,7 +777,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q){
     }
     else{
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(g2, g2, q);
+        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(g2, g2, q)/(system->unitCellArea*totalCells);
     }
 
     return potential;
@@ -915,6 +915,8 @@ std::complex<double> ExcitonTB::realSpaceInteractionTerm(const arma::cx_vec& coe
  * @param k2 kpoint corresponding to k'.
  * @param kQ kpoint corresponding to k + Q.
  * @param k2Q kpoint corresponding to k' + Q.
+ * @param potential Potential used to compute the matrix element (Coulomb, Keldysh or dielectric function within RPA)
+ * @param nrcells Number of reciprocal vectors included in the double sum over G and G'
  * @return Interaction term.
  */
 std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& coefsK, 
@@ -925,7 +927,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                                      const arma::rowvec& k2,
                                      const arma::rowvec& kQ, 
                                      const arma::rowvec& k2Q,
-                                     recpotptr potential,
+                                     std::string potential,
                                      int nrcells){
     
     std::complex<double> Ic, Iv;
@@ -934,19 +936,50 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     arma::mat reciprocalVectors = this->trunreciprocalLattice_;
     //int Gcutoff = system_->truncateReciprocalSupercell(nrcells, radius).n_rows;
 
-    for(int g = 0; g < nrcells; g++){
-        auto G = reciprocalVectors.row(g);
+    if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
+        for(int g = 0; g < nrcells; g++){
+            auto G = reciprocalVectors.row(g);
 
-        for(int g2 = 0; g2 < nrcells; g2++){
-            auto G2 = reciprocalVectors.row(g2);
+            for(int g2 = 0; g2 < nrcells; g2++){
+                auto G2 = reciprocalVectors.row(g2);
 
-            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
+                Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+                Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
 
-            term += Ic*(this->*potential)(g, g2, k - k2)*conj(Iv);
+                term += Ic*this->coulombFT(g, g2, k - k2)*conj(Iv);
+            }
         }
-    }
+    } else if (potential == "keldysh"){
+        for(int g = 0; g < nrcells; g++){
+            auto G = reciprocalVectors.row(g);
 
+            for(int g2 = 0; g2 < nrcells; g2++){
+                auto G2 = reciprocalVectors.row(g2);
+
+                Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+                Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
+
+                term += Ic*this->keldyshFT(g, g2, k - k2)*conj(Iv);
+            }
+        }
+    } else if (potential == "rpa"){
+        for(int g = 0; g < nrcells; g++){
+            auto G = reciprocalVectors.row(g);
+
+            for(int g2 = 0; g2 < nrcells; g2++){
+                auto G2 = reciprocalVectors.row(g2);
+
+                Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+                Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
+
+                term += Ic*this->rpaFT(g, g2, k - k2)*conj(Iv);
+            }
+        }
+    } else {
+        std::cout << "Potential not valid" << std::endl;
+        exit(1);
+    }
+    
     // int g = 0;
     // int g2 = 0;
     // arma::rowvec G = reciprocalVectors.row(g);
@@ -2044,10 +2077,10 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
             recpotptr directPotential = selectReciprocalPotential(this->potential_);
             arma::rowvec k = system->kpoints.row(k_index);
             arma::rowvec k2 = system->kpoints.row(k2_index);
-            D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, directPotential, this->nReciprocalVectors);
+            D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
             if(this->exchange){
-                recpotptr exchangePotential = selectReciprocalPotential(this->potential_);
-                X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, exchangePotential, this->nReciprocalVectors);
+                recpotptr exchangePotential = selectReciprocalPotential(this->exchangePotential_);
+                X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, this->exchangePotential_, this->nReciprocalVectors);
             }
         }
         
@@ -2269,7 +2302,7 @@ double ExcitonTB::fermiGoldenRule(const ExcitonTB& targetExciton,
                 arma::rowvec k = system->kpoints.row(kf_index);
                 arma::rowvec k2 = system->kpoints.row(ki_index);
                 recpotptr potential = selectReciprocalPotential(this->potential_); // Not sure at this point the effect of the chosen potential on this calculation
-                D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, potential, this->nReciprocalVectors);
+                D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
                 X = 0;
             }
             
@@ -2481,7 +2514,7 @@ double ExcitonTB::edgeFermiGoldenRule(const ExcitonTB& targetExciton,
         else if (mode == "reciprocalspace"){
             arma::rowvec k2 = system->kpoints.row(ki_index);
             recpotptr potential = selectReciprocalPotential(this->potential_); // Not sure at this point the effect of the chosen potential on this calculation
-            D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, potential, this->nReciprocalVectors);
+            D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
             X = 0;
         }
         
