@@ -2572,17 +2572,14 @@ void ExcitonTB::printInformation(){
     if (this->isscreeningset == true){
         std::cout << std::left << std::setw(40) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
         std::cout << std::left << std::setw(40) << "Number of conduction bands included: " << this->nconductionbands_ << std::endl;
-        if (this->mode == "reciprocalspace"){
-            std::cout << std::left << std::setw(40) << "Number of reciprocal lattice vectors: " << this->trunreciprocalLattice_.n_rows << std::endl;
-        }
         std::cout << std::left << std::setw(40) << "Gcutoff: " << this->Gcutoff_ << std::endl;
         if (this->function_ == "dielectric" || this->function_ == "polarizability"){
             arma::rowvec G(this->trunreciprocalLattice_ .row(this->Gs_(0)));
             arma::rowvec Gprime(this->trunreciprocalLattice_ .row(this->Gs_(1)));
             std::cout << std::left << std::setw(0) << "Selected G(" << std::setw(0) << this->Gs_(0) << "): " << G(0) << " " << G(1) << " " << G(2) << std::endl;
             std::cout << std::left << std::setw(0) << "Selected G'(" << std::setw(0) << this->Gs_(1) << "): " << Gprime(0) << " " << Gprime(1) << " " << Gprime(2) << std::endl;
-        } else if (this->function_ == "none") {
-            std::cout << std::left << std::setw(40) << "Number of reciprocal vectors: " << this->nGs << std::endl;
+        } else if (this->function_ == "none" || this->function_ == "inversedielectric") {
+            std::cout << std::left << std::setw(40) << "Number of reciprocal lattice vectors: " << this->nGs << std::endl;
         }
     }
 }
