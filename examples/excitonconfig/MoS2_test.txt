@@ -1,5 +1,5 @@
 # label
-Mos2
+MoS2_TB_corner
 # ncells
 20
 # bands
@@ -9,4 +9,6 @@ Mos2
 # totalmomentum
 0.0 0.0 0.0
 # reciprocal
-2
+17
+# gcutoff
+26.

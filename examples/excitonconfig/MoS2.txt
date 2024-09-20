@@ -1,11 +1,17 @@
 # label
-Mos2
+MoS2_TB_exciton_25Gs
 # ncells
-30
-# bandList
--1 0 1 2
+20
+# bands
+2
 # Dielectric
 1 4 13.55
 # totalmomentum
 0.0 0.0 0.0
-#
+# reciprocal
+25
+# potential
+rpa
+# gcutoff
+3
+# blabla

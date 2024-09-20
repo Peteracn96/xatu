@@ -1,14 +1,14 @@
 # mode
 reciprocalspace
 # valence bands
-14
+26
 # conduction bands
 8
 # removedbands
 0
 # reciprocal vectors
-1 2
+0 0
 # momentum
--0.99 1.61 0.
+0.0497087 0.0286994 0.
 # function
 inversedielectric
