@@ -115,7 +115,7 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
 
     if (this->trunreciprocalLattice_.is_empty()){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
-        radius = this->Gcutoff_; //temporary for testing
+        radius = this->Gcutoff_; //temporary for testing, have to test also for excitons
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
     }
 }
