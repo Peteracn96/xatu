@@ -1863,8 +1863,20 @@ void ExcitonTB::computeDielectricMatrix(){
 */
 void ExcitonTB::computesingleDielectricFunction() {
 
-    if(mode == "realspace"){
+    if(mode == "realspace"){ //GIVES SEG FAULT
         std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+
+        arma::vec t1 = system->motif.row(this->ts(0)).subvec(0, 2);
+        arma::rowvec t2 = system->motif.row(this->ts(1)).subvec(0, 2);
+
+        double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
+        arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
+
+        arma::rowvec R1 = lattice_vectors.row(this->Gs_(0)); // Sets R1
+        arma::rowvec R2 = lattice_vectors.row(this->Gs_(1)); // Sets R2
+
+        std::cout << "R_1 = " << R1 << std::endl;
+        std::cout << "R_2 = " << R2 << std::endl;
 
         std::exit(0);
     }
