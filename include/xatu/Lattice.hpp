@@ -11,6 +11,12 @@
 #define eps0 8.8541878E-12
 #endif
 
+/** 
+ *Method to sort rows in a matrix by norm
+ *@return void 
+*/
+void sortVectors(arma::mat&);
+
 namespace xatu {
 
 /// @brief The Lattice class is designed to hold all information regarding both
@@ -82,6 +88,7 @@ class Lattice {
         arma::mat truncateReciprocalSupercell(int, double);
         arma::mat generateCombinations(int n, int ndim, bool centered = false);
         arma::imat generateOrderedCombinations(int, int);
+        arma::imat generateCombinationsGcutoff(double, int);
 
         /* Crystal operations */
         arma::rowvec rotateC3(const arma::rowvec&);

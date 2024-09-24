@@ -14,6 +14,13 @@
 #define eps0 8.8541878E-12
 #endif
 
+/** 
+ *Method to prompt user to continue
+ *@param message
+ *@return void 
+*/
+void continueprompt(std::string);
+
 namespace xatu {
 
 // Definitions
@@ -52,6 +59,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::string function_;
         arma::ivec Gs_;
         arma::rowvec q_;
+        arma::ivec ts_;
         int nGs;
         double Gcutoff_ = 0;
         arma::mat trunreciprocalLattice_;
@@ -74,6 +82,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         const std::string& mode = mode_;
         // Return number of reciprocal lattice vectors to use in summations (mode="reciprocalspace")
         const int& nReciprocalVectors = nReciprocalVectors_;
+        // Return motif vectors where the real space dielectric function is computed at
+        const arma::ivec& ts = ts_;
 
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;

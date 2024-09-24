@@ -196,21 +196,7 @@ int main(int argc, char* argv[]){
 
             fclose(textfile_dielectric);
 
-            std::string to_continue = "_";
-
-            while(to_continue != "y" && to_continue != "n"){
-                std::cout << "Do you wish to procceed with the computation of the exciton?[y/n]\n";
-                std::getline(std::cin, to_continue);
-                if (to_continue == "n"){
-                    std::cout << "You have chosen not to continue. Exiting.\n";
-                    return 0;
-                } else if (to_continue == "y") {
-                    continue;
-                } else {
-                    std::cout << "Option not recognized. Please enter 'y' or 'n' (without the ticks).\n";
-                    continue;
-                }
-            }
+            continueprompt("Do you wish to procceed with the computation of the exciton?[y/n]\n");
             
             // return 0;
         } else {
