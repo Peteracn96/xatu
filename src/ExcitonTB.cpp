@@ -8,22 +8,26 @@ using namespace arma;
 using namespace std::chrono;
 
 /** 
- *Method to sort rows in a matrix by norm
+ *Method to prompt user to continue
+ *@param message
  *@return void 
 */
-void sortVectors(arma::mat& vectors){
+void continueprompt(std::string message){
 
-    std::vector<arma::rowvec> vecs;
+    std::string to_continue = "_";
 
-    for (int i = 0; i < (int)vectors.n_rows; ++i)
-        vecs.push_back(vectors.row(i));
-
-    std::sort(vecs.begin(), vecs.end(), [](const arma::rowvec & a, const arma::rowvec & b){ return arma::norm(a) < arma::norm(b); });
-
-    for (int i = 0; i < (int)vectors.n_rows; ++i){
-        vectors.row(i)(0) = vecs[i][0];
-        vectors.row(i)(1) = vecs[i][1];
-        vectors.row(i)(2) = vecs[i][2];
+    while(to_continue != "y" && to_continue != "n"){
+        std::cout << message;
+        std::getline(std::cin, to_continue);
+        if (to_continue == "n"){
+            std::cout << "You have chosen not to continue. Exiting.\n";
+            exit(1);
+        } else if (to_continue == "y") {
+            continue;
+        } else {
+            std::cout << "Option not recognized. Please enter 'y' or 'n' (without the ticks).\n";
+            continue;
+        }
     }
 }
 
@@ -106,11 +110,12 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     if (cfg.excitonInfo.Gcutoff_found){
         this->Gcutoff_ = cfg.excitonInfo.Gcutoff;
     } else {
-        this->Gcutoff_ = (this->ncell)/2.5;
+        this->Gcutoff_ = (this->ncell)/2.5 * arma::norm(system->reciprocalLattice.row(0)); //Temporary, to have as Gcutoff as a length of reciprocal vector
     }
 
     if (this->trunreciprocalLattice_.is_empty()){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
+        radius = this->Gcutoff_; //temporary for testing
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
     }
 }
@@ -126,21 +131,7 @@ void ExcitonTB::verifypotential(){
     }
 
     if ((this->potential_ != "rpa" || (this->exchangePotential_ != "rpa" && this->exchange)) && this->isscreeningset == true && this->function_ == "none") {
-        std::string to_continue = "_";
-
-        while(to_continue != "y" && to_continue != "n"){
-            std::cout << "You have provided a screening file, yet you have not chosen the rpa potential.\nDo you wish to continue?[y/n]\n";
-            std::getline(std::cin, to_continue);
-            if (to_continue == "n"){
-                std::cout << "You have chosen not to continue. Exiting.\n";
-                exit(1);
-            } else if (to_continue == "y") {
-                continue;
-            } else {
-                std::cout << "Option not recognized. Please enter 'y' or 'n' (without the ticks).\n";
-                continue;
-            }
-        }
+        continueprompt("You have provided a screening file, yet you have not chosen the rpa potential.\nDo you wish to continue?[y/n]\n");
     }
 }
 
@@ -234,6 +225,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::rowvec q           = cfg.screeningInfo.q;
     arma::ivec gs            = cfg.screeningInfo.Gs;
     std::string function     = cfg.screeningInfo.function;
+    arma::ivec ts            = cfg.screeningInfo.ts;
 
     this->isscreeningset = true;
     this->function_ = function;
@@ -286,6 +278,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     if (this->trunreciprocalLattice_.is_empty()){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
+        radius = this->Gcutoff_; //This is temporary to see if it works
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
     }
     
@@ -1378,7 +1371,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     }
     std::cout << "cutoff = " << cutoff << "\n";
 
-    std::ofstream polarfile("../examples/screeningconfig/polarizability_convergence.dat"); 
+    std::ofstream polarfile("../examples/screeningconfig/reciprocalspace_polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
@@ -1585,7 +1578,7 @@ void ExcitonTB::PolarizabilityMesh(){
     arma::cx_vec Chi(nq, arma::fill::zeros);
 
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
-    arma::mat reciprocalVectors = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    arma::mat reciprocalVectors = this->trunreciprocalLattice_;//system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
     arma::rowvec g = reciprocalVectors.row(this->Gs(0)); // Sets G
     arma::rowvec g2 = reciprocalVectors.row(this->Gs(1)); // Sets G'
@@ -1913,6 +1906,13 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     int nGs = ReciprocalVectors.n_rows;
     std::string to_continue = "_";
+
+    for (int i = 0; i < nGs; i++){     
+
+        arma::rowvec G = ReciprocalVectors.row(i);                
+
+        std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+    }
 
     while(to_continue != "y" && to_continue != "n"){
         std::cout << "The number of reciprocal vectors included is: " << nGs << ". Do you wish to procceed?[y/n]\n";
