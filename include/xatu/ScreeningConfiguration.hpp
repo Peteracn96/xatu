@@ -23,10 +23,6 @@ class ScreeningConfiguration : public ConfigurationBase{
         int nrmcbands = 0;
         // Momentum to compute the dielectric function.
         arma::rowvec q = {0.2, 0., 0.};
-        // // Cut off for G vectors
-        // double Gcutoff;
-        // // Bool true/false if Gcutoff was/was not found
-        // bool Gcutoff_found = false;
         // Reduction factor of the BZ mesh. Defaults to 1.
         int submeshFactor = 1;
         // Calculation mode (either 'realspace' or 'reciprocalspace')
@@ -35,8 +31,10 @@ class ScreeningConfiguration : public ConfigurationBase{
         double scissor = 0.0;
         // Number of reciprocal vectors to use in reciprocal space calculation
         int nReciprocalVectors = 0;
-        // Pair of reciprocal vectors (G,G') to compute the dielectric function at
+        // Pair of reciprocal vectors (G,G') to compute the reciprocal space dielectric function at
         arma::ivec Gs = {0, 0};
+        // Pair of motif vectors (i,j) to compute the real space dielectric function at
+        arma::ivec ts = {0, 0};
         // Number of Bravais lattice vectors to use in real space calculation
         int nLatticeVectors = 0;
         // Regularization distance
