@@ -98,16 +98,16 @@ void ScreeningConfiguration::checkContentCoherence(){
     if(screeningInfo.nrmcbands < 0){
         throw std::logic_error("'nrmcbands' must not be a negative number");
     }
-    if(screeningInfo.nReciprocalVectors < 0){
+    if(screeningInfo.nReciprocalVectors < 0){//This was for a functionality I have in mind not needed
         throw std::logic_error("'nReciprocalVectors' must be a non-negative number");
     }
-    if(screeningInfo.nLatticeVectors <= 0 && screeningInfo.mode == "realspace"){
+    if(screeningInfo.nLatticeVectors <= 0 && screeningInfo.mode == "realspace"){ //This was for a functionality I have in mind not needed
         throw std::logic_error("'nLatticeVectors' must be a positive number");
     }
     if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "none"){
         throw std::logic_error("'function' must be 'dielectric', 'polarizability' or 'none'");
     }
-    if (screeningInfo.ts(0) < 0 || screeningInfo.ts(1) < 0){
+    if(screeningInfo.ts(0) < 0 || screeningInfo.ts(1) < 0){
         throw std::invalid_argument("The index of the motif vectors can not be negative! Must be zero or positive integer.");
     }
 };
