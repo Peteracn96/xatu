@@ -1256,8 +1256,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
     std::complex<double> I(0, 1);
 
     int nk = system->nk;
-    int natoms = system->natoms;
-    int basisdim = system->basisdim;
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
@@ -1273,20 +1271,11 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
     std::cout << "fermi level = " << system->fermiLevel << "\n";
 
     std::complex<double> term = 0.;
-
-    this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-    this->ftMotifStack   = arma::cx_cube(natoms, natoms, system->meshBZ.n_rows);
-    this->ftMotifQ       = arma::cx_mat(natoms, natoms);
-
-    vec auxEigVal(basisdim);
-    arma::cx_mat auxEigvec(basisdim, basisdim);
-
-    
     arma::cx_vec coefsk, coefsk2;
 
     int i_index = 0;
     int j_index = 0;
-    
+
     for(unsigned int atom_index = 0; atom_index < i; atom_index++){
         int norbitals = system->orbitals(system->motif.row(atom_index)(3));
 
@@ -1299,8 +1288,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
         j_index += norbitals;
     }
 
-    arma::vec t_i = system->motif.row(i);
-    arma::vec t_j = system->motif.row(j);
+    arma::rowvec t_i = system->motif.row(i).subvec(0,2);
+    arma::rowvec t_j = system->motif.row(j).subvec(0,2);
 
     int norbitals_alpha = system->orbitals(system->motif.row(i)(3));
     int norbitals_beta = system->orbitals(system->motif.row(j)(3));
@@ -1340,13 +1329,11 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
                     sum_alpha = arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1));
                     sum_beta = arma::sum(CoefArray.subvec(j_index, j_index + norbitals_beta - 1));
 
-                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));
-
-                    //std::cout << "ik = " << k << ", iv = " << iv << ", ic = " << ic << "\n"; 
-                
+                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));      
                 }
             }
-                polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(totalCells) << " " << imag(term)/(totalCells) << "\n";
+            
+            polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(totalCells) << " " << imag(term)/(totalCells) << "\n";
         }
     }
 
@@ -1378,7 +1365,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     }
 
     int nk = system->nk;
-    int natoms = system->natoms;
     int basisdim = system->basisdim;
 
     arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs(0)); // Sets G
@@ -1860,6 +1846,7 @@ void ExcitonTB::computeDielectricMatrix(){
  * @return void
 */
 void ExcitonTB::computesingleDielectricFunction() {
+    auto start = high_resolution_clock::now();
 
     if(mode == "realspace"){
         std::cout << "Real space dielectric function implementation not finished." << std::endl;
@@ -1887,26 +1874,33 @@ void ExcitonTB::computesingleDielectricFunction() {
         
         // std::cout << "nk = " << system->nk << std::endl;
 
-        this->computesinglePolarizability(R1, R2, i, j);
+        std::complex<double> T = this->computesinglePolarizability(R1, R2, i, j);
 
-        std::exit(0);
+        std::cout << "The value of the polarizability is T_ij(R,R') = " << T << std::endl;
     }
 
-    std::complex<double> Chi;
+    if(mode == "reciprocalspace"){
+        std::complex<double> Chi;
 
-    arma::rowvec q = this->q_;
+        arma::rowvec q = this->q_;
 
-    arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
-    arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
+        arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
+        arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
 
-    Chi = computesinglePolarizability(q);
+        Chi = computesinglePolarizability(q);
 
-    double potential = coulombFT(this->Gs_(0), this->Gs_(0), q);
+        double potential = coulombFT(this->Gs_(0), this->Gs_(0), q);
 
-    double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
-        
-    std::cout << "Polarizability at q = " << Chi << std::endl;
-    std::cout << "Dielectric function at q = " << kroneckerdelta - potential*Chi << std::endl;
+        double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
+            
+        std::cout << "Polarizability at q = " << Chi << std::endl;
+        std::cout << "Dielectric function at q = " << kroneckerdelta - potential*Chi << std::endl;
+    }
+    
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(stop - start);
+
+    std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
 }
 
 /**
