@@ -1863,7 +1863,7 @@ void ExcitonTB::computeDielectricMatrix(){
 */
 void ExcitonTB::computesingleDielectricFunction() {
 
-    if(mode == "realspace"){ //GIVES SEG FAULT
+    if(mode == "realspace"){
         std::cout << "Real space dielectric function implementation not finished." << std::endl;
 
         arma::rowvec t1 = system->motif.row(this->ts_(0)).subvec(0,2);
