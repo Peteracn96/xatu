@@ -1401,8 +1401,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
     this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
     this->eigvalkqStack_ = arma::mat(basisdim, nk);
-    this->ftMotifStack   = arma::cx_cube(natoms, natoms, system->meshBZ.n_rows);
-    this->ftMotifQ       = arma::cx_mat(natoms, natoms);
 
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
@@ -1866,8 +1864,11 @@ void ExcitonTB::computesingleDielectricFunction() {
     if(mode == "realspace"){
         std::cout << "Real space dielectric function implementation not finished." << std::endl;
 
-        arma::rowvec t1 = system->motif.row(this->ts_(0)).subvec(0,2);
-        arma::rowvec t2 = system->motif.row(this->ts_(1)).subvec(0,2);
+        int i = this->ts_(0);
+        int j = this->ts_(1);
+
+        arma::rowvec t1 = system->motif.row(i).subvec(0,2);
+        arma::rowvec t2 = system->motif.row(j).subvec(0,2);
 
         double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
         arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
@@ -1885,6 +1886,8 @@ void ExcitonTB::computesingleDielectricFunction() {
         // }
         
         // std::cout << "nk = " << system->nk << std::endl;
+
+        this->computesinglePolarizability(R1, R2, i, j);
 
         std::exit(0);
     }
