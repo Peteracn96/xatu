@@ -230,6 +230,11 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg,
 
     this->ts_ = ts;
 
+    if(this->ts_(0) >= system->motif.n_rows || this->ts_(1) >= system->motif.n_rows){
+        std::cout << "The motif vector index must not be higher than or equal to the number of motif vectors!" << std::endl;
+        exit(1);
+    }
+
     this->isscreeningset = true;
     this->function_ = function;
 
@@ -1874,12 +1879,12 @@ void ExcitonTB::computesingleDielectricFunction() {
         std::cout << "R_1 = " << R1 << std::endl;
         std::cout << "R_2 = " << R2 << std::endl;
 
-        for(int i = 0; i < lattice_vectors.n_rows; ++i)
-        {
-            std:cout << " R(" << i << ") = " << lattice_vectors.row(i) << "\n";
-        }
+        // for(int i = 0; i < lattice_vectors.n_rows; ++i)
+        // {
+        //     std:cout << " R(" << i << ") = " << lattice_vectors.row(i) << "\n";
+        // }
         
-        std::cout << "nk = " << system->nk << std::endl;
+        // std::cout << "nk = " << system->nk << std::endl;
 
         std::exit(0);
     }
