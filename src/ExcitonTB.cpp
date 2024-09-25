@@ -230,10 +230,6 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg,
 
     this->ts_ = ts;
 
-    std::cout << "Passou imediatamente aqui\n";
-    std::cout << "this->ts_(0) = " << this->ts_(0) << std::endl;
-    std::cout << "this->ts(0) = " << this->ts(0) << std::endl;
-
     this->isscreeningset = true;
     this->function_ = function;
 
@@ -940,27 +936,19 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
         for(int g = 0; g < nrcells; g++){
             auto G = reciprocalVectors.row(g);
 
-            for(int g2 = 0; g2 < nrcells; g2++){
-                auto G2 = reciprocalVectors.row(g2);
+            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
 
-                Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-                Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
-
-                term += Ic*this->coulombFT(g, g2, k - k2)*conj(Iv);
-            }
+            term += Ic*this->coulombFT(g, g, k - k2)*conj(Iv);
         }
     } else if (potential == "keldysh"){
         for(int g = 0; g < nrcells; g++){
             auto G = reciprocalVectors.row(g);
 
-            for(int g2 = 0; g2 < nrcells; g2++){
-                auto G2 = reciprocalVectors.row(g2);
+            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
+            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
 
-                Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-                Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
-
-                term += Ic*this->keldyshFT(g, g2, k - k2)*conj(Iv);
-            }
+            term += Ic*this->keldyshFT(g, g, k - k2)*conj(Iv);
         }
     } else if (potential == "rpa"){
         for(int g = 0; g < nrcells; g++){
@@ -1875,8 +1863,7 @@ void ExcitonTB::computesingleDielectricFunction() {
 
         arma::rowvec t1 = system->motif.row(this->ts_(0)).subvec(0,2);
         arma::rowvec t2 = system->motif.row(this->ts_(1)).subvec(0,2);
-        std::cout << "Passei aqui 1, t_1 = " << t1 << "\n";
-        std::cout << "Passei aqui 1, t_2 = " << t2 << "\n";
+
         double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
         arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
 
@@ -2010,7 +1997,11 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         fprintf(textfile_dielectric, "\n");
     }
 
-    fclose(textfile_dielectric);
+    // for (unsigned int g = 0; g < nGs; g++){
+    //     for (unsigned int g2 = g; g2 < nGs; g2++){
+    //         std::cout << "W(" << g << "," << g2 << ") = " << auxvecsol.row(g)(g2)*coulombFT(g2,g2,system->kpoints.row(iq)) << " ?=? " << auxvecsol.row(g2)(g)*coulombFT(g,g,system->kpoints.row(iq)) << std::endl; 
+    //     }
+    // }
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
