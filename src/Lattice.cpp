@@ -446,8 +446,6 @@ arma::imat Lattice::generateOrderedCombinations(int nvalues, int ndim){
 */
 arma::imat Lattice::generateCombinationsGcutoff(double Gc, int ndim){
 	
-	
-
 	//Code to have as Gcutoff a norm of a G, and include all G's such that |G| <= Gcutoff_
 
 	double normG1 = arma::norm(reciprocalLattice.row(0));
@@ -473,10 +471,6 @@ arma::imat Lattice::generateCombinationsGcutoff(double Gc, int ndim){
 			combinations.row(i_row)(1) = m;
 			i_row++;
 		}
-	}
-	std::cout << "Presenting the combinatios" << std::endl;
-	for(int i = 0; i < combinations.n_rows; ++i){
-		std::cout << "n = " << combinations.row(i)(0) << ", m = " << combinations.row(i)(1) << "\n";
 	}
 
 	

@@ -127,7 +127,7 @@ int main(int argc, char* argv[]){
     bulkExciton.system->setAU(dftArg.isSet());
 
     if (screeningArg.isSet()){
-        bulkExciton.initializeScreeningAttributes(*screeningConfig);
+        bulkExciton.initializeScreeningAttributes(*screeningConfig,excitonConfig->excitonInfo.mode);
     }
     
     bulkExciton.verifypotential();

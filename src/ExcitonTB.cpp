@@ -216,9 +216,10 @@ arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
  * Method to set the screening attributes of an exciton object from a ScreeningConfiguration object.
  * @details Overload of the method to use a configuration object. Based on the parametric method.
  * @param cfg ScreeningConfiguration object from parsed file.
+ * @param mode Real space or reciprocal space mode
  * @return void
  */
-void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg){
+void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg, const std::string mode){
     int nvalencebands        = cfg.screeningInfo.nvbands;
     int nconductionbands     = cfg.screeningInfo.ncbands;
     int nremovedbands        = cfg.screeningInfo.nrmcbands;
@@ -226,6 +227,12 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::ivec gs            = cfg.screeningInfo.Gs;
     std::string function     = cfg.screeningInfo.function;
     arma::ivec ts            = cfg.screeningInfo.ts;
+
+    this->ts_ = ts;
+
+    std::cout << "Passou imediatamente aqui\n";
+    std::cout << "this->ts_(0) = " << this->ts_(0) << std::endl;
+    std::cout << "this->ts(0) = " << this->ts(0) << std::endl;
 
     this->isscreeningset = true;
     this->function_ = function;
@@ -391,7 +398,7 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, const ExcitonConfigurati
 
     system_.reset(new SystemTB(config));
     initializeExcitonAttributes(excitonConfig);
-    initializeScreeningAttributes(screeningConfig);
+    initializeScreeningAttributes(screeningConfig, excitonConfig.excitonInfo.mode);
 }
 
 ExcitonTB::ExcitonTB(std::shared_ptr<SystemTB> sys, int ncell, const arma::ivec& bands, 
@@ -1864,19 +1871,28 @@ void ExcitonTB::computeDielectricMatrix(){
 void ExcitonTB::computesingleDielectricFunction() {
 
     if(mode == "realspace"){ //GIVES SEG FAULT
-        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+        std::cout << "Real space dielectric function implementation not finished." << std::endl;
 
-        arma::vec t1 = system->motif.row(this->ts(0)).subvec(0, 2);
-        arma::rowvec t2 = system->motif.row(this->ts(1)).subvec(0, 2);
-
+        arma::rowvec t1 = system->motif.row(this->ts_(0)).subvec(0,2);
+        arma::rowvec t2 = system->motif.row(this->ts_(1)).subvec(0,2);
+        std::cout << "Passei aqui 1, t_1 = " << t1 << "\n";
+        std::cout << "Passei aqui 1, t_2 = " << t2 << "\n";
         double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
         arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
 
         arma::rowvec R1 = lattice_vectors.row(this->Gs_(0)); // Sets R1
+    
         arma::rowvec R2 = lattice_vectors.row(this->Gs_(1)); // Sets R2
 
         std::cout << "R_1 = " << R1 << std::endl;
         std::cout << "R_2 = " << R2 << std::endl;
+
+        for(int i = 0; i < lattice_vectors.n_rows; ++i)
+        {
+            std:cout << " R(" << i << ") = " << lattice_vectors.row(i) << "\n";
+        }
+        
+        std::cout << "nk = " << system->nk << std::endl;
 
         std::exit(0);
     }

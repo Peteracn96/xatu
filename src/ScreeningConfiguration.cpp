@@ -19,7 +19,7 @@ ScreeningConfiguration::ScreeningConfiguration(){
  * @param filename Name of file with the exciton configuration.
  */
 ScreeningConfiguration::ScreeningConfiguration(std::string filename) : ConfigurationBase(filename){
-    this->expectedArguments = {"mode","removedbands","function"};
+    this->expectedArguments = {"function"};
     parseContent();
     checkArguments();
     checkContentCoherence();
@@ -67,17 +67,6 @@ void ScreeningConfiguration::parseContent(){
         else if(arg == "function"){
             screeningInfo.function = parseWord(content[0]);
         }
-        else if(arg == "mode"){
-            screeningInfo.mode = content[0];
-            if (screeningInfo.mode == "reciprocalspace"){
-                screeningInfo.nReciprocalVectors = parseScalar<int>(content[0]);
-            } else if (screeningInfo.mode == "realspace") {
-                screeningInfo.nLatticeVectors = parseScalar<int>(content[0]);
-            } else {
-                throw std::invalid_argument("Mode not recognized, must be 'realspace' or 'reciprocalspace'. Exiting.");
-            }
-                
-        }
         else if(arg == "motif.vectors"){
             std::vector<int> ts = parseLine<int>(content[0]);
             screeningInfo.ts(0) = ts[0];
@@ -118,11 +107,8 @@ void ScreeningConfiguration::checkContentCoherence(){
     if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "none"){
         throw std::logic_error("'function' must be 'dielectric', 'polarizability' or 'none'");
     }
-    if (screeningInfo.mode != "realspace" && screeningInfo.mode != "reciprocalspace"){
-        throw std::invalid_argument("Invalid mode. Use 'realspace' or 'reciprocalspace'");
-    }
     if (screeningInfo.ts(0) < 0 || screeningInfo.ts(1) < 0){
-        throw std::invalid_argument("Invalid mode. Use 'realspace' or 'reciprocalspace'");
+        throw std::invalid_argument("The index of the motif vectors can not be negative! Must be zero or positive integer.");
     }
 };
 

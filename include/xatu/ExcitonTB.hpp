@@ -183,7 +183,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Static dielectric function, BSE initialization and energies
         void initializeHamiltonian();
 
-        void initializeScreeningAttributes(const ScreeningConfiguration&);
+        void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
         void computesingleDielectricFunction();
         void computesinglePolarizability();
         void computesingleInverseDielectricMatrix(std::string);
