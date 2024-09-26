@@ -230,11 +230,6 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg,
 
     this->ts_ = ts;
 
-    if(this->ts_(0) >= system->motif.n_rows || this->ts_(1) >= system->motif.n_rows){
-        std::cout << "The motif vector index must not be higher than or equal to the number of motif vectors!" << std::endl;
-        exit(1);
-    }
-
     this->isscreeningset = true;
     this->function_ = function;
 
@@ -1296,7 +1291,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
 
     for(unsigned int atom_index = 0; atom_index < i; atom_index++){
         int norbitals = system->orbitals(system->motif.row(atom_index)(3));
-
         i_index += norbitals;
     }
 
@@ -1311,6 +1305,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
 
     int norbitals_alpha = system->orbitals(system->motif.row(i)(3));
     int norbitals_beta = system->orbitals(system->motif.row(j)(3));
+
+    std::complex<double> Nsquared = (std::complex<double>)totalCells*(std::complex<double>)totalCells;
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
@@ -1344,20 +1340,20 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
 
                     std::complex<double> sum_alpha, sum_beta = 0;
 
-                    sum_alpha = arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1));
+                    sum_alpha = std::conj(arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1)));
                     sum_beta = arma::sum(CoefArray.subvec(j_index, j_index + norbitals_beta - 1));
 
                     term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));      
                 }
             }
             
-            polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(totalCells) << " " << imag(term)/(totalCells) << "\n";
+            polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/real(Nsquared) << "\n";
         }
     }
 
     polarfile.close();
 
-    return term/((std::complex<double>)totalCells);
+    return term/Nsquared;
 }
 
 /**
@@ -1877,13 +1873,11 @@ void ExcitonTB::computesingleDielectricFunction() {
 
         double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
         arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
+        int n_vectors = lattice_vectors.n_rows;
 
         arma::rowvec R1 = lattice_vectors.row(this->Gs_(0)); // Sets R1
     
         arma::rowvec R2 = lattice_vectors.row(this->Gs_(1)); // Sets R2
-
-        std::cout << "R_1 = " << R1 << std::endl;
-        std::cout << "R_2 = " << R2 << std::endl;
 
         // for(int i = 0; i < lattice_vectors.n_rows; ++i)
         // {
@@ -2613,10 +2607,24 @@ void ExcitonTB::printInformation(){
         std::cout << std::left << std::setw(40) << "Number of conduction bands included: " << this->nconductionbands_ << std::endl;
         std::cout << std::left << std::setw(40) << "Gcutoff: " << this->Gcutoff_ << std::endl;
         if (this->function_ == "dielectric" || this->function_ == "polarizability"){
-            arma::rowvec G(this->trunreciprocalLattice_ .row(this->Gs_(0)));
-            arma::rowvec Gprime(this->trunreciprocalLattice_ .row(this->Gs_(1)));
-            std::cout << std::left << std::setw(0) << "Selected G(" << std::setw(0) << this->Gs_(0) << "): " << G(0) << " " << G(1) << " " << G(2) << std::endl;
-            std::cout << std::left << std::setw(0) << "Selected G'(" << std::setw(0) << this->Gs_(1) << "): " << Gprime(0) << " " << Gprime(1) << " " << Gprime(2) << std::endl;
+            if (this->mode == "reciprocalspace"){
+                arma::rowvec vector(this->trunreciprocalLattice_.row(this->Gs_(0)));
+                arma::rowvec vectorprime(this->trunreciprocalLattice_.row(this->Gs_(1)));
+
+                std::cout << std::left << std::setw(0) << "Selected G(" << std::setw(0) << this->Gs_(0) << "): " << vector(0) << " " << vector(1) << " " << vector(2) << std::endl;
+                std::cout << std::left << std::setw(0) << "Selected G'(" << std::setw(0) << this->Gs_(1) << "): " << vectorprime(0) << " " << vectorprime(1) << " " << vectorprime(2) << std::endl;
+            }
+
+            if (this->mode == "realspace"){
+                arma::rowvec vector(this->trunLattice_.row(this->Gs_(0)));
+                arma::rowvec vectorprime(this->trunLattice_.row(this->Gs_(1)));
+
+                std::cout << std::left << std::setw(0) << "Selected R(" << std::setw(0) << this->Gs_(0) << "): " << vector(0) << " " << vector(1) << " " << vector(2) << std::endl;
+                std::cout << std::left << std::setw(0) << "Selected R'(" << std::setw(0) << this->Gs_(1) << "): " << vectorprime(0) << " " << vectorprime(1) << " " << vectorprime(2) << std::endl;
+                std::cout << std::left << std::setw(0) << "Selected t_i = " << std::setw(0) << system->motif.row(ts(0)).subvec(0,2) << std::endl;
+                std::cout << std::left << std::setw(0) << "Selected t_j = " << std::setw(0) << system->motif.row(ts(1)).subvec(0,2) << std::endl;
+            }
+           
         } else if (this->function_ == "none" || this->function_ == "inversedielectric") {
             std::cout << std::left << std::setw(40) << "Number of reciprocal lattice vectors: " << this->nGs << std::endl;
         }
