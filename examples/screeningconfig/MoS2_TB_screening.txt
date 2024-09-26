@@ -9,6 +9,6 @@ reciprocalspace
 # reciprocal vectors
 1 2
 # momentum
--0.99 1.61 0.
+0 0 0.
 # function
 inversedielectric

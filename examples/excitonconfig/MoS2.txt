@@ -1,7 +1,7 @@
 # label
-MoS2_TB_exciton_25Gs
+MoS2_TBGs_trash
 # ncells
-20
+5
 # bands
 2
 # Dielectric
@@ -9,9 +9,9 @@ MoS2_TB_exciton_25Gs
 # totalmomentum
 0.0 0.0 0.0
 # reciprocal
-25
+14
 # potential
-rpa
+keldysh
 # gcutoff
-3
+4
 # blabla

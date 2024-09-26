@@ -284,32 +284,50 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg,
     //     this->Gcutoff_ = (this->ncell)/2.5;
     // }
 
-    if (this->trunreciprocalLattice_.is_empty()){
+    if (this->trunLattice_.is_empty() && this->mode == "realspace"){
+        double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
+        this->trunLattice_ = system_->truncateSupercell(ncell, radius);
+        int nRs = this->trunLattice_.n_rows;
+
+
+        if(this->ts_(0) >= system->motif.n_rows || this->ts_(1) >= system->motif.n_rows){
+            std::cout << "The motif vector index must not be higher than or equal to the number of motif vectors!" << std::endl;
+            exit(1);
+        }
+        
+        if (gs(0) >= nRs || gs(1) >= nRs){
+            std::cout << "Error: Index of the lattice vector must not be higher than number of lattice vectors" << std::endl;
+            std::cout << "Number of lattice vectors is " << nRs << std::endl;
+
+            exit(1);
+        }
+
+        if (cfg.screeningInfo.function == "none"){
+            std::cout << "Computation of the exciton using the RPA dielectric function in real space not implemented yet. Terminating." << std::endl;
+            exit(1);
+        }
+    }
+
+    if (this->trunreciprocalLattice_.is_empty() && this->mode == "reciprocalspace"){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
         radius = this->Gcutoff_; //This is temporary to see if it works
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
-    }
-    
-    int ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
-    if (gs(0) >= ngs || gs(1) >= ngs){
-        std::cout << "Error: Index of the reciprocal vector must not be higher than number of reciprocal vectors" << std::endl;
-        std::cout << "Number of reciprocal vectors is " << ngs << std::endl;
+        int ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
-        exit(1);
-    }
+        if (gs(0) >= ngs || gs(1) >= ngs){
+            std::cout << "Error: Index of the reciprocal vector must not be higher than number of reciprocal vectors" << std::endl;
+            std::cout << "Number of reciprocal vectors is " << ngs << std::endl;
 
-    
-    // std::cout << "this->trunreciprocalLattice_.n_rows = " << this->trunreciprocalLattice_.n_rows << std::endl;
-    // std::cout << "||system->reciprocalLattice.row(0)|| = " << arma::norm(system->reciprocalLattice.row(0)) << std::endl;
-    // std::cout << "radius as of Gcutoff = " << radius << std::endl;
-    // std::cout << "radius as of cutoff =  = " << cutoff_ * arma::norm(system->reciprocalLattice.row(0)) << std::endl;
-    
-    if (cfg.screeningInfo.function == "none"){
-        int nks = this->ncell*this->ncell;
-        this->Chimatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
-        this->epsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
-        this->Invepsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
+            exit(1);
+        }
+
+        if (cfg.screeningInfo.function == "none"){
+            int nks = this->ncell*this->ncell;
+            this->Chimatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
+            this->epsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
+            this->Invepsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
+        }
     }
 }
 

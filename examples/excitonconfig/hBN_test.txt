@@ -2,10 +2,10 @@
 ! Name to be used when writing
 hBN_N30
 # ncells
-30
+25
 # bands
-1
+4
 # Dielectric
 1 1 10
 # reciprocal
-4
+2

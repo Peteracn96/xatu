@@ -9,6 +9,8 @@ reciprocalspace
 # reciprocal vectors
 0 0
 # momentum
-0.0497087 0.0286994 0.
+0. 0. 0.
+#motif.vectors
+1 0
 # function
-inversedielectric
+Dielectric
