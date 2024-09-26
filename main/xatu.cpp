@@ -121,7 +121,7 @@ int main(int argc, char* argv[]){
     cout << "+---------------------------------------------------------------------------+" << endl;
     cout << "|                                  Parameters                               |" << endl;
     cout << "+---------------------------------------------------------------------------+" << endl;
-    
+
     xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(*systemConfig, *excitonConfig);
     bulkExciton.setMode(excitonConfig->excitonInfo.mode);
     bulkExciton.system->setAU(dftArg.isSet());
