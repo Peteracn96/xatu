@@ -555,6 +555,43 @@ void ExcitonTB::setRegularization(double regularization){
     this->regularization_ = regularization;
 }
 
+/**
+ * Sets the cutoff in length for truncation of the reciprocal lattice.
+ * @param Gcutoff Cutoof in Angstroms^-1.
+ * @return void
+*/
+void ExcitonTB::setGcutoff(double Gcutoff){
+    this->Gcutoff_ = Gcutoff;
+}
+
+/**
+ * Sets the vectors of the real/reciprocal lattice, where the polarizability will be computed at.
+ * @details Receives as argument an arma::ivec object.
+ * @param indeces_vec Vector containing the two indices.
+ * @return void
+*/
+void ExcitonTB::setVectors(arma::ivec indeces_vec){
+    this->Gs_ = indeces_vec;
+}
+
+/**
+ * Sets the vectors of the real/reciprocal lattice, where the polarizability will be computed at.
+ * @param index1 Index of the first vector.
+ * @param index2 Index of the second vector.
+ * @return void
+*/
+void ExcitonTB::setVectors(int index1, int index2){
+    setVectors({index1, index2});
+}
+
+/**
+ * Sets the potential for the computation of the exciton
+ * @param index1 Index of the first vector.
+ * @param index2 Index of the second vector.
+ * @return void
+*/
+
+
 /*---------------------------------------- Potentials ----------------------------------------*/
 
 /** 

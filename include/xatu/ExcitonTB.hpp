@@ -128,6 +128,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setMode(std::string);
         void setReciprocalVectors(int);
         void setRegularization(double);
+        void setGcutoff(double);
+        void setVectors(int,int);
+        void setVectors(arma::ivec);
 
     private:
         // Potentials
@@ -136,7 +139,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         double coulomb(double);
         double rpa(double); // In principle will accept more than a double
         potptr selectPotential(std::string);
-        recpotptr selectReciprocalPotential(std::string);
+        recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
 
         // Fourier transforms
         double coulombFT(int, int, arma::rowvec);
@@ -178,7 +181,6 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> computesinglePolarizability(arma::rowvec&);
         std::complex<double> computesinglePolarizability(const arma::rowvec&,const arma::rowvec&,const int, const int);
         std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int);
-        std::complex<double> computeDielectricFunction(int, int, arma::rowvec&, const arma::imat&);
 
     public:
         // Static dielectric function, BSE initialization and energies
@@ -186,7 +188,6 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
         void computesingleDielectricFunction();
-        void computesinglePolarizability();
         void computesingleInverseDielectricMatrix(std::string);
         void PolarizabilityMesh();
         void computeDielectricMatrix();
