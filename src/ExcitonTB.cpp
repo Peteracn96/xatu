@@ -1055,7 +1055,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
  */
 std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1, const arma::cx_vec& coefs2,
                                                     const arma::rowvec& k1, const arma::rowvec& k2,
-                                                    const arma::rowvec& G){
+                                                    const arma::rowvec& G) const {
 
     std::complex<double> imag(0, 1);
     arma::cx_vec coefs = arma::conj(coefs1) % coefs2;

@@ -160,7 +160,7 @@ class ExcitonTB : public Exciton<SystemTB> {
                                                        std::string, int nrcells = 15);
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
-                                                  const arma::rowvec&);
+                                                  const arma::rowvec&) const;
 
         // Initializers
         void initializeExcitonAttributes(int, const arma::ivec&, const arma::rowvec&, const arma::rowvec&);
@@ -179,7 +179,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         int fecthReciprocalLatticeVector(arma::rowvec);
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizability(arma::rowvec&);
-        std::complex<double> computesinglePolarizability(const arma::rowvec&,const arma::rowvec&,const int, const int);
+        std::complex<double> computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int);
         std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int);
 
     public:
