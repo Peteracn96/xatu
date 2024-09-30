@@ -26,9 +26,9 @@ namespace xatu {
 // Definitions
 
 // Define pointer to potential function type (f: R -> R) within those in ExcitonTB
-typedef double (ExcitonTB::*potptr)(double);
+typedef double (ExcitonTB::*potptr)(double) const;
 // Define pointer to potential function (in reciprocal space) type (f: NxNxR -> R) within those in ExcitonTB
-typedef double (ExcitonTB::*recpotptr)(int, int, arma::rowvec);
+typedef double (ExcitonTB::*recpotptr)(int, int, arma::rowvec) const;
 
 class ResultTB;
 
@@ -134,17 +134,17 @@ class ExcitonTB : public Exciton<SystemTB> {
 
     private:
         // Potentials
-        double keldysh(double);
-        void STVH0(double, double*);
-        double coulomb(double);
-        double rpa(double); // In principle will accept more than a double
-        potptr selectPotential(std::string);
-        recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
+        double keldysh(double) const;
+        void STVH0(double, double*) const;
+        double coulomb(double) const;
+        double rpa(double) const; // In principle will accept more than a double
+        const potptr selectPotential(std::string);
+        const recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
 
         // Fourier transforms
-        double coulombFT(int, int, arma::rowvec);
-        double keldyshFT(int, int, arma::rowvec);
-        std::complex<double> rpaFT(int g, int g2, arma::rowvec);
+        double coulombFT(int, int, arma::rowvec) const;
+        double keldyshFT(int, int, arma::rowvec) const;
+        std::complex<double> rpaFT(int g, int g2, arma::rowvec) const;
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat motifFTMatrix(const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat extendMotifFT(const arma::cx_mat&);
@@ -157,7 +157,7 @@ class ExcitonTB : public Exciton<SystemTB> {
                                                        const arma::cx_vec&, const arma::cx_vec&,
                                                        const arma::rowvec&, const arma::rowvec&,
                                                        const arma::rowvec&, const arma::rowvec&, 
-                                                       std::string, int nrcells = 15);
+                                                       std::string, int nrcells = 15)  const ;
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
                                                   const arma::rowvec&) const;

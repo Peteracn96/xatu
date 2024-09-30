@@ -600,7 +600,7 @@ void ExcitonTB::setVectors(int index1, int index2){
  * @param X x --- Argument of H0(x) ( x ò 0 )
  * @param SH0 SH0 --- H0(x). The return value is written to the direction of the pointer.
 */
-void ExcitonTB::STVH0(double X, double *SH0) {
+void ExcitonTB::STVH0(double X, double *SH0) const {
     double A0,BY0,P0,Q0,R,S,T,T2,TA0;
 	int K, KM;
 
@@ -641,7 +641,7 @@ void ExcitonTB::STVH0(double X, double *SH0) {
  * @param r Distance at which we evaluate the potential.
  * @return Value of Keldysh potential, V(r).
  */
-double ExcitonTB::keldysh(double r){
+double ExcitonTB::keldysh(double r) const{
     double eps_bar = (eps_m + eps_s)/2;
     double SH0;
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
@@ -668,7 +668,7 @@ double ExcitonTB::keldysh(double r){
  * @param regularization Regularization distance to remove divergence at r=0.
  * @return Value of Coulomb potential, V(r).
  */
-double ExcitonTB::coulomb(double r){
+double ExcitonTB::coulomb(double r) const{
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
     r = abs(r);
     if (r > cutoff){
@@ -681,7 +681,7 @@ double ExcitonTB::coulomb(double r){
  * RPA potential in real space.
  * Implementation in progress, returns the same as keldysh.
  */
-double ExcitonTB::rpa(double r){
+double ExcitonTB::rpa(double r) const{
     double eps_bar = (eps_m + eps_s)/2;
     double SH0;
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
@@ -708,7 +708,7 @@ double ExcitonTB::rpa(double r){
  * @return Pointer to function representing the potential.
  */
 
-potptr ExcitonTB::selectPotential(std::string potential){
+ const potptr ExcitonTB::selectPotential(std::string potential){
     if(potential == "keldysh"){
         return &ExcitonTB::keldysh;
     }
@@ -729,7 +729,7 @@ potptr ExcitonTB::selectPotential(std::string potential){
  * @return Pointer to function representing the potential.
  */
 
-recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This function is not being used for now, as rpaFT returns a std::complex<double> and not double.
+const recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This function is not being used for now, as rpaFT returns a std::complex<double> and not double.
     if(potential == "keldysh"){
         return &ExcitonTB::keldyshFT;
     }
@@ -754,7 +754,7 @@ recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This fu
  * @param q kpoint where we evaluate the FT.
  * @return Fourier transform of the potential at q, FT[V](q).
  */
-double ExcitonTB::coulombFT(int g, int g2, arma::rowvec q){
+double ExcitonTB::coulombFT(int g, int g2, arma::rowvec q) const {
 
     if (g != g2){
         return 0.;
@@ -784,7 +784,7 @@ double ExcitonTB::coulombFT(int g, int g2, arma::rowvec q){
  * @param q kpoint where we evaluate the FT.
  * @return Fourier transform of the potential at q, FT[V](q).
  */
-double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q){
+double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
 
     if (g != g2){
         return 0.;
@@ -813,7 +813,7 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q){
  * Evaluates the RPA potential in reciprocal space.
  * Implementation in progress, returns the same as keldysh.
  */
-std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q){
+std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
 
     if (this->Invepsilonmatrix_.is_empty()){
         std::cerr << "Inverse of dielectric matrix has not been computed yet. Terminating." << std::endl;
@@ -979,7 +979,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                                      const arma::rowvec& kQ, 
                                      const arma::rowvec& k2Q,
                                      std::string potential,
-                                     int nrcells){
+                                     int nrcells) const {
     
     std::complex<double> Ic, Iv;
     std::complex<double> term = 0;
