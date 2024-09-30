@@ -131,6 +131,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setGcutoff(double);
         void setVectors(int,int);
         void setVectors(arma::ivec);
+        void setmotifVectors(int,int);
+        void setmotifVectors(arma::ivec);
 
     private:
         // Potentials

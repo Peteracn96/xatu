@@ -581,16 +581,28 @@ void ExcitonTB::setVectors(arma::ivec indeces_vec){
  * @return void
 */
 void ExcitonTB::setVectors(int index1, int index2){
-    setVectors({index1, index2});
+    setVectors(arma::ivec({index1, index2}));
 }
 
 /**
- * Sets the potential for the computation of the exciton
+ * Sets the motif vectors where the polarizability will be computed at.
+ * @details Receives as argument an arma::ivec object.
+ * @param indeces_vec Vector containing the two indices.
+ * @return void
+*/
+void ExcitonTB::setmotifVectors(arma::ivec indeces_vec){
+    this->ts_ = indeces_vec;
+}
+
+/**
+ * Sets the motif vectors where the polarizability will be computed at.
  * @param index1 Index of the first vector.
  * @param index2 Index of the second vector.
  * @return void
 */
-
+void ExcitonTB::setmotifVectors(int index1, int index2){
+    setmotifVectors(arma::ivec({index1, index2}));
+}
 
 /*---------------------------------------- Potentials ----------------------------------------*/
 
