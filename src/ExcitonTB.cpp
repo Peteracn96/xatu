@@ -752,7 +752,7 @@ const recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //T
         return &ExcitonTB::keldyshFT;
     }
     else{
-        throw std::invalid_argument("selectPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
+        throw std::invalid_argument("selectreciprocalPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
     }
 }
 
