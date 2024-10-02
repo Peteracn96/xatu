@@ -740,7 +740,6 @@ double ExcitonTB::rpa(double r) const{
  * @param potential Potential to be used in the direct term.
  * @return Pointer to function representing the potential.
  */
-
 const recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This function is not being used for now, as rpaFT returns a std::complex<double> and not double.
     if(potential == "keldysh"){
         return &ExcitonTB::keldyshFT;
