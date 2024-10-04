@@ -86,7 +86,7 @@ void ScreeningConfiguration::parseContent(){
  * consistent and well-defined. 
  */
 void ScreeningConfiguration::checkContentCoherence(){
-    if(screeningInfo.ncell <= 0 && screeningInfo.mode == "realspace"){
+    if(screeningInfo.ncell <= 0){
         throw std::logic_error("'ncell' must be a positive number");
     };
     if(screeningInfo.nvbands <= 0){
@@ -101,7 +101,7 @@ void ScreeningConfiguration::checkContentCoherence(){
     if(screeningInfo.nReciprocalVectors < 0){//This was for a functionality I have in mind not needed
         throw std::logic_error("'nReciprocalVectors' must be a non-negative number");
     }
-    if(screeningInfo.nLatticeVectors <= 0 && screeningInfo.mode == "realspace"){ //This was for a functionality I have in mind not needed
+    if(screeningInfo.nLatticeVectors <= 0){ //This was for a functionality I have in mind not needed
         throw std::logic_error("'nLatticeVectors' must be a positive number");
     }
     if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "none"){

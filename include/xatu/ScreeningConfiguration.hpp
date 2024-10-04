@@ -25,8 +25,6 @@ class ScreeningConfiguration : public ConfigurationBase{
         arma::rowvec q = {0.2, 0., 0.};
         // Reduction factor of the BZ mesh. Defaults to 1.
         int submeshFactor = 1;
-        // Calculation mode (either 'realspace' or 'reciprocalspace')
-        std::string mode = "reciprocalspace";
         // Scissor cut to correct the bandgap
         double scissor = 0.0;
         // Number of reciprocal vectors to use in reciprocal space calculation
