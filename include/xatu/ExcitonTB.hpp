@@ -129,6 +129,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setReciprocalVectors(int);
         void setRegularization(double);
         void setGcutoff(double);
+        void setValenceBands(int);
+        void setConductionBands(int);
         void setVectors(int,int);
         void setVectors(arma::ivec);
         void setmotifVectors(int,int);
@@ -188,6 +190,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Static dielectric function, BSE initialization and energies
         void initializeHamiltonian();
 
+        void initializeScreeningAttributes(const ScreeningConfiguration&);
         void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
         void computesingleDielectricFunction();
         void computesingleInverseDielectricMatrix(std::string);

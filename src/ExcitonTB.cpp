@@ -219,7 +219,7 @@ arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
  * @param mode Real space or reciprocal space mode
  * @return void
  */
-void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg, const std::string mode){
+void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg){
     int nvalencebands        = cfg.screeningInfo.nvbands;
     int nconductionbands     = cfg.screeningInfo.ncbands;
     int nremovedbands        = cfg.screeningInfo.nrmcbands;
@@ -324,6 +324,19 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg,
             this->Invepsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
         }
     }
+}
+
+/**
+ * Method to set the screening attributes of an exciton object from a ScreeningConfiguration object and the mode specified.
+ * @details Overload of the method to use a configuration object. Based on the parametric method.
+ * @param cfg ScreeningConfiguration object from parsed file.
+ * @param mode Real space or reciprocal space mode
+ * @return void
+ */
+void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg, const std::string mode){
+    
+    this->initializeScreeningAttributes(cfg);
+    this->setMode(mode);
 }
 
 /**
@@ -519,6 +532,24 @@ void ExcitonTB::setGauge(std::string gauge){
         throw std::invalid_argument("setGauge(): gauge must be either lattice or atomic");
     }
     this->gauge_ = gauge;
+}
+
+/**
+ * Sets the number of valence bands included in the computation of the screening.
+ * @param nvbands
+ * @return void
+ */
+void ExcitonTB::setValenceBands(int nvbands){
+    this->nvalencebands_ = nvbands;
+}
+
+/**
+ * Sets the number of conduction bands included in the computation of the screening.
+ * @param ncbands
+ * @return void
+ */
+void ExcitonTB::setConductionBands(int ncbands){
+    this->nconductionbands_ = ncbands;
 }
 
 /**
