@@ -196,7 +196,7 @@ int main(int argc, char* argv[]){
 
             fclose(textfile_dielectric);
 
-            continueprompt("Do you wish to procceed with the computation of the exciton?[y/n]\n");
+            //continueprompt("Do you wish to procceed with the computation of the exciton?[y/n]\n");
             
             // return 0;
         } else {
