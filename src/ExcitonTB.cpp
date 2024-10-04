@@ -222,7 +222,6 @@ arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
 void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg){
     int nvalencebands        = cfg.screeningInfo.nvbands;
     int nconductionbands     = cfg.screeningInfo.ncbands;
-    int nremovedbands        = cfg.screeningInfo.nrmcbands;
     arma::rowvec q           = cfg.screeningInfo.q;
     arma::ivec gs            = cfg.screeningInfo.Gs;
     std::string function     = cfg.screeningInfo.function;
@@ -254,12 +253,11 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     this->nvalencebands_ = nvalencebands;
     this->nconductionbands_ = nconductionbands;
-    this->nrmcbands_ = nremovedbands;
 
     this->Gs_ = gs;
 
     std::vector<arma::s64> valence, conduction;
-    int basisdim = system->basisdim - nremovedbands;
+    int basisdim = system->basisdim;
 
     for(int i = 0; i < basisdim; i++){
         if (i <= system->fermiLevel){

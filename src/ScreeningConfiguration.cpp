@@ -52,9 +52,6 @@ void ScreeningConfiguration::parseContent(){
         else if(arg == "conductionbands"){
             screeningInfo.ncbands = parseScalar<int>(content[0]);
         }
-        else if(arg == "removedbands"){
-            screeningInfo.nrmcbands = parseScalar<int>(content[0]);
-        }
         else if(arg == "reciprocalvectors"){
             std::vector<int> gs = parseLine<int>(content[0]);
             screeningInfo.Gs(0) = gs[0];
@@ -86,23 +83,11 @@ void ScreeningConfiguration::parseContent(){
  * consistent and well-defined. 
  */
 void ScreeningConfiguration::checkContentCoherence(){
-    if(screeningInfo.ncell <= 0){
-        throw std::logic_error("'ncell' must be a positive number");
-    };
     if(screeningInfo.nvbands <= 0){
         throw std::logic_error("'nvbands' must be a positive number");
     };
     if(screeningInfo.ncbands <= 0){
         throw std::logic_error("'ncbands' must be a positive number");
-    }
-    if(screeningInfo.nrmcbands < 0){
-        throw std::logic_error("'nrmcbands' must not be a negative number");
-    }
-    if(screeningInfo.nReciprocalVectors < 0){//This was for a functionality I have in mind not needed
-        throw std::logic_error("'nReciprocalVectors' must be a non-negative number");
-    }
-    if(screeningInfo.nLatticeVectors <= 0){ //This was for a functionality I have in mind not needed
-        throw std::logic_error("'nLatticeVectors' must be a positive number");
     }
     if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "none"){
         throw std::logic_error("'function' must be 'dielectric', 'polarizability' or 'none'");
