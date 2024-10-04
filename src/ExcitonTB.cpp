@@ -303,7 +303,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg,
         }
     }
 
-    if (this->trunreciprocalLattice_.is_empty() && this->mode == "reciprocalspace"){
+    if (this->mode == "reciprocalspace"){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
         radius = this->Gcutoff_; //This is temporary to see if it works
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
