@@ -52,7 +52,7 @@ void ScreeningConfiguration::parseContent(){
         else if(arg == "conduction.bands"){
             screeningInfo.ncbands = parseScalar<int>(content[0]);
         }
-        else if(arg == "reciprocal.vectors"){
+        else if(arg == "vectors"){
             std::vector<int> gs = parseLine<int>(content[0]);
             screeningInfo.Gs(0) = gs[0];
             screeningInfo.Gs(1) = gs[1];
@@ -94,6 +94,9 @@ void ScreeningConfiguration::checkContentCoherence(){
     }
     if(screeningInfo.ts(0) < 0 || screeningInfo.ts(1) < 0){
         throw std::invalid_argument("The index of the motif vectors can not be negative! Must be zero or positive integer.");
+    }
+    if(screeningInfo.Gs(0) < 0 || screeningInfo.Gs(1) < 0){
+        throw std::invalid_argument("The indeces of the vectors must be zero or a positive integer.");
     }
 };
 

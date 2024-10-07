@@ -1662,6 +1662,11 @@ void ExcitonTB::PolarizabilityMesh(){
 
     auto start = high_resolution_clock::now();
 
+    if (this->mode == "realspace"){
+        std::cout << "The real space polarizability in a direct lattice partition has not been implemented yet. Terminating." << std::endl;
+        exit(1);
+    }
+
     std::cout << "Computing polarizability in the BZ mesh... \n" << std::flush;
 
     std::ofstream polarfile; 
