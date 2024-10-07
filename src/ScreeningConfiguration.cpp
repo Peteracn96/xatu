@@ -69,9 +69,6 @@ void ScreeningConfiguration::parseContent(){
             screeningInfo.ts(0) = ts[0];
             screeningInfo.ts(1) = ts[1];
         }
-        else if(arg == "regularization"){
-            screeningInfo.regularization = parseScalar<double>(content[0]);
-        }
         else{    
             std::cout << "Unexpected argument: " << arg << ", skipping block..." << std::endl;
         }
