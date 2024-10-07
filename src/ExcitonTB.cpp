@@ -2060,7 +2060,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         }
     }
 
-    std::string filename_dielectric = label + "invepsilon_" + std::to_string(nGs) + ".dat";
+    std::string filename_dielectric = "invepsilon.dat";
     FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
 
     if (textfile_dielectric == NULL){
