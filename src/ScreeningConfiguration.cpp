@@ -19,7 +19,7 @@ ScreeningConfiguration::ScreeningConfiguration(){
  * @param filename Name of file with the exciton configuration.
  */
 ScreeningConfiguration::ScreeningConfiguration(std::string filename) : ConfigurationBase(filename){
-    this->expectedArguments = {"function"};
+    this->expectedArguments = {"function","valence bands","conduction bands"};
     parseContent();
     checkArguments();
     checkContentCoherence();
