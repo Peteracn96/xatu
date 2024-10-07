@@ -2046,19 +2046,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
     }
 
-    while(to_continue != "y" && to_continue != "n"){
-        std::cout << "The number of reciprocal vectors included is: " << nGs << ". Do you wish to procceed?[y/n]\n";
-        std::getline(std::cin, to_continue);
-        if (to_continue == "n"){
-            std::cout << "You have chosen not to continue. Exiting.\n";
-            exit(1);
-        } else if (to_continue == "y") {
-            continue;
-        } else {
-            std::cout << "Option not recognized. Please enter 'y' or 'n' (without the ticks).\n";
-            continue;
-        }
-    }
+    //continueprompt("The number of reciprocal vectors included is: " + std::to_string(nGs) + ". Do you wish to procceed?[y/n]\n");
 
     std::string filename_dielectric = "invepsilon.dat";
     FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
