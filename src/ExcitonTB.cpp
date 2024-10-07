@@ -1639,7 +1639,7 @@ void ExcitonTB::PolarizabilityMesh(){
 
     std::ofstream polarfile; 
 
-    polarfile.open("../examples/screeningconfig/polarizability_mesh.dat");
+    polarfile.open("polarizability_mesh.dat");
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
@@ -1661,7 +1661,6 @@ void ExcitonTB::PolarizabilityMesh(){
     #pragma omp parallel for
     for (int iq = 0; iq < nq; iq++){
         Chi(iq) = reciprocalPolarizabilityMatrixElement(g, g2, iq);
-        std::cout << "iq = " << iq << "\n";
     }
 
     std::cout << "Chi computed" << std::endl;
