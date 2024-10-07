@@ -19,7 +19,7 @@ ScreeningConfiguration::ScreeningConfiguration(){
  * @param filename Name of file with the exciton configuration.
  */
 ScreeningConfiguration::ScreeningConfiguration(std::string filename) : ConfigurationBase(filename){
-    this->expectedArguments = {"function","valence bands","conduction bands"};
+    this->expectedArguments = {"function","valence.bands","conduction.bands"};
     parseContent();
     checkArguments();
     checkContentCoherence();
@@ -46,13 +46,13 @@ void ScreeningConfiguration::parseContent(){
         else if(content.size() != 1){
             throw std::logic_error("Expected only one line per field");
         }
-        else if(arg == "valencebands"){
+        else if(arg == "valence.bands"){
             screeningInfo.nvbands = parseScalar<int>(content[0]);
         }
-        else if(arg == "conductionbands"){
+        else if(arg == "conduction.bands"){
             screeningInfo.ncbands = parseScalar<int>(content[0]);
         }
-        else if(arg == "reciprocalvectors"){
+        else if(arg == "reciprocal.vectors"){
             std::vector<int> gs = parseLine<int>(content[0]);
             screeningInfo.Gs(0) = gs[0];
             screeningInfo.Gs(1) = gs[1];
