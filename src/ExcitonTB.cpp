@@ -1364,7 +1364,7 @@ void ExcitonTB::initializeHamiltonian(){
 std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) {
 
 
-    std::ofstream polarfile("realspace_polarizability_convergence.dat"); 
+    std::ofstream polarfile("polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
@@ -1476,7 +1476,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     }
     std::cout << "cutoff = " << cutoff << "\n";
 
-    std::ofstream polarfile("reciprocalspace_polarizability_convergence.dat"); 
+    std::ofstream polarfile("polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
