@@ -89,8 +89,8 @@ void ScreeningConfiguration::checkContentCoherence(){
     if(screeningInfo.ncbands <= 0){
         throw std::logic_error("'ncbands' must be a positive number");
     }
-    if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "none"){
-        throw std::logic_error("'function' must be 'dielectric', 'polarizability' or 'none'");
+    if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "exciton"){
+        throw std::logic_error("'function' must be 'dielectric', 'polarizability', 'inversedielectric' or 'exciton'");
     }
     if(screeningInfo.ts(0) < 0 || screeningInfo.ts(1) < 0){
         throw std::invalid_argument("The index of the motif vectors can not be negative! Must be zero or positive integer.");

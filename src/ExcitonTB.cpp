@@ -130,7 +130,7 @@ void ExcitonTB::verifypotential(){
         exit(1);
     }
 
-    if ((this->potential_ != "rpa" || (this->exchangePotential_ != "rpa" && this->exchange)) && this->isscreeningset == true && this->function_ == "none") {
+    if ((this->potential_ != "rpa" || (this->exchangePotential_ != "rpa" && this->exchange)) && this->isscreeningset == true && this->function_ == "exciton") {
         continueprompt("You have provided a screening file, yet you have not chosen the rpa potential.\nDo you wish to continue?[y/n]\n");
     }
 }
@@ -295,7 +295,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
             exit(1);
         }
 
-        if (cfg.screeningInfo.function == "none"){
+        if (cfg.screeningInfo.function == "exciton"){
             std::cout << "Computation of the exciton using the RPA dielectric function in real space not implemented yet. Terminating." << std::endl;
             exit(1);
         }
@@ -315,7 +315,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
             exit(1);
         }
 
-        if (cfg.screeningInfo.function == "none"){
+        if (cfg.screeningInfo.function == "exciton"){
             int nks = this->ncell*this->ncell;
             this->Chimatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
             this->epsilonmatrix_ = arma::cx_cube(ngs, ngs, nks, arma::fill::zeros);
@@ -1337,7 +1337,7 @@ void ExcitonTB::initializeHamiltonian(){
 std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) {
 
 
-    std::ofstream polarfile("../examples/screeningconfig/realspace_polarizability_convergence.dat"); 
+    std::ofstream polarfile("realspace_polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";
@@ -1449,7 +1449,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     }
     std::cout << "cutoff = " << cutoff << "\n";
 
-    std::ofstream polarfile("../examples/screeningconfig/reciprocalspace_polarizability_convergence.dat"); 
+    std::ofstream polarfile("reciprocalspace_polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
         std::cerr << "Error opening file\n";

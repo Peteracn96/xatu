@@ -174,7 +174,7 @@ int main(int argc, char* argv[]){
 
             return 0;
 
-        } else if (screeningConfig->screeningInfo.function == "none"){
+        } else if (screeningConfig->screeningInfo.function == "exciton"){
             
             std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
             
