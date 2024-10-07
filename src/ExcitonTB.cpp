@@ -117,6 +117,10 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
         radius = this->Gcutoff_; //temporary for testing, have to test also for excitons
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+
+        if (this->nReciprocalVectors_ > this->trunreciprocalLattice_.n_rows){
+            throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton may not exceed the number of vectors included in the screening.");
+        }
     }
 }
 
@@ -308,11 +312,13 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
         int ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
-        if (gs(0) >= ngs || gs(1) >= ngs){
-            std::cout << "Error: Index of the reciprocal vector must not be higher than number of reciprocal vectors" << std::endl;
-            std::cout << "Number of reciprocal vectors is " << ngs << std::endl;
+        if(cfg.screeningInfo.function == "dielectric" || cfg.screeningInfo.function == "polarizability"){
+            if (gs(0) >= ngs || gs(1) >= ngs){
+                std::cout << "Error: Index of the reciprocal vector must not be higher than number of reciprocal vectors" << std::endl;
+                std::cout << "Number of reciprocal vectors is " << ngs << std::endl;
 
-            exit(1);
+                exit(1);
+            }
         }
 
         if (cfg.screeningInfo.function == "exciton"){
@@ -538,6 +544,9 @@ void ExcitonTB::setGauge(std::string gauge){
  * @return void
  */
 void ExcitonTB::setValenceBands(int nvbands){
+    if(nvbands <= 0){
+        throw std::invalid_argument("setValenceBands(): number of valence bands must be a positive integer");
+    }
     this->nvalencebands_ = nvbands;
 }
 
@@ -547,6 +556,9 @@ void ExcitonTB::setValenceBands(int nvbands){
  * @return void
  */
 void ExcitonTB::setConductionBands(int ncbands){
+    if(ncbands <= 0){
+        throw std::invalid_argument("setConductionBands(): number of valence bands must be a positive integer");
+    }
     this->nconductionbands_ = ncbands;
 }
 
@@ -590,6 +602,9 @@ void ExcitonTB::setRegularization(double regularization){
  * @return void
 */
 void ExcitonTB::setGcutoff(double Gcutoff){
+    if(Gcutoff < 0){
+        throw std::invalid_argument("setGcutoff(): G cutoff for the screening must be positive");
+    }
     this->Gcutoff_ = Gcutoff;
 }
 
@@ -600,6 +615,9 @@ void ExcitonTB::setGcutoff(double Gcutoff){
  * @return void
 */
 void ExcitonTB::setVectors(arma::ivec indeces_vec){
+    if(indeces_vec(0) < 0 || indeces_vec(1)){
+        throw std::invalid_argument("setVectors(arma::ivec): Both vectors must have a positive index");
+    }
     this->Gs_ = indeces_vec;
 }
 
@@ -610,6 +628,9 @@ void ExcitonTB::setVectors(arma::ivec indeces_vec){
  * @return void
 */
 void ExcitonTB::setVectors(int index1, int index2){
+    if(index1 < 0 || index2 < 0){
+        throw std::invalid_argument("setVectors(int,int): Both vectors must have a positive index");
+    }
     setVectors(arma::ivec({index1, index2}));
 }
 
@@ -620,6 +641,9 @@ void ExcitonTB::setVectors(int index1, int index2){
  * @return void
 */
 void ExcitonTB::setmotifVectors(arma::ivec indeces_vec){
+    if(indeces_vec(0) < 0 || indeces_vec(1)){
+        throw std::invalid_argument("setmotifVectors(arma::ivec): Both vectors must have a positive index");
+    }
     this->ts_ = indeces_vec;
 }
 
@@ -630,6 +654,9 @@ void ExcitonTB::setmotifVectors(arma::ivec indeces_vec){
  * @return void
 */
 void ExcitonTB::setmotifVectors(int index1, int index2){
+    if(index1 < 0 || index2 < 0){
+        throw std::invalid_argument("setmotifVectors(int,int): Both vectors must have a positive index");
+    }
     setmotifVectors(arma::ivec({index1, index2}));
 }
 
