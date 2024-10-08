@@ -37,6 +37,9 @@ build:	$(OBJECTS)
 xatu: main/xatu.cpp $(OBJECTS) 
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
+example: main/screening_example.cpp $(OBJECTS) 
+	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
+
 %: main/%.cpp $(OBJECTS)
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
