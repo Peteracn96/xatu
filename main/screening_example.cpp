@@ -17,12 +17,10 @@ int main(){
 
     auto screening_config = xatu::ScreeningConfiguration("../examples/screeningconfig/MoS2_TB_screening.txt");
 
-    auto mos2_exciton = xatu::ExcitonTB(model_config, exciton_config);
+    auto mos2_exciton = xatu::ExcitonTB(model_config, exciton_config, screening_config);
 
     //mos2_exciton.initializeScreeningAttributes(screening_config);
 
     mos2_exciton.setGcutoff(Gcutoff);
     
-
-
 }
