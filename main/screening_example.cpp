@@ -19,8 +19,7 @@ int main(){
 
     auto mos2_exciton = xatu::ExcitonTB(model_config, exciton_config, screening_config);
 
-    //mos2_exciton.initializeScreeningAttributes(screening_config);
-
-    mos2_exciton.setGcutoff(Gcutoff);
+    mos2_exciton.computeDielectricMatrix();
     
+    return 0;
 }

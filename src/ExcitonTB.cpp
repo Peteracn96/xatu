@@ -2000,10 +2000,10 @@ void ExcitonTB::computesingleDielectricFunction() {
     
         arma::rowvec R2 = lattice_vectors.row(this->Gs_(1)); // Sets R2
 
-        // for(int i = 0; i < lattice_vectors.n_rows; ++i)
-        // {
-        //     std:cout << " R(" << i << ") = " << lattice_vectors.row(i) << "\n";
-        // }
+        for(int i = 0; i < lattice_vectors.n_rows; ++i)
+        {
+            std:cout << " R(" << i << ") = " << lattice_vectors.row(i) << "\n";
+        }
         
         // std::cout << "nk = " << system->nk << std::endl;
 
