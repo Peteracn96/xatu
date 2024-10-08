@@ -15,7 +15,7 @@ int main(){
 
     auto exciton_config = xatu::ExcitonConfiguration("../examples/excitonconfig/MoS2_test.txt");
 
-    auto screening_config = xatu::ScreeningConfiguration("../examples/screeningconfig/MoS2_TB_screening.txt");
+    auto screening_config = xatu::ScreeningConfiguration("../examples/screeningconfig/MoS2_wannier_screening.txt");
 
     auto mos2_exciton = xatu::ExcitonTB(model_config, exciton_config, screening_config);
 
