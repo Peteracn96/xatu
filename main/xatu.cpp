@@ -179,6 +179,8 @@ int main(int argc, char* argv[]){
             std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
             
             bulkExciton.computeDielectricMatrix();
+
+            bulkExciton.invertDielectricMatrix();
             
             std::string filename_dielectric = excitonConfig->excitonInfo.label + "_screening.dat";
             FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");

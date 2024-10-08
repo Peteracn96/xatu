@@ -1936,30 +1936,42 @@ void ExcitonTB::computeDielectricMatrix(){
         } 
     }
 
-    
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
-    auto start_dielectric_matrix_inversion = high_resolution_clock::now();
 
-    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << " s.\nInverting the dielectric matrix... " << std::flush;
+    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << std::endl << std::flush;
+}
+
+/**
+ * Method to invert the static polarizability matrix in the BZ mesh.
+ * @return void
+*/
+void ExcitonTB::invertDielectricMatrix(){
+
+    auto start = high_resolution_clock::now();
+
+    std::cout << "Computing dielectric matrix in the BZ mesh... \n" << std::flush;
+
+    int nGs = this->trunreciprocalLattice_.n_rows;
+    int Nktotal = system->nk;
+
+    arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+
+    std::cout << "\nInverting the dielectric matrix... " << std::flush;
+
+    auto start_dielectric_matrix_inversion = high_resolution_clock::now();
 
     #pragma omp parallel for
     for (int iq = 0; iq < Nktotal; iq++){
-
         this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
     }
 
     auto stop = high_resolution_clock::now();
     auto duration_inversion = duration_cast<milliseconds>(stop - start_dielectric_matrix_inversion);
-    auto duration = duration_cast<milliseconds>(stop - start);
 
     std::cout << "Done in " << duration_inversion.count()/1000.0 << " s." << std::endl;
-    std::cout << "Total function run time: " << duration.count()/1000.0 << " s." << std::endl;
-    //dielectricfile << "Done in " << duration.count()/1000.0 << " s." << std::endl;
-    //dielectricfile.close();
 }
-
 
 /**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
