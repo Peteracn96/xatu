@@ -1062,7 +1062,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
             Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
 
-            term += Ic*this->coulombFT(g, g, k - k2)*conj(Iv);
+            term += Ic*(this->coulombFT(g, g, k - k2)/(system->unitCellArea*totalCells))*conj(Iv);
         }
     } else if (potential == "keldysh"){
         for(int g = 0; g < nrcells; g++){
@@ -1651,7 +1651,7 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
         }
     }
 
-    return term/(system->unitCellArea*totalCells);
+    return 4*PI*PI*term/(system->unitCellArea*totalCells);
 }
 
 /**
