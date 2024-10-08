@@ -841,7 +841,7 @@ double ExcitonTB::coulombFT(int g, int g2, arma::rowvec q) const {
         potential = 1/(qnorm);
     }
     
-    potential = potential*ec*1E10/(2*eps0);
+    potential = potential*ec*1E10/(2*eps0*system->unitCellArea*totalCells);
     
     return potential;
 }  
@@ -896,7 +896,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     }
     else{
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(g2, g2, q)/(system->unitCellArea*totalCells);
+        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(g2, g2, q);
     }
 
     return potential;
