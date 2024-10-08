@@ -19,7 +19,10 @@ int main(){
 
     auto mos2_exciton = xatu::ExcitonTB(model_config, exciton_config, screening_config);
 
-    mos2_exciton.computeDielectricMatrix();
+    mos2_exciton.brillouinZoneMesh(mos2_exciton.ncell);
+    mos2_exciton.initializeHamiltonian();
+
+    mos2_exciton.computesingleDielectricFunction();
     
     return 0;
 }
