@@ -878,7 +878,8 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
 
 /**
  * Evaluates the RPA potential in reciprocal space.
- * Implementation in progress, returns the same as keldysh.
+ * @param q kpoint where we evaluate the FT.
+ * @return W_(G,G')(q) matrix element of the screened potential
  */
 std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
 
