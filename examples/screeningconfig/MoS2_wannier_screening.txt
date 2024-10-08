@@ -1,16 +1,14 @@
-# mode
-reciprocalspace
-# valence bands
+# valence.bands
 26
-# conduction bands
+# conduction.bands
 8
 # removedbands
 0
-# reciprocal vectors
-0 0
+# vectors
+1 0
 # momentum
 0. 0. 0.
 #motif.vectors
-1 0
+0 0
 # function
 Dielectric
