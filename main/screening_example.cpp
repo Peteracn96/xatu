@@ -24,8 +24,27 @@ int main(){
 
 
     mos2_exciton.setVectors(0,0);
-    mos2_exciton.computesingleDielectricFunction();
+    //mos2_exciton.computesingleDielectricFunction();
 
+    // Prints the k points to plot the matrix elements in a grid
+    std::string filename_k_points = "kgrid_Wannier" + std::to_string(mos2_exciton.ncell) + ".dat";
+
+    std::ofstream k_points_file; 
+
+    k_points_file.open(filename_k_points);
+
+    if (!k_points_file.is_open()) { // check if the file was opened successfully
+        std::cerr << "Error opening file\n";
+        std::cerr << errno << "\n";
+    }
+
+
+    for(unsigned int i = 0; i < mos2_exciton.ncell*mos2_exciton.ncell; i++){
+        auto k = mos2_exciton.system->kpoints.row(i);
+        k_points_file << k(0) << " " << k(1) << " " << k(2) << std::endl;
+    }
+
+    k_points_file.close();
     
     return 0;
 }
