@@ -13,7 +13,7 @@ int main(){
 
     auto model_config = xatu::SystemConfiguration("../examples/material_models/wannier_models/MoS2_spin_wannier_07032024.model");
 
-    auto exciton_config = xatu::ExcitonConfiguration("../examples/excitonconfig/MoS2_test.txt");
+    auto exciton_config = xatu::ExcitonConfiguration("../examples/excitonconfig/MoS2_wannier.txt");
 
     auto screening_config = xatu::ScreeningConfiguration("../examples/screeningconfig/MoS2_wannier_screening.txt");
 
@@ -22,7 +22,10 @@ int main(){
     mos2_exciton.brillouinZoneMesh(mos2_exciton.ncell);
     mos2_exciton.initializeHamiltonian();
 
+
+    mos2_exciton.setVectors(0,0);
     mos2_exciton.computesingleDielectricFunction();
+
     
     return 0;
 }
