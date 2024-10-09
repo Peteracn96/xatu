@@ -1651,7 +1651,7 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
         }
     }
 
-    return 4*PI*PI*term/(system->unitCellArea*totalCells);
+    return term/(system->unitCellArea*totalCells);
 }
 
 /**
@@ -1664,47 +1664,104 @@ void ExcitonTB::PolarizabilityMesh(){
     auto start = high_resolution_clock::now();
 
     if (this->mode == "realspace"){
-        std::cout << "The real space polarizability in a direct lattice partition has not been implemented yet. Terminating." << std::endl;
-        exit(1);
-    }
-
-    std::cout << "Computing polarizability in the BZ mesh... \n" << std::flush;
-
-    std::ofstream polarfile; 
-
-    polarfile.open("polarizability_mesh.dat");
-
-    if (!polarfile.is_open()) { // check if the file was opened successfully
-        std::cerr << "Error opening file\n";
-        std::cerr << errno << "\n";
+        std::cout << "The real space polarizability in a direct lattice partition has not been completely implemented yet." << std::endl;
         
+        // arma::vec t1 = system->motif.row(this->ts_(0)).subvec(0,2);
+        // arma::vec t2 = system->motif.row(this->ts_(1)).subvec(0,2);
+
+        int t1 = this->ts_(0);
+
+        int natoms = system->motif.n_rows;
+
+        double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
+        arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
+        int nRvectors = lattice_vectors.n_rows;
+
+        int nlattice_sites = nRvectors*natoms;
+
+        int origin = (nRvectors-1)/2;
+
+        arma::vec R0 = lattice_vectors.row(origin);
+        arma::vec R1 = R0;
+        arma::vec R2 = R0;
+
+        arma::vec Chi(nlattice_sites, arma::fill::zeros);
+
+        for (int i = 0; i < nRvectors; i++)
+        {
+            arma::vec Raux = lattice_vectors.row(i);
+
+            for (int t = 0; t < natoms; ++t){
+                Chi(t + i*natoms) = this->computesinglePolarizability(R1,Raux,t1,t);
+            }
+
+        }
+        
+        std::ofstream polarfile; 
+
+        polarfile.open("polarizability_lattice.dat");
+
+        if (!polarfile.is_open()) { // check if the file was opened successfully
+            std::cerr << "Error opening file\n";
+            std::cerr << errno << "\n";
+            
+            exit(1);
+        }
+        
+        //Prints values of the polarizability in the lattice
+        for (int i = 0; i < nRvectors; i++)
+        {
+            arma::vec Raux = lattice_vectors.row(i);
+
+            for (int t = 0; t < natoms; ++t){ 
+                arma::vec taux = system->motif.row(t).subvec(0,2);
+                polarfile << Raux(0) << " " << Raux(1) << " " << Raux(2) << " " << taux(0) << " " << taux(1) << " " << taux(2) << " " << Chi(t + i*natoms) << "\n";
+            }
+        }
+
+        polarfile.close();
+
         exit(1);
     }
 
-    int nq = system->nk;
+    if (this->mode == "reciprocalspace"){
+        std::cout << "Computing polarizability in the BZ mesh... \n" << std::flush;
 
-    arma::cx_vec Chi(nq, arma::fill::zeros);
+        std::ofstream polarfile; 
 
-    double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
-    arma::mat reciprocalVectors = this->trunreciprocalLattice_;//system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+        polarfile.open("polarizability_mesh.dat");
 
-    arma::rowvec g = reciprocalVectors.row(this->Gs(0)); // Sets G
-    arma::rowvec g2 = reciprocalVectors.row(this->Gs(1)); // Sets G'
+        if (!polarfile.is_open()) { // check if the file was opened successfully
+            std::cerr << "Error opening file\n";
+            std::cerr << errno << "\n";
+            
+            exit(1);
+        }
 
-    #pragma omp parallel for
-    for (int iq = 0; iq < nq; iq++){
-        Chi(iq) = reciprocalPolarizabilityMatrixElement(g, g2, iq);
+        int nq = system->nk;
+
+        arma::cx_vec Chi(nq, arma::fill::zeros);
+
+        double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
+        arma::mat reciprocalVectors = this->trunreciprocalLattice_;//system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+
+        arma::rowvec g = reciprocalVectors.row(this->Gs(0)); // Sets G
+        arma::rowvec g2 = reciprocalVectors.row(this->Gs(1)); // Sets G'
+
+        #pragma omp parallel for
+        for (int iq = 0; iq < nq; iq++){
+            Chi(iq) = reciprocalPolarizabilityMatrixElement(g, g2, iq);
+        }
+
+        std::cout << "Chi computed" << std::endl;
+        
+        for (int iq = 0; iq < nq; iq++){
+            auto q = system_->kpoints.row(iq);
+            polarfile << q(0) << " " << q(1) << " " << q(2) << " " << real(Chi(iq)) << " " << imag(Chi(iq)) << "\n";
+        }
+
+        polarfile.close();
     }
-
-    std::cout << "Chi computed" << std::endl;
-    
-    for (int iq = 0; iq < nq; iq++){
-        auto q = system_->kpoints.row(iq);
-        polarfile << q(0) << " " << q(1) << " " << q(2) << " " << real(Chi(iq)) << " " << imag(Chi(iq)) << "\n";
-    }
-
-    polarfile.close();
-
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
 
@@ -2762,7 +2819,7 @@ void ExcitonTB::writeInverseDielectricMatrix(FILE* textfile){
     }
 
     // Prints the k points to plot the matrix elements in a grid
-    std::string filename_k_points = "kgrid" + std::to_string(this->ncell) + ".dat";
+    std::string filename_k_points = "kgrid_" + std::to_string(this->ncell) + ".dat";
 
     std::ofstream k_points_file; 
 
