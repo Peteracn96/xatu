@@ -615,7 +615,7 @@ void ExcitonTB::setGcutoff(double Gcutoff){
  * @return void
 */
 void ExcitonTB::setVectors(arma::ivec indeces_vec){
-    if(indeces_vec(0) < 0 || indeces_vec(1)){
+    if(indeces_vec(0) < 0 || indeces_vec(1) < 0){
         throw std::invalid_argument("setVectors(arma::ivec): Both vectors must have a positive index");
     }
     this->Gs_ = indeces_vec;
