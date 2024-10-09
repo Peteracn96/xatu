@@ -1362,7 +1362,7 @@ void ExcitonTB::initializeHamiltonian(){
  * @param t_j 2nd atom of the motif
  * @return Polarizability
 */
-std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) {
+double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) {
 
 
     std::ofstream polarfile("polarizability_convergence.dat"); 
@@ -1458,7 +1458,7 @@ std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& 
 
     polarfile.close();
 
-    return term/Nsquared;
+    return real(term)/real(Nsquared);
 }
 
 /**
