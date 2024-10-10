@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(lldb) Iniciar",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/xatu",
+            "args": ["${workspaceFolder}/examples/material_models/MoS2.model", "${workspaceFolder}/examples/excitonconfig/MoS2_test.txt"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "targetArchitecture": "arm64"
+        }
+    ]
+}
