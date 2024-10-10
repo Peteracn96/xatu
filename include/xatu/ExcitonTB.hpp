@@ -196,6 +196,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void computesingleInverseDielectricMatrix(std::string);
         void PolarizabilityMesh();
         void computeDielectricMatrix();
+        void writeBZtofile();
         void invertDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
@@ -215,7 +216,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void printInformation();
 
         // Write inverse of dielectric matrix in a file
-        void writeInverseDielectricMatrix(FILE*);     
+        void writeInverseDielectricMatrix(std::string);     
 
         // Verifies if potential chosen is 'rpa' and if a screening file was not provided
         void verifypotential();

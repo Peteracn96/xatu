@@ -183,18 +183,12 @@ int main(int argc, char* argv[]){
             bulkExciton.invertDielectricMatrix();
             
             std::string filename_dielectric = excitonConfig->excitonInfo.label + "_screening.dat";
-            FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
+            
+            bulkExciton.writeInverseDielectricMatrix(filename_dielectric);
 
-            if (textfile_dielectric == NULL){
-                std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
-                return 0;
-            }
+            bulkExciton.writeBZtofile();
 
-            std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
-            bulkExciton.writeInverseDielectricMatrix(textfile_dielectric);
             std::cout << "\nComputation of the exciton with screening under testing.\n" << std::endl;
-
-            fclose(textfile_dielectric);
 
             //continueprompt("Do you wish to procceed with the computation of the exciton?[y/n]\n");
             

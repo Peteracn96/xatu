@@ -2031,6 +2031,31 @@ void ExcitonTB::invertDielectricMatrix(){
 }
 
 /**
+ * Method to invert the static polarizability matrix in the BZ mesh.
+ * @return void
+*/
+void ExcitonTB::writeBZtofile(){
+    std::string filename_k_points = "kgrid_" + std::to_string(this->ncell) + ".dat";
+
+   std::ofstream k_points_file; 
+
+    k_points_file.open(filename_k_points);
+
+    if (!k_points_file.is_open()) { // check if the file was opened successfully
+        std::cerr << "Error opening file\n";
+        std::cerr << errno << "\n";
+    }
+
+
+    for(unsigned int i = 0; i < this->ncell*this->ncell; i++){
+        auto k = this->system->kpoints.row(i);
+        k_points_file << k(0) << " " << k(1) << " " << k(2) << std::endl;
+    }
+
+    k_points_file.close();
+}
+
+/**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
  * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
  * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
@@ -2801,10 +2826,19 @@ void ExcitonTB::printInformation(){
     }
 }
 
-/* Method to print information of the inverse of the dielectric matrix in a file.
+/* Method to print information of the inverse of the dielectric matrix into a file.
  * @return void 
  */
-void ExcitonTB::writeInverseDielectricMatrix(FILE* textfile){
+void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric){
+
+    FILE* textfile = fopen(filename_dielectric.c_str(), "w");
+
+    if (textfile == NULL){
+        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
 
     int ngs = this->trunreciprocalLattice_.n_rows;
     int nqs = system->nk;
@@ -2817,25 +2851,6 @@ void ExcitonTB::writeInverseDielectricMatrix(FILE* textfile){
             fprintf(textfile, "\n");
         }
     }
-
-    // Prints the k points to plot the matrix elements in a grid
-    std::string filename_k_points = "kgrid_" + std::to_string(this->ncell) + ".dat";
-
-    std::ofstream k_points_file; 
-
-    k_points_file.open(filename_k_points);
-
-    if (!k_points_file.is_open()) { // check if the file was opened successfully
-        std::cerr << "Error opening file\n";
-        std::cerr << errno << "\n";
-    }
-
-
-    for(unsigned int i = 0; i < nqs; i++){
-        auto k = system_->kpoints.row(i);
-        k_points_file << k(0) << " " << k(1) << " " << k(2) << std::endl;
-    }
-
-    k_points_file.close();
+    fclose(textfile);
 }
 }
