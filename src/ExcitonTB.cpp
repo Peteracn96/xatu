@@ -660,6 +660,18 @@ void ExcitonTB::setmotifVectors(int index1, int index2){
     setmotifVectors(arma::ivec({index1, index2}));
 }
 
+/* ------------------------------ Getters ------------------------------ */
+int ExcitonTB::getNGs() const {
+
+    if (this->trunreciprocalLattice_.is_empty()){
+        std::cout << "Matrix of reciprocal lattice vectors is empty. Will return 0.\n" << std::endl;
+        return 0;
+    }
+
+    return this->trunreciprocalLattice_.n_rows;
+}
+
+
 /*---------------------------------------- Potentials ----------------------------------------*/
 
 /** 
@@ -2808,7 +2820,7 @@ void ExcitonTB::printInformation(){
 void ExcitonTB::writeBZtofile() const {
     std::string filename_k_points = "kgrid_" + std::to_string(this->ncell) + ".dat";
 
-   std::ofstream k_points_file; 
+    std::ofstream k_points_file; 
 
     k_points_file.open(filename_k_points);
 

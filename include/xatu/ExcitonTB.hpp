@@ -136,6 +136,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setmotifVectors(int,int);
         void setmotifVectors(arma::ivec);
 
+        // Getters
+        int getNGs() const;
+
     private:
         // Potentials
         double keldysh(double) const;
