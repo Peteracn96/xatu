@@ -183,8 +183,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         int fecthReciprocalLatticeVector(arma::rowvec);
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizability(arma::rowvec&);
-        double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int);
-        std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int);
+        double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
+        std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int) const;
 
     public:
         // Static dielectric function, BSE initialization and energies
@@ -194,9 +194,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
         void computesingleDielectricFunction();
         void computesingleInverseDielectricMatrix(std::string);
-        void PolarizabilityMesh();
+        void PolarizabilityMesh() const;
         void computeDielectricMatrix();
-        void writeBZtofile();
         void invertDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
@@ -216,7 +215,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         void printInformation();
 
         // Write inverse of dielectric matrix in a file
-        void writeInverseDielectricMatrix(std::string);     
+        void writeInverseDielectricMatrix(std::string) const;     
+        // Write BZ mesh in a file
+        void writeBZtofile() const;
 
         // Verifies if potential chosen is 'rpa' and if a screening file was not provided
         void verifypotential();

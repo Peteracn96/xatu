@@ -709,7 +709,7 @@ void ExcitonTB::STVH0(double X, double *SH0) const {
  * @param r Distance at which we evaluate the potential.
  * @return Value of Keldysh potential, V(r).
  */
-double ExcitonTB::keldysh(double r) const{
+double ExcitonTB::keldysh(double r) const {
     double eps_bar = (eps_m + eps_s)/2;
     double SH0;
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
@@ -736,7 +736,7 @@ double ExcitonTB::keldysh(double r) const{
  * @param regularization Regularization distance to remove divergence at r=0.
  * @return Value of Coulomb potential, V(r).
  */
-double ExcitonTB::coulomb(double r) const{
+double ExcitonTB::coulomb(double r) const {
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
     r = abs(r);
     if (r > cutoff){
@@ -749,7 +749,7 @@ double ExcitonTB::coulomb(double r) const{
  * RPA potential in real space.
  * Implementation in progress, returns the same as keldysh.
  */
-double ExcitonTB::rpa(double r) const{
+double ExcitonTB::rpa(double r) const {
     double eps_bar = (eps_m + eps_s)/2;
     double SH0;
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
@@ -1362,7 +1362,7 @@ void ExcitonTB::initializeHamiltonian(){
  * @param t_j 2nd atom of the motif
  * @return Polarizability
 */
-double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) {
+double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) const {
 
 
     std::ofstream polarfile("polarizability_convergence.dat"); 
@@ -1596,7 +1596,7 @@ arma::mat generatecombinations(int nvbands, int basisdim, int nks){
  * @param q Momentum vector q
  * @return Polarizability
 */
-std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, int iq) {
+std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, int iq) const {
 
     int nk = system->nk;
     int natoms = system->natoms;
@@ -1622,8 +1622,8 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
 
         int kqindex = system_->findEquivalentPointBZ(kq, ncell);
 
-        arma::cx_dmat *auxk_slice = &eigveckStack_.slice(ik);
-        arma::cx_dmat *auxkq_slice = &eigveckStack_.slice(kqindex);
+        const arma::cx_dmat *auxk_slice = &eigveckStack_.slice(ik);
+        const arma::cx_dmat *auxkq_slice = &eigveckStack_.slice(kqindex);
 
         for (int ic = nvbands; ic <= upperindexcband; ic++){
 
@@ -1659,7 +1659,7 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
  * @details Opens 'polarizability_mesh.dat' file and writes in it the values of the polarizability at each point in the BZ mesh
  * @return void
 */
-void ExcitonTB::PolarizabilityMesh(){
+void ExcitonTB::PolarizabilityMesh() const {
 
     auto start = high_resolution_clock::now();
 
@@ -1750,7 +1750,7 @@ void ExcitonTB::PolarizabilityMesh(){
 
         #pragma omp parallel for
         for (int iq = 0; iq < nq; iq++){
-            Chi(iq) = reciprocalPolarizabilityMatrixElement(g, g2, iq);
+            Chi(iq) = this->reciprocalPolarizabilityMatrixElement(g, g2, iq);
         }
 
         std::cout << "Chi computed" << std::endl;
@@ -2028,31 +2028,6 @@ void ExcitonTB::invertDielectricMatrix(){
     auto duration_inversion = duration_cast<milliseconds>(stop - start_dielectric_matrix_inversion);
 
     std::cout << "Done in " << duration_inversion.count()/1000.0 << " s." << std::endl;
-}
-
-/**
- * Method to invert the static polarizability matrix in the BZ mesh.
- * @return void
-*/
-void ExcitonTB::writeBZtofile(){
-    std::string filename_k_points = "kgrid_" + std::to_string(this->ncell) + ".dat";
-
-   std::ofstream k_points_file; 
-
-    k_points_file.open(filename_k_points);
-
-    if (!k_points_file.is_open()) { // check if the file was opened successfully
-        std::cerr << "Error opening file\n";
-        std::cerr << errno << "\n";
-    }
-
-
-    for(unsigned int i = 0; i < this->ncell*this->ncell; i++){
-        auto k = this->system->kpoints.row(i);
-        k_points_file << k(0) << " " << k(1) << " " << k(2) << std::endl;
-    }
-
-    k_points_file.close();
 }
 
 /**
@@ -2826,10 +2801,35 @@ void ExcitonTB::printInformation(){
     }
 }
 
+/**
+ * Method to invert the static polarizability matrix in the BZ mesh.
+ * @return void
+*/
+void ExcitonTB::writeBZtofile() const {
+    std::string filename_k_points = "kgrid_" + std::to_string(this->ncell) + ".dat";
+
+   std::ofstream k_points_file; 
+
+    k_points_file.open(filename_k_points);
+
+    if (!k_points_file.is_open()) { // check if the file was opened successfully
+        std::cerr << "Error opening file\n";
+        std::cerr << errno << "\n";
+    }
+
+
+    for(unsigned int i = 0; i < this->ncell*this->ncell; i++){
+        auto k = this->system->kpoints.row(i);
+        k_points_file << k(0) << " " << k(1) << " " << k(2) << std::endl;
+    }
+
+    k_points_file.close();
+}
+
 /* Method to print information of the inverse of the dielectric matrix into a file.
  * @return void 
  */
-void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric){
+void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) const {
 
     FILE* textfile = fopen(filename_dielectric.c_str(), "w");
 
