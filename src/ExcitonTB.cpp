@@ -2765,24 +2765,26 @@ void ExcitonTB::printInformation(){
     }
     std::cout << "\n" << endl;
 
-    std::cout << std::left << std::setw(30) << "Gauge used: " << gauge << endl;
-    std::cout << std::left << std::setw(30) << "Calculation mode: " << mode << endl;
+    std::cout << std::left << std::setw(30) << "Gauge used: " << gauge << std::endl;
+    std::cout << std::left << std::setw(30) << "Calculation mode: " << mode << std::endl;
     if(mode == "reciprocalspace"){
-        std::cout << std::left << std::setw(30) << "nG: " << nReciprocalVectors << endl;
+        std::cout << std::left << std::setw(30) << "nG: " << nReciprocalVectors << std::endl;
     }
-    std::cout << std::left << std::setw(30) << "Potential: " << potential_ << endl;
+    std::cout << std::left << std::setw(30) << "Potential: " << potential_ << std::endl;
     if(exchange){
-        std::cout << std::left << std::setw(30) << "Exchange: " << (exchange ? "True" : "False") << endl;
-        std::cout << std::left << std::setw(30) << "Exchange potential: " << exchangePotential_ << endl;
+        std::cout << std::left << std::setw(30) << "Exchange: " << (exchange ? "True" : "False") << std::endl;
+        std::cout << std::left << std::setw(30) << "Exchange potential: " << exchangePotential_ << std::endl;
     }
+    std::cout << std::left << std::setw(30) << "Dielectric constant of embedding medium: " << eps_m << std::endl;
+    std::cout << std::left << std::setw(30) << "Dielectric constant of substrate: " << eps_s << std::endl;
     if(arma::norm(Q) > 1E-7){
         std::cout << std::left << std::setw(30) << "Q: "; 
         for (auto qi : Q){
             std::cout << qi << "  ";
         }
-        std::cout << endl;
+        std::cout << std::endl;
     }
-    std::cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << endl;
+    std::cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << std::endl;
 
     if (this->isscreeningset == true){
         std::cout << std::left << std::setw(40) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
