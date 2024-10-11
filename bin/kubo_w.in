@@ -1,0 +1,13 @@
+#initial frequency (eV)
+1
+#frequency range (eV)
+6
+#number of frequency points (integer)
+400
+#broadening parameter (eV)
+0.08d0
+#type of broadening (available: 'lorentzian', 'exponential', 'gaussian')
+lorentzian
+#output kubo name files
+hBN_sp.dat
+hBN_ex.dat
