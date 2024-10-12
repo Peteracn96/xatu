@@ -2816,7 +2816,7 @@ void ExcitonTB::printInformation(){
 }
 
 /**
- * Method to invert the static polarizability matrix in the BZ mesh.
+ * Method to print the BZ mesh to a file.
  * @return void
 */
 void ExcitonTB::writeBZtofile() const {
