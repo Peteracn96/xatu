@@ -113,15 +113,20 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
         this->Gcutoff_ = (this->ncell)/2.5 * arma::norm(system->reciprocalLattice.row(0)); //Temporary, to have as Gcutoff as a length of reciprocal vector
     }
 
-    if (this->trunreciprocalLattice_.is_empty()){
-        double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
-        radius = this->Gcutoff_; //temporary for testing, have to test also for excitons
-        this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
+    if (this->mode == "reciprocalspace"){
+        if (this->trunreciprocalLattice_.is_empty()){
+            double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
+            radius = this->Gcutoff_; //temporary for testing, have to test also for excitons
+            this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
-        if (this->nReciprocalVectors_ > this->trunreciprocalLattice_.n_rows){
-            throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton may not exceed the number of vectors included in the screening.");
+            if (this->nReciprocalVectors_ > this->trunreciprocalLattice_.n_rows){
+                throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton may not exceed the number of vectors included in the screening.");
+            }
         }
+    } else if (this->mode == "realspace"){
+        std::cout << "Doing nothing for now\n";
     }
+    
 }
 
 /*
@@ -1396,10 +1401,6 @@ double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma:
     int upperindexcband = nvbands + ncbandsincluded - 1;
     int lowerindexvbands = nvbands - nvbandsincluded;
 
-    std::cout << "Total of valence bands = " << nvbands << "\n";
-    std::cout << "Total of conduction bands = " << ncbands << "\n";
-    std::cout << "fermi level = " << system->fermiLevel << "\n";
-
     std::complex<double> term = 0.;
     arma::cx_vec coefsk, coefsk2;
 
@@ -1678,8 +1679,16 @@ void ExcitonTB::PolarizabilityMesh() const {
     if (this->mode == "realspace"){
         std::cout << "The real space polarizability in a direct lattice partition has not been completely implemented yet." << std::endl;
         
-        // arma::vec t1 = system->motif.row(this->ts_(0)).subvec(0,2);
-        // arma::vec t2 = system->motif.row(this->ts_(1)).subvec(0,2);
+        std::ofstream polarfile; 
+
+        polarfile.open("polarizability_lattice.dat");
+
+        if (!polarfile.is_open()) { // check if the file was opened successfully
+            std::cerr << "Error opening file\n";
+            std::cerr << errno << "\n";
+            
+            exit(1);
+        }
 
         int t1 = this->ts_(0);
 
@@ -1691,33 +1700,19 @@ void ExcitonTB::PolarizabilityMesh() const {
 
         int nlattice_sites = nRvectors*natoms;
 
-        int origin = (nRvectors-1)/2;
+        int index = (nRvectors-1)/2;
 
-        arma::vec R0 = lattice_vectors.row(origin);
-        arma::vec R1 = R0;
-        arma::vec R2 = R0;
-
+        arma::rowvec R0 = lattice_vectors.row(index);
+    
         arma::vec Chi(nlattice_sites, arma::fill::zeros);
 
         for (int i = 0; i < nRvectors; i++)
         {
-            arma::vec Raux = lattice_vectors.row(i);
+            arma::rowvec Raux = lattice_vectors.row(i);
 
             for (int t = 0; t < natoms; ++t){
-                Chi(t + i*natoms) = this->computesinglePolarizability(R1,Raux,t1,t);
+                Chi(t + i*natoms) = this->computesinglePolarizability(R0,Raux,t1,t);
             }
-
-        }
-        
-        std::ofstream polarfile; 
-
-        polarfile.open("polarizability_lattice.dat");
-
-        if (!polarfile.is_open()) { // check if the file was opened successfully
-            std::cerr << "Error opening file\n";
-            std::cerr << errno << "\n";
-            
-            exit(1);
         }
         
         //Prints values of the polarizability in the lattice
