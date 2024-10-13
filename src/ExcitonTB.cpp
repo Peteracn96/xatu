@@ -1677,7 +1677,7 @@ void ExcitonTB::PolarizabilityMesh() const {
     auto start = high_resolution_clock::now();
 
     if (this->mode == "realspace"){
-        std::cout << "The real space polarizability in a direct lattice partition has not been completely implemented yet." << std::endl;
+        std::cout << "Computing the polarizability at the lattice sites... \n" << std::flush;
         
         std::ofstream polarfile; 
 
@@ -1706,29 +1706,40 @@ void ExcitonTB::PolarizabilityMesh() const {
     
         arma::vec Chi(nlattice_sites, arma::fill::zeros);
 
+        // Generate the combinations for parallelizing the computation of Chi
+        int ncombinations = nRvectors*natoms;
+        arma::imat combinations(ncombinations,2,arma::fill::zeros);
+
         for (int i = 0; i < nRvectors; i++)
         {
-            arma::rowvec Raux = lattice_vectors.row(i);
-
             for (int t = 0; t < natoms; ++t){
-                Chi(t + i*natoms) = this->computesinglePolarizability(R0,Raux,t1,t);
+                combinations(i + t*natoms,0) = i;
+                combinations(i + t*natoms,1) = t;
             }
+        }
+
+        #pragma omp parallel for
+        for (int index = 0; index < ncombinations; index++)
+        {
+            arma::rowvec Raux = lattice_vectors.row(combinations(index,0));
+            int t = combinations(index,1);
+            Chi(index) = this->computesinglePolarizability(R0,Raux,t1,t);
         }
         
         //Prints values of the polarizability in the lattice
         for (int i = 0; i < nRvectors; i++)
         {
-            arma::vec Raux = lattice_vectors.row(i);
+            arma::rowvec Raux = lattice_vectors.row(i);
 
             for (int t = 0; t < natoms; ++t){ 
-                arma::vec taux = system->motif.row(t).subvec(0,2);
+                arma::rowvec taux = system->motif.row(t).subvec(0,2);
                 polarfile << Raux(0) << " " << Raux(1) << " " << Raux(2) << " " << taux(0) << " " << taux(1) << " " << taux(2) << " " << Chi(t + i*natoms) << "\n";
             }
         }
 
-        polarfile.close();
+        std::cout << "Done." << std::flush;
 
-        exit(1);
+        polarfile.close();
     }
 
     if (this->mode == "reciprocalspace"){
@@ -1769,6 +1780,7 @@ void ExcitonTB::PolarizabilityMesh() const {
 
         polarfile.close();
     }
+    
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
 
