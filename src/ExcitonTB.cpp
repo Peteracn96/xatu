@@ -1593,14 +1593,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     return term/(system->unitCellArea*totalCells);
 }
 
-arma::mat generatecombinations(int nvbands, int basisdim, int nks){
-    arma::mat vbands(1,nvbands,arma::fill::zeros);
-    arma::mat cbands(1,basisdim-nvbands,arma::fill::zeros);
-    arma::mat kindices(1,nks,arma::fill::zeros);
-
-    arma::mat bands = arma::kron(vbands,cbands);
-}
-
 /**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q.
  * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh
@@ -1709,12 +1701,13 @@ void ExcitonTB::PolarizabilityMesh() const {
         // Generate the combinations for parallelizing the computation of Chi
         int ncombinations = nRvectors*natoms;
         arma::imat combinations(ncombinations,2,arma::fill::zeros);
-
+        int ii = 0;
         for (int i = 0; i < nRvectors; i++)
         {
             for (int t = 0; t < natoms; ++t){
-                combinations(i + t*natoms,0) = i;
-                combinations(i + t*natoms,1) = t;
+                combinations(ii,0) = i;
+                combinations(ii,1) = t;
+                ++ii;
             }
         }
 
