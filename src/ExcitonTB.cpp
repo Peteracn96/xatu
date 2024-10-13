@@ -1677,7 +1677,7 @@ void ExcitonTB::PolarizabilityMesh() const {
     auto start = high_resolution_clock::now();
 
     if (this->mode == "realspace"){
-        std::cout << "Computing the polarizability at the lattice sites... \n" << std::flush;
+        std::cout << "Computing the polarizability at the lattice sites... " << std::flush;
         
         std::ofstream polarfile; 
 
@@ -1780,7 +1780,7 @@ void ExcitonTB::PolarizabilityMesh() const {
 
         polarfile.close();
     }
-    
+
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
 
