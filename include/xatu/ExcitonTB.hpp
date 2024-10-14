@@ -68,6 +68,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::cx_cube epsilonmatrix_;
         arma::cx_cube Invepsilonmatrix_;
 
+        arma::mat Polarizabilitymatrix_;
+
     public:
         // Returns dielectric constant of embedding medium
         const double& eps_m = eps_m_;
