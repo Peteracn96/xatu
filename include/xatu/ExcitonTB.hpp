@@ -62,7 +62,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::ivec ts_;
         int nGs;
         double Gcutoff_ = 0;
-        arma::mat trunLattice_;
+        
         arma::mat trunreciprocalLattice_;
         arma::cx_cube Chimatrix_;
         arma::cx_cube epsilonmatrix_;
@@ -91,7 +91,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;
         const arma::ivec& Gs = Gs_;
-
+        arma::mat trunLattice_;
     // ----------------------------------- Methods -----------------------------------
     // Constructor & Destructor
     private:
