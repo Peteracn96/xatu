@@ -116,7 +116,7 @@ int main(){
     // }
 
     std::cout << "Total number of vectors found = " << count << " among the " << nRvectors << " vectors" <<  std::endl;
-    std::cout << "Total number of non equivalent vectors is = " << index_vector.size() << " vectors" <<  std::endl;
+    
 
     std::set<int> indexes_set = std::set<int>( index_vector.begin(), index_vector.end() );
 
@@ -126,6 +126,8 @@ int main(){
     {
         std::cout << index << '\n';
     }
+
+    std::cout << "Total number of non equivalent vectors is = " << indexes_set.size() << " vectors" <<  std::endl;
 
     return 0;
 }
