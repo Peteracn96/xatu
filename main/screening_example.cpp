@@ -101,7 +101,7 @@ int main(){
 
     for (int i = 0; i < nRdif; ++ i){
         arma::rowvec Rdif_aux = Rdifferences.row(i);
-        std::cout << "R2-R1(" << i << ") = " << Rdif_aux << std::endl;
+        //std::cout << "R2-R1(" << i << ") = " << Rdif_aux << std::endl;
     }
 
     std::cout << "List of the indexes of the non-equivalent vectors:\n";
