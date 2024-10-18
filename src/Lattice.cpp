@@ -453,8 +453,8 @@ arma::imat Lattice::generateCombinationsGcutoff(double Gc, int ndim){
 	//double normG3 = arma::norm(reciprocalLattice.row(2));
 
 	//For now implements only 2D systems
-	int n_max = std::ceil(Gc/normG1);
-	int m_max = std::ceil(Gc/normG2);
+	int n_max = 4*std::ceil(Gc/normG1); //higher factor to ensure that all the G vectos with G<|Gc| are included
+	int m_max = 4*std::ceil(Gc/normG2);
 
 	int ncombinations = (2*n_max + 1)*(2*m_max + 1);
 
