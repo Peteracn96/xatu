@@ -10,11 +10,11 @@ int main(){
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+    xatu::SystemConfiguration model_config("MoS2.model");
 
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    xatu::ExcitonConfiguration exciton_config("MoS2_test.txt");
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
+    xatu::ScreeningConfiguration screening_config("MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
@@ -85,18 +85,21 @@ int main(){
     int count = 0;
     int non_equivalent = 0;
 
-    std::vector<int> index_vector;
+    std::cout << "nRdif = " << nRdif << std::endl;
 
-    for (int i = 0; i < nRdif; ++ i){
+    int index_array[nRdif]={0};
+
+    int index = 0;
+    for (int i = 0; i < nRdif; ++i){
         arma::rowvec Rdif_aux = Rdifferences.row(i);
         for (int j = 0; j < nRdif; ++j) {
             arma::rowvec Rdif_aux2 = Rdifferences.row(j);
-
             if (arma::norm(Rdif_aux - Rdif_aux2) < 1E-7){
-                index_vector.push_back(j);
+                index_array[index] = j;
                 break;
             }
         }
+        index++;
     }
 
     for (int i = 0; i < nRdif; ++ i){
@@ -106,8 +109,9 @@ int main(){
 
     std::cout << "List of the indexes of the non-equivalent vectors:\n";
 
-    for (std::vector<int>::iterator it = index_vector.begin(); it < index_vector.end(); ++it){
-        std::cout << *it << std::endl;
+    for (int i = 0; i < nRdif; ++i){
+        arma::rowvec Rdif_aux = Rdifferences.row(i);
+        std::cout << "index = " << index_array[i]  << ", R2-R1(" << i << ") = " << Rdif_aux  << std::endl;
     }
 
 
@@ -115,19 +119,18 @@ int main(){
     //     std::cout << "Vector dif. nummer " << i << " was found " << CountRdifs(i) << " times\n";
     // }
 
-    std::cout << "Total number of vectors found = " << count << " among the " << nRvectors << " vectors" <<  std::endl;
-    
-
-    std::set<int> indexes_set = std::set<int>( index_vector.begin(), index_vector.end() );
+    std::set<int> indexes_set = std::set<int>( index_array, index_array + nRdif );
 
     std::cout << "The indices are:" <<  std::endl;
 
     for (int const& index : indexes_set)
     {
-        std::cout << index << '\n';
+        std::cout << index << ", ";
     }
 
-    std::cout << "Total number of non equivalent vectors is = " << indexes_set.size() << " vectors" <<  std::endl;
+    std::cout << "\nTotal number of non equivalent vectors is = " << indexes_set.size() << " vectors" <<  std::endl;
+
+    std::cout << "Number of k points in BZ mesh = " << mos2_exciton.system->kpoints.n_rows << std::endl;
 
     return 0;
 }
