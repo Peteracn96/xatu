@@ -132,5 +132,15 @@ int main(){
 
     std::cout << "Number of k points in BZ mesh = " << mos2_exciton.system->kpoints.n_rows << std::endl;
 
+    // Initiates the polarizability and computes it at the non-equivalent sites
+
+    int NAtoms = mos2_exciton.system->natoms;
+
+    arma::mat T(nRvectors*NAtoms,nRvectors*NAtoms,arma::fill::zeros);
+
+    for (int const& index : indexes_set){
+        //finish this
+    }
+
     return 0;
 }
