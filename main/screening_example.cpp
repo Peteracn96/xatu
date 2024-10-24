@@ -64,7 +64,7 @@ int main(){
 
     int nRdif = nRvectors*nRvectors;
 
-    arma::mat Rdifferences(nRdif,3,arma::fill::zeros);
+    arma::mat Rdifferences(nRdif,5,arma::fill::zeros);
 
     int index_row = 0;
     for (int i = 0; i < nRvectors; i++)
@@ -75,25 +75,27 @@ int main(){
         {
             arma::rowvec Rj = LatticeVectors.row(j);
 
-            Rdifferences.row(index_row) = Ri - Rj;
+            Rdifferences.row(index_row).subvec(0,2) = Ri - Rj;
+            Rdifferences(index_row,3) = i;
+            Rdifferences(index_row,4) = j;
             ++index_row;
         }
     }
-
-    arma::ivec CountRdifs(nRdif,arma::fill::zeros);
-
-    int count = 0;
     int non_equivalent = 0;
 
     std::cout << "nRdif = " << nRdif << std::endl;
 
     int index_array[nRdif]={0};
 
+    for (arma::uword i = 0; i < nRdif; ++i){
+        index_array[i] = i;
+    }
+
     int index = 0;
     for (int i = 0; i < nRdif; ++i){
-        arma::rowvec Rdif_aux = Rdifferences.row(i);
+        arma::rowvec Rdif_aux = Rdifferences.row(i).subvec(0,2);
         for (int j = 0; j < nRdif; ++j) {
-            arma::rowvec Rdif_aux2 = Rdifferences.row(j);
+            arma::rowvec Rdif_aux2 = Rdifferences.row(j).subvec(0,2);
             if (arma::norm(Rdif_aux - Rdif_aux2) < 1E-7){
                 index_array[index] = j;
                 break;
@@ -102,33 +104,33 @@ int main(){
         index++;
     }
 
-    for (int i = 0; i < nRdif; ++ i){
-        arma::rowvec Rdif_aux = Rdifferences.row(i);
-        //std::cout << "R2-R1(" << i << ") = " << Rdif_aux << std::endl;
-    }
-
-    std::cout << "List of the indexes of the non-equivalent vectors:\n";
+    std::cout << "List of the non-equivalent vectors:\n";
 
     for (int i = 0; i < nRdif; ++i){
-        arma::rowvec Rdif_aux = Rdifferences.row(i);
+        arma::rowvec Rdif_aux = Rdifferences.row(i).subvec(0,2);
         std::cout << "index = " << index_array[i]  << ", R2-R1(" << i << ") = " << Rdif_aux  << std::endl;
     }
-
-
-    // for (int i = 0; i < nRdif; ++ i){
-    //     std::cout << "Vector dif. nummer " << i << " was found " << CountRdifs(i) << " times\n";
-    // }
 
     std::set<int> indexes_set = std::set<int>(index_array, index_array + nRdif);
 
     int n_non_equivalent_vectors = indexes_set.size();
 
-    std::cout << "The indices are:" <<  std::endl;
+    int indexes_array[n_non_equivalent_vectors];
 
+    int i_aux = 0;
     for (int const& index : indexes_set)
     {
-        std::cout << index << ", ";
+        indexes_array[i_aux] = index;
+        i_aux++;
     }
+    
+
+    // std::cout << "The indices are:" <<  std::endl;
+
+    // for (int const& index : indexes_set)
+    // {
+    //     std::cout << index << ", ";
+    // }
 
     std::cout << "\nTotal number of non equivalent vectors is = " << n_non_equivalent_vectors << " vectors" <<  std::endl;
 
@@ -146,7 +148,8 @@ int main(){
 
     int n_all_combinations = pow(nRvectors*NAtoms,2);
     arma::imat all_combinations(n_all_combinations,4,arma::fill::zeros);
-    int i_aux = 0;
+    
+    i_aux = 0;
     for (int R_i = 0; R_i < nRvectors; R_i++){
         
         for (int R_j = 0; R_j < nRvectors; R_j++){
@@ -166,17 +169,18 @@ int main(){
 
     int n_non_equivalent_combinations = n_non_equivalent_vectors*NAtoms*NAtoms;
 
-    arma::imat non_equivalent_combinations(n_non_equivalent_combinations,3,arma::fill::zeros);
+    arma::imat non_equivalent_combinations(n_non_equivalent_combinations,4,arma::fill::zeros);
 
-    arma::vec T_aux(n_non_equivalent_combinations,arma::fill::zeros);
+    arma::mat T_aux(n_non_equivalent_vectors*NAtoms,NAtoms,arma::fill::zeros);
     
     i_aux = 0;
-    for (int const& index : indexes_set){
+    for (int index = 0; index < n_non_equivalent_vectors; ++index){
         for (int t_i = 0; t_i < NAtoms; ++t_i){
             for (int t_j = 0; t_j < NAtoms; ++t_j){
-                non_equivalent_combinations(i_aux,0) = index;
+                non_equivalent_combinations(i_aux,0) = indexes_array[index];
                 non_equivalent_combinations(i_aux,1) = t_i;
                 non_equivalent_combinations(i_aux,2) = t_j;
+                non_equivalent_combinations(i_aux,3) = index;
                 ++i_aux;
             }
         }
@@ -184,43 +188,76 @@ int main(){
 
     // Computes non equivalent matrix elements of T
 
+    std::cout << "Computing all the elements... " << std::endl;
+    #
     for (int i = 0; i < n_non_equivalent_combinations; i++)
     {
+        int index = non_equivalent_combinations(i,3);
         int R_dif_index = non_equivalent_combinations(i,0);
         int t_i_index = non_equivalent_combinations(i,1);
         int t_j_index = non_equivalent_combinations(i,2);
 
-        arma::rowvec R_dif = Rdifferences.row(R_dif_index);
+        arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
         arma::rowvec R_origin(3,arma::fill::zeros);
 
-        T_aux(i) = mos2_exciton.computesinglePolarizability(R_dif, R_origin, t_i_index, t_j_index);
-        std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index << std::endl;
+        T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.computesinglePolarizability(R_dif, R_origin, t_i_index, t_j_index);
+
+        //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
+        std::cout << i << ", " << std::flush;
     }
+    arma::rowvec R_origin({-3.160,0,0});
+    std::cout << "T(0,0) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 0, 0) << std::endl;
+    std::cout << "T(t_1,0) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 1, 0) << std::endl;
+    std::cout << "T(0,t_1) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 0, 1) << std::endl;
+    std::cout << "T(t_2,t_1) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 2, 1) << std::endl;
+    std::cout << "T(t_2,t_2) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 2, 1) << std::endl;
 
     // Prints the elements
-    for (int i = 0; i < n_non_equivalent_combinations; i++)
+    for (int i = 0; i < 4; i++)
     {
-        std::cout << "T(" << i << ") = " << T_aux(i) << std::endl;
+        T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
     }
     
     // Builds the big T matrix
 
-    for (int i = 0; i < n_non_equivalent_combinations; i++)
+    for (int i = 0; i < n_all_combinations; i++)
     {
-        int R_dif_index = non_equivalent_combinations(i,0);
+        int R_dif_index = all_combinations(i,0);
 
-        int R_i = Rdifferences.row(R_dif_index)(3);
-        int R_j = Rdifferences.row(R_dif_index)(4);
+        // int R_i = Rdifferences.row(R_dif_index);
+        // int R_j = Rdifferences.row(R_dif_index);
 
-        int t_i_index = non_equivalent_combinations(i,1);
-        int t_j_index = non_equivalent_combinations(i,2);
+        // int t_i_index = all_combinations(i,1);
+        // int t_j_index = all_combinations(i,2);
 
-        T(R_i + t_i_index, R_j + t_j_index) = T_aux(i);
+
+        // T(R_i + t_i_index, R_j + t_j_index) = T_aux(i);
+    }
+
+    i_aux = 0;
+
+    for (int R_i = 0; R_i < nRvectors; R_i++){
+        
+        for (int R_j = 0; R_j < nRvectors; R_j++){
+
+
+            //T.submat(R_i, R_i + NAtoms, R_j, R_j + NAtoms) = T_aux.submat(index_array[R_i + nRvectors*R_j], index_array[R_i + nRvectors*R_j] + NAtoms, 0, NAtoms);
+            
+            // for (int t_i = 0; t_i < NAtoms; ++t_i){
+                
+            //     for (int t_j = 0; t_j < NAtoms; ++t_j){
+                    
+            //         T(R_i + t_i, R_j + t_j) = T_aux(index_array[R_i] Rdifferences.row(index_array) + t_i,t_j);
+
+            //         ++i_aux;
+            //     }
+            // }
+        }
     }
     
     // Prints the T matrix
 
-    T.print("T:");
+    //T.print("T:");
 
     return 0;
 }
