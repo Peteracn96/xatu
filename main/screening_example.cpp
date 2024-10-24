@@ -189,7 +189,8 @@ int main(){
     // Computes non equivalent matrix elements of T
 
     std::cout << "Computing all the elements... " << std::endl;
-    #
+
+    #pragma omp parallel for
     for (int i = 0; i < n_non_equivalent_combinations; i++)
     {
         int index = non_equivalent_combinations(i,3);
@@ -203,20 +204,16 @@ int main(){
         T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.computesinglePolarizability(R_dif, R_origin, t_i_index, t_j_index);
 
         //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
-        std::cout << i << ", " << std::flush;
+        //std::cout << i << ", " << std::flush;
     }
-    arma::rowvec R_origin({-3.160,0,0});
-    std::cout << "T(0,0) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 0, 0) << std::endl;
-    std::cout << "T(t_1,0) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 1, 0) << std::endl;
-    std::cout << "T(0,t_1) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 0, 1) << std::endl;
-    std::cout << "T(t_2,t_1) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 2, 1) << std::endl;
-    std::cout << "T(t_2,t_2) = " << mos2_exciton.computesinglePolarizability(R_origin, {0,0,0}, 2, 1) << std::endl;
-
+    
     // Prints the elements
-    for (int i = 0; i < 4; i++)
+    for (int const& i : {6,})
     {
         T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
     }
+
+    
     
     // Builds the big T matrix
 
@@ -241,23 +238,16 @@ int main(){
         for (int R_j = 0; R_j < nRvectors; R_j++){
 
 
-            //T.submat(R_i, R_i + NAtoms, R_j, R_j + NAtoms) = T_aux.submat(index_array[R_i + nRvectors*R_j], index_array[R_i + nRvectors*R_j] + NAtoms, 0, NAtoms);
+            //T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux.submat(index_array[R_i*nRvectors + R_j], 0, index_array[R_i*nRvectors + R_j] + NAtoms - 1, NAtoms - 1);
             
-            // for (int t_i = 0; t_i < NAtoms; ++t_i){
-                
-            //     for (int t_j = 0; t_j < NAtoms; ++t_j){
-                    
-            //         T(R_i + t_i, R_j + t_j) = T_aux(index_array[R_i] Rdifferences.row(index_array) + t_i,t_j);
+            T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = arma::mat(NAtoms,NAtoms,arma::fill::value(index_array[R_i*nRvectors + R_j]));
 
-            //         ++i_aux;
-            //     }
-            // }
         }
     }
     
     // Prints the T matrix
 
-    //T.print("T:");
+    T.print("T:");
 
     return 0;
 }
