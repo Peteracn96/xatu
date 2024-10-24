@@ -1394,6 +1394,10 @@ void ExcitonTB::initializeHamiltonian(){
 */
 double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) const {
 
+    if (this->mode != "realspace"){
+        std::cout << "Can not compute polarizability in real space if not in the 'realspace' mode" << std::endl;
+        exit(1);
+    }
 
     std::ofstream polarfile("polarizability_convergence.dat"); 
 
