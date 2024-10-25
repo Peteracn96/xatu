@@ -125,12 +125,12 @@ int main(){
     }
     
 
-    // std::cout << "The indices are:" <<  std::endl;
+    std::cout << "The indices are:" <<  std::endl;
 
-    // for (int const& index : indexes_set)
-    // {
-    //     std::cout << index << ", ";
-    // }
+    for (int const& index : indexes_set)
+    {
+        std::cout << index << ", ";
+    }
 
     std::cout << "\nTotal number of non equivalent vectors is = " << n_non_equivalent_vectors << " vectors" <<  std::endl;
 
@@ -172,7 +172,8 @@ int main(){
     arma::imat non_equivalent_combinations(n_non_equivalent_combinations,4,arma::fill::zeros);
 
     arma::mat T_aux(n_non_equivalent_vectors*NAtoms,NAtoms,arma::fill::zeros);
-    
+    arma::imat T_aux_indexes(n_non_equivalent_vectors,2,arma::fill::zeros);
+
     i_aux = 0;
     for (int index = 0; index < n_non_equivalent_vectors; ++index){
         for (int t_i = 0; t_i < NAtoms; ++t_i){
@@ -184,6 +185,8 @@ int main(){
                 ++i_aux;
             }
         }
+        T_aux_indexes(index,0) = indexes_array[index];
+        T_aux_indexes(index,1) = index;
     }
 
     // Computes non equivalent matrix elements of T
@@ -208,11 +211,11 @@ int main(){
     }
     
     // Prints the elements
-    for (int const& i : {6,})
+    for (arma::uword const& i : arma::regspace(0,18))
     {
         T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
     }
-
+    //T_aux.print("T_aux:");
     
     
     // Builds the big T matrix
@@ -237,12 +240,8 @@ int main(){
         
         for (int R_j = 0; R_j < nRvectors; R_j++){
 
-
-            //T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux.submat(index_array[R_i*nRvectors + R_j], 0, index_array[R_i*nRvectors + R_j] + NAtoms - 1, NAtoms - 1);
-            
-            T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = arma::mat(NAtoms,NAtoms,arma::fill::value(index_array[R_i*nRvectors + R_j]));
-
-        }
+            //T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux.submat(index, 0, index + NAtoms - 1, NAtoms - 1);
+            //T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = arma::mat(NAtoms,NAtoms,arma::fill::value(index_array[R_i*nRvectors + R_j]));        }
     }
     
     // Prints the T matrix
