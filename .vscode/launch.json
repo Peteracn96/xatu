@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/xatu",
-            "args": ["${workspaceFolder}/examples/material_models/MoS2.model", "${workspaceFolder}/examples/excitonconfig/MoS2_test.txt"],
+            "args": ["${workspaceFolder}/examples/material_models/MoS2.model","-z ${workspaceFolder}/examples/screeningconfig/MoS2_TB_screening.txt", "${workspaceFolder}/examples/excitonconfig/MoS2_test.txt"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

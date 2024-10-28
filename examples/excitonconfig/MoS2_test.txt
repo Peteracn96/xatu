@@ -1,7 +1,7 @@
 # label
 MoS2_Wannier_
 # ncells
-15
+9
 # bands
 2
 # Dielectric
@@ -9,4 +9,8 @@ MoS2_Wannier_
 # totalmomentum
 0.0 0.0 0.0
 # gcutoff
-25
+3.5
+# reciprocal
+4
+# potential
+rpa

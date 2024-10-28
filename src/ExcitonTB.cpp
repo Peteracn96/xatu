@@ -2008,7 +2008,7 @@ void ExcitonTB::computeDielectricMatrix(){
         }
         
         if (odd == 1){
-            //#pragma omp parallel for
+            #pragma omp parallel for
             for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
 
                 int iq = indecesqg.at(i,0);

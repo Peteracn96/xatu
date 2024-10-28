@@ -5,8 +5,8 @@
 # vectors
 2 0
 # momentum
-0 0 0.
+0.2 0 0.
 # function
-inversedielectric
+exciton
 # motif.vectors
 1 0
