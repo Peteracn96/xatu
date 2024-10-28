@@ -7,5 +7,6 @@ docs/
 .vs/
 .vscode/
 examples/
+xatu_data
 test
 Makefile
