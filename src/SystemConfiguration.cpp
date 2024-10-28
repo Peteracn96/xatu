@@ -127,7 +127,7 @@ arma::mat SystemConfiguration::parseMotif(std::vector<std::string>& content){
         motif.row(i) = arma::rowvec(atom);
     }
 
-    return motif;
+    return arma::trans(motif);
 }
 
 /**
@@ -244,8 +244,8 @@ void SystemConfiguration::checkContentCoherence() {
     }
 
     std::vector<int> species_vec;
-    for(unsigned int atomIndex = 0; atomIndex < systemInfo.motif.n_rows; atomIndex++){
-        int species = systemInfo.motif.row(atomIndex)(3);
+    for(unsigned int atomIndex = 0; atomIndex < systemInfo.motif.n_cols; atomIndex++){
+        int species = systemInfo.motif.col(atomIndex)(3);
         if ( std::find(species_vec.begin(), species_vec.end(), species) == species_vec.end() ){
             species_vec.push_back(species);
         }

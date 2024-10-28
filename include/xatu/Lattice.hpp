@@ -81,7 +81,7 @@ class Lattice {
         arma::mat refinedBZSubMesh(int, int, double);
         void shiftBZ(const arma::rowvec&);
         void calculateInverseReciprocalMatrix();
-        int findEquivalentPointBZ(const arma::rowvec&, int);
+        int findEquivalentPointBZ(const arma::vec&, int);
 
         // Supercells
         arma::mat truncateSupercell(int, double);

@@ -20,7 +20,7 @@ class ScreeningConfiguration : public ConfigurationBase{
         // Number of conduction bands included calculation.
         int ncbands = 0;
         // Momentum to compute the dielectric function.
-        arma::rowvec q = {0.2, 0., 0.};
+        arma::vec q = {0.2, 0., 0.};
         // Reduction factor of the BZ mesh. Defaults to 1.
         int submeshFactor = 1;
         // Pair of reciprocal vectors (G,G') to compute the reciprocal space dielectric function at

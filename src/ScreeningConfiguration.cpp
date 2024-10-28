@@ -59,7 +59,7 @@ void ScreeningConfiguration::parseContent(){
         }
         else if(arg == "momentum"){
             std::vector<double> momentum = parseLine<double>(content[0]);
-            screeningInfo.q = arma::rowvec(momentum);
+            screeningInfo.q = arma::colvec(momentum);
         }
         else if(arg == "function"){
             screeningInfo.function = parseWord(content[0]);

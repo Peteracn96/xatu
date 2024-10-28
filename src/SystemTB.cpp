@@ -163,15 +163,15 @@ void SystemTB::orthogonalize_hamiltonian(const arma::rowvec& k, arma::cx_mat& ha
  * @param k kpoint required to perform the transformation.
  * @return Atomic gauge state coefficients.
  */
-arma::cx_vec SystemTB::latticeToAtomicGauge(const arma::cx_vec& coefs, const arma::rowvec& k){
+arma::cx_vec SystemTB::latticeToAtomicGauge(const arma::cx_vec& coefs, const arma::vec& k){
 
     arma::cx_vec phases(basisdim);
     std::complex<double> imag(0, 1);
     int it = 0;
     for(int atomIndex = 0; atomIndex < natoms; atomIndex++){
-        int species = motif.row(atomIndex)(3);
+        int species = motif.col(3)(atomIndex);
         for(int orbIndex = 0; orbIndex < orbitals(species); orbIndex++){
-            arma::rowvec atomPosition = motif.row(atomIndex).subvec(0, 2);
+            arma::vec atomPosition = motif.col(atomIndex).subvec(0, 2);
             phases(it) = exp(-imag*arma::dot(k, atomPosition));
             it++;
         }

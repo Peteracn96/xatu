@@ -53,7 +53,7 @@ void System::initializeSystemAttributes(const SystemConfiguration& configuration
 
     int basisdim = 0;
     for(int i = 0; i < natoms; i++){
-        int species = this->motif.row(i)(3);
+        int species = this->motif.col(i)(3);
         basisdim += orbitals(species);
     }
 	basisdim_   = basisdim;

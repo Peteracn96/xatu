@@ -37,7 +37,7 @@ Lattice::Lattice(const Lattice& lattice){
 	motif_          = lattice.motif;
 	unitCellList_   = lattice.unitCellList;
     
-    natoms_ = motif.n_rows;
+    natoms_ = motif.n_cols;
 	ncells_ = unitCellList.n_rows;
 
 	calculateReciprocalLattice();
@@ -56,7 +56,7 @@ void Lattice::initializeLatticeAttributes(const SystemConfiguration& configurati
     motif_          = configuration.systemInfo.motif;
 	unitCellList_   = configuration.systemInfo.bravaisVectors;
     
-    natoms_ = motif.n_rows;
+    natoms_ = motif.n_cols;
 	ncells_ = unitCellList.n_rows;
 
 	nk_ = 0; // Mesh has to be explicitly initialized
@@ -116,10 +116,10 @@ void Lattice::extractLatticeParameters(){
 	}
 	this->a_ = arma::norm(bravaisLattice.row(0));
 
-	double reference_height = motif.row(0)(2);
+	double reference_height = motif.col(2)(0);
 	double c = 0;
-	for (arma::uword i = 0; i < motif.n_rows; i++){
-		double diff = abs(motif.row(i)(2) - reference_height);
+	for (arma::uword i = 0; i < motif.n_cols; i++){
+		double diff = abs(motif.col(2)(i) - reference_height);
 		if (diff > c){
 			c = diff;
 		}
@@ -313,12 +313,12 @@ void Lattice::calculateInverseReciprocalMatrix(){
  * @param ncell Number of points used in the original BZ mesh, usually equivalent to the number of cells.
  * @returns Index (row) of the equivalent kpoint from the BZ mesh matrix.
  */ 
-int Lattice::findEquivalentPointBZ(const arma::rowvec& kpoint, int ncell){
+int Lattice::findEquivalentPointBZ(const arma::vec& kpoint, int ncell){
 	if(inverseReciprocalMatrix.empty()){
 		calculateInverseReciprocalMatrix();
 	}
 	ncell = ncell * factor_;
-	arma::vec independentTerm = reciprocalLattice * kpoint.t();
+	arma::vec independentTerm = reciprocalLattice * kpoint;
 	arma::vec coefs = inverseReciprocalMatrix * independentTerm * 2*ncell;
 	coefs = (ncell % 2 == 1) ? coefs - 1 : coefs; 
 	coefs = arma::round(coefs);

@@ -47,7 +47,7 @@ class SystemTB : public System {
         void solveBands(arma::rowvec&, arma::vec&, arma::cx_mat&) const;
 
         /* Gauge */
-        arma::cx_vec latticeToAtomicGauge(const arma::cx_vec&, const arma::rowvec&);
+        arma::cx_vec latticeToAtomicGauge(const arma::cx_vec&, const arma::vec&);
         arma::cx_vec atomicToLatticeGauge(const arma::cx_vec&, const arma::rowvec&);
 
         /* Observables */

@@ -44,7 +44,7 @@ class Exciton {
         arma::ivec valencebands_, conductionbands_;
         bool isscreeningset = false;
 
-        arma::rowvec q_;
+        arma::vec q_;
         arma::ivec Gs_;
 
         // Flags

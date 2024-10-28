@@ -28,7 +28,7 @@ namespace xatu {
 // Define pointer to potential function type (f: R -> R) within those in ExcitonTB
 typedef double (ExcitonTB::*potptr)(double) const;
 // Define pointer to potential function (in reciprocal space) type (f: NxNxR -> R) within those in ExcitonTB
-typedef double (ExcitonTB::*recpotptr)(int, int, arma::rowvec) const;
+//typedef double (ExcitonTB::*recpotptr)(int, int, arma::vec) const;
 
 class ResultTB;
 
@@ -58,7 +58,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Internals for dielectric function
         std::string function_;
         arma::ivec Gs_;
-        arma::rowvec q_;
+        arma::vec q_;
         arma::ivec ts_;
         int nGs;
         double Gcutoff_ = 0;
@@ -89,7 +89,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         const arma::ivec& ts = ts_;
 
         // Return momentum to compute the dielectric matrix at
-        const arma::rowvec& q = q_;
+        const arma::vec& q = q_;
         const arma::ivec& Gs = Gs_;
         arma::mat trunLattice_;
     // ----------------------------------- Methods -----------------------------------
@@ -148,10 +148,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         double coulomb(double) const;
         double rpa(double) const; // In principle will accept more than a double
         const potptr selectPotential(std::string);
-        const recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
+        //const recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
 
         // Fourier transforms
-        double coulombFT(int, int, arma::rowvec) const;
+        double coulombFT(int, int, arma::vec) const;
         double keldyshFT(int, int, arma::rowvec) const;
         std::complex<double> rpaFT(int g, int g2, arma::rowvec) const;
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
@@ -168,8 +168,8 @@ class ExcitonTB : public Exciton<SystemTB> {
                                                        const arma::rowvec&, const arma::rowvec&, 
                                                        std::string, int nrcells = 15)  const ;
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
-                                                  const arma::rowvec&, const arma::rowvec&,
-                                                  const arma::rowvec&) const;
+                                                  const arma::vec&, const arma::vec&,
+                                                  const arma::vec&) const;
 
         // Initializers
         void initializeExcitonAttributes(int, const arma::ivec&, const arma::rowvec&, const arma::rowvec&);
@@ -185,11 +185,11 @@ class ExcitonTB : public Exciton<SystemTB> {
         ResultTB* diagonalizeRaw(std::string method = "diag", int nstates = 8) override;
 
         // Static dielectric function
-        int fecthReciprocalLatticeVector(arma::rowvec);
+        int fetchReciprocalLatticeVector(arma::vec);
         arma::mat generateReciprocalVectors(int);
-        std::complex<double> computesinglePolarizability(arma::rowvec&);
+        std::complex<double> computesinglePolarizability(arma::vec&);
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
-        std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int) const;
+        std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::vec&, const arma::vec&, int) const;
 
     public:
         // Static dielectric function, BSE initialization and energies

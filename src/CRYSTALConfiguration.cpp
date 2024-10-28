@@ -238,7 +238,7 @@ void CRYSTALConfiguration::parseAtoms(){
 
         int index = chemical_species_to_index[chemical_species];
         atom = {x, y, z, (double)index};
-        motif.row(i) = arma::rowvec(atom);
+        motif.col(i) = arma::vec(atom);
     }
     this->motif = motif;
     this->shellsPerSpecies = shellsPerSpecies;
