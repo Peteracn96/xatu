@@ -1,9 +1,9 @@
 # label
 ! Name to be used when writing
-hBN_N30
+hBN_DFT
 # ncells
 ! Number of unit cells along each direction
-25
+20
 # reciprocal
 2
 # bands

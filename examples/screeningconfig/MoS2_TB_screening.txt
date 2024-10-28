@@ -4,11 +4,11 @@ reciprocalspace
 26
 # conduction bands
 8
-# removedbands
-0
-# reciprocal vectors
-3 3
+# vectors
+0 0
 # momentum
-0.5 0.   0
+0.3 0 0.
 # function
-polarizability
+dielectric
+# motif.vectors
+0 0
