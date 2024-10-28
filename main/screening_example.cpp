@@ -58,7 +58,7 @@ int main(){
     arma::mat LatticeVectors = mos2_exciton.trunLattice_;
     int nRvectors = LatticeVectors.n_rows;
 
-    //Prints values of the polarizability in the lattice
+    //Prints vectors of the the lattice
     for (int i = 0; i < nRvectors; i++)
     {
         arma::rowvec Raux = LatticeVectors.row(i);

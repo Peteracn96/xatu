@@ -3,7 +3,7 @@
 #include "xatu/ExcitonTB.hpp"
 #include "xatu/utils.hpp"
 #include "xatu/davidson.hpp"
-
+#include <set>
 using namespace arma;
 using namespace std::chrono;
 
@@ -305,8 +305,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         }
 
         if (cfg.screeningInfo.function == "exciton"){
-            std::cout << "Computation of the exciton using the RPA dielectric function in real space not implemented yet. Terminating." << std::endl;
-            exit(1);
+            std::cout << "Computation of the exciton using the RPA dielectric function in real space under development." << std::endl;
         }
     }
 
@@ -325,7 +324,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     } else if (this->mode == "reciprocalspace"){
         double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
-        radius = this->Gcutoff_; //This is temporary to see if it works
+        radius = this->Gcutoff_; //This is temporary to see if it works. It seems it works, however need to discuss this further with Toni
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
         int ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
@@ -1815,49 +1814,122 @@ void ExcitonTB::computeDielectricMatrix(){
         arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
         int nRvectors = lattice_vectors.n_rows;
 
-        int nlattice_sites = nRvectors*nAtoms;
+        // Generates all the possible differences R_i-R_j
 
-        // Let's implement first by brute force, and optimize later
+        int n_R_differences = nRvectors*nRvectors;
+        arma::mat Rdifferences(n_R_differences,3,arma::fill::zeros);
 
-        //Generate combinations for parallelization
-        int ncombinations = pow(nRvectors*nAtoms,2);
-        arma::imat combinations(ncombinations,4,arma::fill::zeros);
-        int ii = 0;
-
-        for (int r = 0; r < nRvectors; r++)
+        int index_row = 0;
+        for (int i = 0; i < nRvectors; i++)
         {
-            for (int t = 0; t < nAtoms; ++t){
-                
-                for (int r2 = 0; r2 < nRvectors; r2++){
+            arma::rowvec Ri = lattice_vectors.row(i);
 
-                    for (int t2 = 0; t2 < nAtoms; ++t2){
-                        combinations(ii,0) = r;
-                        combinations(ii,1) = t;
-                        combinations(ii,2) = r2;
-                        combinations(ii,3) = t2;
-                        ++ii;
-                    }
+            for (int j = 0; j < nRvectors; j++)
+            {
+                arma::rowvec Rj = lattice_vectors.row(j);
+                Rdifferences.row(index_row).subvec(0,2) = Ri - Rj;
+
+                ++index_row;
+            }
+        }
+
+        // Initializes the array that maps the index of a difference to the index of its first appearance in the Rdifferences matrix
+
+        int index_array[n_R_differences]={0};
+
+        for (arma::uword i = 0; i < n_R_differences; ++i){
+            index_array[i] = i;
+        }
+
+        int index = 0;
+
+        for (int i = 0; i < n_R_differences; ++i){
+            arma::rowvec Rdif_aux = Rdifferences.row(i);
+            for (int j = 0; j < n_R_differences; ++j) {
+                arma::rowvec Rdif_aux2 = Rdifferences.row(j);
+                if (arma::norm(Rdif_aux - Rdif_aux2) < 1E-7){
+                    index_array[index] = j;
+                    break;
+                }
+            }
+            index++;
+        }
+
+        // Initializes array that stores all the non-repeated indexes of the previous array
+
+        std::set<int> indexes_set = std::set<int>(index_array, index_array + n_R_differences);
+
+        int n_non_equivalent_vectors = indexes_set.size();
+
+        int indexes_array[n_non_equivalent_vectors];
+
+        int i_aux = 0;
+        for (int const& index : indexes_set)
+        {
+            indexes_array[i_aux] = index;
+            i_aux++;
+        }
+
+        // Initiates the polarizability and computes it at the non-equivalent sitesGenerates all non equivalent combinations to compute the non-equivalent matrix elements, stored in T_aux
+
+        int n_atoms = this->system->natoms;
+        int n_rows = nRvectors*n_atoms;
+
+        int n_positive_vectors = (n_non_equivalent_vectors - 1)/2 + 1; // Needs only to compute the T blocks for the upper diagonal part. +1->is the origin
+        int n_non_equivalent_combinations = n_positive_vectors*n_atoms*n_atoms;
+
+        arma::imat non_equivalent_combinations(n_non_equivalent_combinations,4,arma::fill::zeros);
+
+        arma::mat T_aux(n_positive_vectors*n_atoms,n_atoms,arma::fill::zeros);
+
+        i_aux = 0;
+        for (int index = 0; index < n_positive_vectors; ++index){
+            for (int t_i = 0; t_i < n_atoms; ++t_i){
+                for (int t_j = 0; t_j < n_atoms; ++t_j){
+                    non_equivalent_combinations(i_aux,0) = indexes_array[index]; // index of the row in the matrix storing all R differences
+                    non_equivalent_combinations(i_aux,1) = t_i;
+                    non_equivalent_combinations(i_aux,2) = t_j;
+                    non_equivalent_combinations(i_aux,3) = index; // index in the array storing the indexes of the non-equivalent R differences
+                    ++i_aux;
                 }
             }
         }
 
+        // Computes non equivalent matrix elements of T
+
+        std::cout << "Computing all the polarizability matrix elements... " << std::flush;
+
         #pragma omp parallel for
-        for (int index = 0; index < ncombinations; index++)
+        for (int i = 0; i < n_non_equivalent_combinations; i++)
         {
-            int r = combinations(index,0);
-            int t = combinations(index,1);
-            int r2 = combinations(index,2);
-            int t2 = combinations(index,3);
+            int index = non_equivalent_combinations(i,3);
+            int R_dif_index = non_equivalent_combinations(i,0);
+            int t_i_index = non_equivalent_combinations(i,1);
+            int t_j_index = non_equivalent_combinations(i,2);
 
-            arma::rowvec R = lattice_vectors.row(r);
-            arma::rowvec R2 = lattice_vectors.row(r2);
+            arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
+            arma::rowvec R_origin(3,arma::fill::zeros);
 
-            this->Polarizabilitymatrix_(r*nAtoms + t, r2*nAtoms + t2) = this->computesinglePolarizability(R,R2,t,t2);
+            T_aux(index*n_atoms + t_i_index,t_j_index) = this->computesinglePolarizability(R_dif, R_origin, t_i_index, t_j_index);
         }
 
-        std::cout << "Polarizability matrix computed. Nothing else to do as implementation is nopt finished." << std::endl;
+        // Builds the big T matrix (making use of symmetry property of transposition, Chi(R_i + t_i, R_j + t_j) = Chi(R_j + t_j, R_i + t_i))
 
-        exit(1);
+        for (int R_i = 0; R_i < nRvectors; R_i++){
+            
+            for (int R_j = R_i; R_j < nRvectors; R_j++){
+
+                auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
+                int found_index = ptr - indexes_array;
+                arma::mat T_aux_mat = T_aux.submat(found_index, 0, found_index + n_atoms - 1, n_atoms - 1);
+                this->Polarizabilitymatrix_.submat(R_i*n_atoms, R_j*n_atoms, R_i*n_atoms + n_atoms - 1, R_j*n_atoms + n_atoms - 1) = T_aux_mat;
+                this->Polarizabilitymatrix_.submat(R_j*n_atoms, R_i*n_atoms, R_j*n_atoms + n_atoms - 1, R_i*n_atoms + n_atoms - 1) = arma::trans(T_aux_mat);
+            }
+        }
+
+        std::cout << "Done." << std::flush << std::endl;
+
+        std::cout << "Polarizability matrix computed. Nothing else to do as implementation is not finished." << std::endl;
     }
     
     if (this->mode == "reciprocalspace"){
@@ -2056,6 +2128,11 @@ void ExcitonTB::computeDielectricMatrix(){
 void ExcitonTB::invertDielectricMatrix(){
 
     auto start = high_resolution_clock::now();
+
+    if (this->mode_ == "realspace"){
+        std::cout << "Inversion of the Dyson equation not implemented yet. Exiting." << std::endl;
+        exit(1);
+    }
 
     std::cout << "Computing dielectric matrix in the BZ mesh... \n" << std::flush;
 
