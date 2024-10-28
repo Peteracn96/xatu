@@ -3,18 +3,22 @@
 #include <iostream>
 #include <set>
 
+using namespace std::chrono;
+
+
 int main(){
 
+    auto start = high_resolution_clock::now();
     arma::rowvec q = {1.2, 0.3, 0};
 
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("MoS2.model");
+    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
 
-    xatu::ExcitonConfiguration exciton_config("MoS2_test.txt");
+    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
 
-    xatu::ScreeningConfiguration screening_config("MoS2_TB_screening.txt");
+    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
@@ -81,7 +85,6 @@ int main(){
             ++index_row;
         }
     }
-    int non_equivalent = 0;
 
     std::cout << "nRdif = " << nRdif << std::endl;
 
@@ -123,7 +126,6 @@ int main(){
         indexes_array[i_aux] = index;
         i_aux++;
     }
-    
 
     std::cout << "The indices are:" <<  std::endl;
 
@@ -144,49 +146,26 @@ int main(){
 
     arma::mat T(n_rows,n_rows,arma::fill::zeros);
 
-    // Generates combinations (all of them and non equivalent ones) to compute T
+    // Generates all non equivalent to compute T
 
-    int n_all_combinations = pow(nRvectors*NAtoms,2);
-    arma::imat all_combinations(n_all_combinations,4,arma::fill::zeros);
-    
-    i_aux = 0;
-    for (int R_i = 0; R_i < nRvectors; R_i++){
-        
-        for (int R_j = 0; R_j < nRvectors; R_j++){
-            
-            for (int t_i = 0; t_i < NAtoms; ++t_i){
-                
-                for (int t_j = 0; t_j < NAtoms; ++t_j){
-                    all_combinations(i_aux,0) = R_i;
-                    all_combinations(i_aux,1) = t_i;
-                    all_combinations(i_aux,2) = R_j;
-                    all_combinations(i_aux,3) = t_j;
-                    ++i_aux;
-                }
-            }
-        }
-    }
-
-    int n_non_equivalent_combinations = n_non_equivalent_vectors*NAtoms*NAtoms;
+    int n_positive_vectors = (n_non_equivalent_vectors - 1)/2 + 1; // Needs only to compute the T blocks for the upper diagonal part. +1->is the origin
+    int n_non_equivalent_combinations = n_positive_vectors*NAtoms*NAtoms;
 
     arma::imat non_equivalent_combinations(n_non_equivalent_combinations,4,arma::fill::zeros);
 
-    arma::mat T_aux(n_non_equivalent_vectors*NAtoms,NAtoms,arma::fill::zeros);
-    arma::imat T_aux_indexes(n_non_equivalent_vectors,2,arma::fill::zeros);
-
+    arma::mat T_aux(n_positive_vectors*NAtoms,NAtoms,arma::fill::zeros);
+    
     i_aux = 0;
-    for (int index = 0; index < n_non_equivalent_vectors; ++index){
+    for (int index = 0; index < n_positive_vectors; ++index){
         for (int t_i = 0; t_i < NAtoms; ++t_i){
             for (int t_j = 0; t_j < NAtoms; ++t_j){
-                non_equivalent_combinations(i_aux,0) = indexes_array[index];
+                non_equivalent_combinations(i_aux,0) = indexes_array[index]; // index of the row in the matrix storing all R differences
                 non_equivalent_combinations(i_aux,1) = t_i;
                 non_equivalent_combinations(i_aux,2) = t_j;
-                non_equivalent_combinations(i_aux,3) = index;
+                non_equivalent_combinations(i_aux,3) = index; // index in the array storing the indexes of the non equivalent R differences
                 ++i_aux;
             }
         }
-        T_aux_indexes(index,0) = indexes_array[index];
-        T_aux_indexes(index,1) = index;
     }
 
     // Computes non equivalent matrix elements of T
@@ -211,7 +190,7 @@ int main(){
     }
     
     // Prints the elements
-    for (arma::uword const& i : arma::regspace(0,18))
+    for (arma::uword const& i : arma::regspace(0,9))
     {
         T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
     }
@@ -220,33 +199,28 @@ int main(){
     
     // Builds the big T matrix
 
-    for (int i = 0; i < n_all_combinations; i++)
-    {
-        int R_dif_index = all_combinations(i,0);
-
-        // int R_i = Rdifferences.row(R_dif_index);
-        // int R_j = Rdifferences.row(R_dif_index);
-
-        // int t_i_index = all_combinations(i,1);
-        // int t_j_index = all_combinations(i,2);
-
-
-        // T(R_i + t_i_index, R_j + t_j_index) = T_aux(i);
-    }
-
     i_aux = 0;
 
     for (int R_i = 0; R_i < nRvectors; R_i++){
         
-        for (int R_j = 0; R_j < nRvectors; R_j++){
+        for (int R_j = R_i; R_j < nRvectors; R_j++){
 
-            //T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux.submat(index, 0, index + NAtoms - 1, NAtoms - 1);
-            //T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = arma::mat(NAtoms,NAtoms,arma::fill::value(index_array[R_i*nRvectors + R_j]));        }
+            auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
+            int found_index = ptr - indexes_array;
+            arma::mat T_aux_mat = T_aux.submat(found_index, 0, found_index + NAtoms - 1, NAtoms - 1);
+            T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
+            T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
+        }
     }
     
     // Prints the T matrix
 
     T.print("T:");
+
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(stop - start);
+
+    std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
 
     return 0;
 }
