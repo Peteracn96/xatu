@@ -1659,7 +1659,7 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
         }
     }
 
-    return term/(system->unitCellArea*totalCells);
+    //return term/(system->unitCellArea*totalCells); Alterar aqui, problema pode vir de system->unitCellArea
 }
 
 /**
