@@ -69,6 +69,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::cx_cube Invepsilonmatrix_;
 
         arma::mat Polarizabilitymatrix_;
+        arma::mat Wmatrix_;
 
     public:
         // Returns dielectric constant of embedding medium
@@ -87,6 +88,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         const int& nReciprocalVectors = nReciprocalVectors_;
         // Return motif vectors where the real space dielectric function is computed at
         const arma::ivec& ts = ts_;
+        // Returns polarizability matrix in real space
+        const arma::mat& Polarizabilitymatrix = Polarizabilitymatrix_;
+        // Returns matrix of the screened potential
+        const arma::mat& Wmatrix = Wmatrix_;
 
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;
