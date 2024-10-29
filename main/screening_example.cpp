@@ -6,6 +6,11 @@
 using namespace std::chrono;
 
 
+double my_coulomb(double r) {
+    return ec/(4E-10*PI*eps0*r);    
+    //return 1/r;
+}
+
 int main(){
 
     auto start = high_resolution_clock::now();
@@ -282,7 +287,7 @@ int main(){
 
             arma::rowvec R = LatticeVectors.row(R_i);
             arma::rowvec t = motif.row(t_i).subvec(0,2);
-            V.col(t_j)(index) = 1/(arma::norm(R + t - t_j_vector));
+            V.col(t_j)(index) = my_coulomb(arma::norm(R + t - t_j_vector));
         }
     }
 
@@ -300,7 +305,7 @@ int main(){
             for (arma::uword index2 = 0; index2 < n_positions; ++index2){
 
                 // Lambda function to compute the sum
-                auto sum_func = [index,index2,&R,&t_i,n_positions,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif]() -> double {
+                auto sum_func = [index2,&R,&t_i,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif]() -> double {
                     double sum = 0;
                     for (arma::uword R2 = 0; R2 < nRvectors; ++R2){
 
@@ -313,7 +318,7 @@ int main(){
                             double norm = arma::norm(R + t_i - (R2 + t2));
 
                             if (norm > 1E-7){
-                                sum += T(R2*NAtoms + i2,index2)/norm;
+                                sum += my_coulomb(norm)*T(R2*NAtoms + i2,index2);
                             }
                         }
                     }
