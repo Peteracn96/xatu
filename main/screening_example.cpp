@@ -14,11 +14,11 @@ int main(){
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+    xatu::SystemConfiguration model_config("MoS2.model");
 
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    xatu::ExcitonConfiguration exciton_config("MoS2_test.txt");
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
+    xatu::ScreeningConfiguration screening_config("MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
@@ -111,7 +111,7 @@ int main(){
 
     for (int i = 0; i < nRdif; ++i){
         arma::rowvec Rdif_aux = Rdifferences.row(i).subvec(0,2);
-        std::cout << "index = " << index_array[i]  << ", R2-R1(" << i << ") = " << Rdif_aux  << std::endl;
+        //std::cout << "index = " << index_array[i]  << ", R2-R1(" << i << ") = " << Rdif_aux  << std::endl;
     }
 
     std::set<int> indexes_set = std::set<int>(index_array, index_array + nRdif);
@@ -190,10 +190,10 @@ int main(){
     }
     
     // Prints the elements
-    for (arma::uword const& i : arma::regspace(0,9))
-    {
-        T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
-    }
+    // for (arma::uword const& i : arma::regspace(0,9))
+    // {
+    //     T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
+    // }
     //T_aux.print("T_aux:");
     
     
@@ -216,6 +216,154 @@ int main(){
     // Prints the T matrix
 
     T.print("T:");
+
+    // Now is the inversion of Dyson's equation
+
+    int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+    arma::mat V(n_positions, NAtoms, arma::fill::zeros);
+    arma::mat W(n_positions, NAtoms, arma::fill::zeros); 
+    arma::cube epsilon(n_positions,n_positions,NAtoms);
+
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        epsilon.slice(t_j) = arma::mat(n_positions,n_positions,arma::fill::eye);
+    }
+
+    arma::ucube combinations(n_positions,2,NAtoms);
+
+    // Generates all the combinations, for each t_j
+
+    int origin_index = (nRvectors - 1)/2;
+    int origin_index_aux = origin_index*NAtoms;
+
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        int index_aux = 0;
+
+        for (arma::uword R_i = 0; R_i < nRvectors; ++R_i){
+
+            if (R_i == origin_index){
+
+                for (arma::uword t_i = 0; t_i < NAtoms; ++t_i){
+
+                    if (t_i != t_j){
+                        combinations.slice(t_j).row(index_aux)(0) = R_i;
+                        combinations.slice(t_j).row(index_aux)(1) = t_i;
+                        ++index_aux;
+                    }
+                }
+            } else {
+
+                for (arma::uword t_i = 0; t_i < NAtoms; ++t_i){
+                    combinations.slice(t_j).row(index_aux)(0) = R_i;
+                    combinations.slice(t_j).row(index_aux)(1) = t_i;
+                    ++index_aux;
+                }
+            }
+            
+        }
+    }
+
+    // Prints the combinations
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        combinations.slice(t_j).print("t_j = " + std::to_string(t_j));
+    }
+
+    // Computes the bare Coulomb potential matrix
+
+    arma::mat motif = mos2_exciton.system->motif;
+
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+        arma::rowvec t_j_vector = motif.row(t_j).subvec(0,2);
+
+        for (arma::uword index = 0; index < n_positions; ++index){
+
+            int R_i = combinations.slice(t_j).row(index)(0);
+            int t_i = combinations.slice(t_j).row(index)(1);
+
+            arma::rowvec R = LatticeVectors.row(R_i);
+            arma::rowvec t = motif.row(t_i).subvec(0,2);
+            V.col(t_j)(index) = 1/(arma::norm(R + t - t_j_vector));
+        }
+    }
+
+    // Computes the "epsilon" matrices
+
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+        arma::rowvec t_j_vector = motif.row(t_j).subvec(0,2);
+
+        for (arma::uword index = 0; index < n_positions; ++index){
+
+            arma::rowvec R = LatticeVectors.row(combinations.slice(t_j).row(index)(0));
+            arma::rowvec t_i = motif.row(combinations.slice(t_j).row(index)(1)).subvec(0,2);
+
+            for (arma::uword index2 = 0; index2 < n_positions; ++index2){
+
+                // Lambda function to compute the sum
+                auto sum_func = [index,index2,&R,&t_i,n_positions,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif]() -> double {
+                    double sum = 0;
+                    for (arma::uword R2 = 0; R2 < nRvectors; ++R2){
+
+                        arma::rowvec R2_vector = LatticeVectors.row(R2);
+
+                        for (arma::uword i2 = 0; i2 < NAtoms; ++i2){
+
+                            arma::rowvec t2 = motif.row(i2).subvec(0,2);
+
+                            double norm = arma::norm(R + t_i - (R2 + t2));
+
+                            if (norm > 1E-7){
+                                sum += T(R2*NAtoms + i2,index2)/norm;
+                            }
+                        }
+                    }
+
+                    return sum;
+                };
+
+                epsilon.slice(t_j)(index,index2) -= sum_func();
+            }
+        }
+    }
+
+    // Prints the epsilon matrices
+    // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+    //     epsilon.slice(t_j).print(std::to_string(t_j) + ":");
+    // }
+
+    // Solves for W
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        W.col(t_j) = arma::solve(epsilon.slice(t_j), V.col(t_j));
+    }
+
+    // Prints the V columns
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+        V.col(t_j).print("V(.,t_" + std::to_string(t_j) + "):");
+    }
+    
+    // Prints the W columns
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+        W.col(t_j).print("W(.,t_" + std::to_string(t_j) + "):");
+    }
+
+
+    // Prints V.epsilon.V
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+        std::cout << "t_j = " << t_j << ", W.epsilon.W = " << W.col(t_j).t()*epsilon.slice(t_j)*W.col(t_j) << std::endl;
+    }
+
+    // Prints eigenvalues of epsilon
+    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+
+        arma::cx_vec eigvalues = arma::eig_gen(epsilon.slice(t_j).i());
+        
+        eigvalues.print("lambdas(t_" + std::to_string(t_j) + "):");
+    }
+
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
