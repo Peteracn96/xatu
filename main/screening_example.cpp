@@ -188,7 +188,7 @@ int main(){
         arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
         arma::rowvec R_origin(3,arma::fill::zeros);
 
-        T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.computesinglePolarizability(R_dif, R_origin, t_i_index, t_j_index);
+        T_aux(index*NAtoms + t_i_index,t_j_index) = -mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
 
         //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
         //std::cout << i << ", " << std::flush;
@@ -220,7 +220,7 @@ int main(){
     
     // Prints the T matrix
 
-    T.print("T:");
+    //T.print("T:");
 
     // Now is the inversion of Dyson's equation
 
@@ -230,7 +230,7 @@ int main(){
     arma::cube epsilon(n_positions,n_positions,NAtoms);
 
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
-        epsilon.slice(t_j) = arma::mat(n_positions,n_positions,arma::fill::eye);
+        epsilon.slice(t_j) = arma::mat(n_positions,n_positions,arma::fill::zeros);
     }
 
     arma::ucube combinations(n_positions,2,NAtoms);
@@ -268,9 +268,9 @@ int main(){
     }
 
     // Prints the combinations
-    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
-        combinations.slice(t_j).print("t_j = " + std::to_string(t_j));
-    }
+    // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+    //     combinations.slice(t_j).print("t_j = " + std::to_string(t_j));
+    // }
 
     // Computes the bare Coulomb potential matrix
 
@@ -304,9 +304,14 @@ int main(){
 
             for (arma::uword index2 = 0; index2 < n_positions; ++index2){
 
-                // Lambda function to compute the sum
-                auto sum_func = [index2,&R,&t_i,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif]() -> double {
+                //Lambda function to compute the sum
+                auto sum_func = [index2,&R,t_j,&t_i,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif]() -> double {
                     double sum = 0;
+
+                    int Rprime_index = combinations.slice(t_j).row(index2)(0);
+                    int tprime_index = combinations.slice(t_j).row(index2)(1);
+                    int pos_prime_index = Rprime_index*NAtoms + tprime_index;
+
                     for (arma::uword R2 = 0; R2 < nRvectors; ++R2){
 
                         arma::rowvec R2_vector = LatticeVectors.row(R2);
@@ -316,17 +321,18 @@ int main(){
                             arma::rowvec t2 = motif.row(i2).subvec(0,2);
 
                             double norm = arma::norm(R + t_i - (R2 + t2));
-
+                            
                             if (norm > 1E-7){
-                                sum += my_coulomb(norm)*T(R2*NAtoms + i2,index2);
+                                //sum += my_coulomb(norm)*T(R2*NAtoms + i2,index2);
+                                sum += my_coulomb(norm)*T(R2*NAtoms + i2,pos_prime_index);
                             }
                         }
                     }
 
                     return sum;
                 };
-
-                epsilon.slice(t_j)(index,index2) -= sum_func();
+                double kronecker_delta = index == index2 ? 1.0:0.0;
+                epsilon.slice(t_j)(index,index2) = kronecker_delta - sum_func();
             }
         }
     }
@@ -354,26 +360,30 @@ int main(){
         W.col(t_j).print("W(.,t_" + std::to_string(t_j) + "):");
     }
 
-
-    // Prints V.epsilon.V
-    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
-        
-        std::cout << "t_j = " << t_j << ", W.epsilon.W = " << W.col(t_j).t()*epsilon.slice(t_j)*W.col(t_j) << std::endl;
-    }
-
-    // Prints eigenvalues of epsilon
-    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
-
-        arma::cx_vec eigvalues = arma::eig_gen(epsilon.slice(t_j).i());
-        
-        eigvalues.print("lambdas(t_" + std::to_string(t_j) + "):");
-    }
-
-
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
 
     std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
+
+    FILE* textfile = fopen("test_W_screening.dat", "w");
+
+    if (textfile == NULL){
+        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Writing inverse of dielectric matrix fo file: " << textfile << std::endl;
+    for(arma::uword t_j = 0; t_j < NAtoms; t_j++){
+        for (arma::uword pos_index = 0; pos_index < n_positions; pos_index++){
+            arma::rowvec R = LatticeVectors.row(combinations.slice(t_j).row(pos_index)(0));
+            arma::rowvec t = motif.row(combinations.slice(t_j).row(pos_index)(1));
+            fprintf(textfile, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), W.col(t_j)(pos_index));
+        }
+
+        fprintf(textfile, "\n");
+    }
+
+    fclose(textfile);
 
     return 0;
 }

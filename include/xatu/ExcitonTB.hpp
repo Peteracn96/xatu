@@ -193,17 +193,18 @@ class ExcitonTB : public Exciton<SystemTB> {
         int fecthReciprocalLatticeVector(arma::rowvec);
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizability(arma::rowvec&);
-        //double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
+        double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
         std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int) const;
+        //double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
 
     public:
         // Static dielectric function, BSE initialization and energies
         void initializeHamiltonian();
-        double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const; //Temporarily here for dev
         void initializeScreeningAttributes(const ScreeningConfiguration&);
         void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
         void computesingleDielectricFunction();
         void computesingleInverseDielectricMatrix(std::string);
+        double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const; //Temporarily public
         void PolarizabilityMesh() const;
         void computeDielectricMatrix();
         void invertDielectricMatrix();

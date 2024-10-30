@@ -1597,6 +1597,104 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 }
 
 /**
+ * Method to compute the matrix element of the static polarizability at the specified pair the (R + t_i, R' + t_j).
+ * @param R 1st Lattice vector
+ * @param R2 2nd Lattice vector
+ * @param t_i 1st atom of the motif
+ * @param t_j 2nd atom of the motif
+ * @return Polarizability
+*/
+double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) const {
+
+    if (this->mode != "realspace"){
+        std::cout << "Can not compute polarizability in real space if not in the 'realspace' mode" << std::endl;
+        exit(1);
+    }
+
+    std::complex<double> I(0, 1);
+
+    int nk = system->nk;
+
+    int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
+    std::complex<double> term = 0.;
+    arma::cx_vec coefsk, coefsk2;
+
+    int i_index = 0;
+    int j_index = 0;
+
+    for(unsigned int atom_index = 0; atom_index < i; atom_index++){
+        int norbitals = system->orbitals(system->motif.row(atom_index)(3));
+        i_index += norbitals;
+    }
+
+    for(unsigned int atom_index = 0; atom_index < j; atom_index++){
+        int norbitals = system->orbitals(system->motif.row(atom_index)(3));
+
+        j_index += norbitals;
+    }
+
+    arma::rowvec t_i = system->motif.row(i).subvec(0,2);
+    arma::rowvec t_j = system->motif.row(j).subvec(0,2);
+
+    int norbitals_alpha = system->orbitals(system->motif.row(i)(3));
+    int norbitals_beta = system->orbitals(system->motif.row(j)(3));
+
+    std::complex<double> Nsquared = (std::complex<double>)totalCells*(std::complex<double>)totalCells;
+
+    for (int ic = nvbands; ic <= upperindexcband; ic++){
+    
+        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
+
+            for (int ik = 0; ik < nk; ik++){
+
+                arma::rowvec k = system->kpoints.row(ik);
+
+                // Using the atomic gauge
+                if(gauge == "atomic"){
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                }
+                else{                            
+                    coefsk = eigveckStack_.slice(ik).col(iv);
+                }
+                
+                for (int ik2 = 0; ik2 < nk; ik2++){
+
+                    arma::rowvec k2 = system->kpoints.row(ik2);
+
+                    // Using the atomic gauge
+                    if(gauge == "atomic"){
+                        coefsk2 = system_->latticeToAtomicGauge(eigveckStack_.slice(ik2).col(ic), system->kpoints.row(ik));
+                    }
+                    else{                            
+                        coefsk2 = eigveckStack_.slice(ik2).col(ic);
+                    }
+
+                    arma::cx_vec CoefArray =  arma::conj(coefsk) % coefsk2;
+
+                    std::complex<double> sum_alpha, sum_beta = 0;
+
+                    sum_alpha = std::conj(arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1)));
+                    sum_beta = arma::sum(CoefArray.subvec(j_index, j_index + norbitals_beta - 1));
+
+                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));      
+                }
+            }
+        }
+    }
+
+    return real(term)/real(Nsquared);
+}
+
+
+/**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q.
  * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh
  * @param G Reciprocal lattice vector G
@@ -1659,9 +1757,8 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
         }
     }
 
-    //return term/(system->unitCellArea*totalCells); Alterar aqui, problema pode vir de system->unitCellArea
+    return term/(system->unitCellArea*totalCells);
 }
-
 /**
  * Method to compute the (G,G') static polarizability in the BZ mesh.
  * @details Opens 'polarizability_mesh.dat' file and writes in it the values of the polarizability at each point in the BZ mesh
@@ -1912,7 +2009,7 @@ void ExcitonTB::computeDielectricMatrix(){
             arma::rowvec R_dif = Rdifferences.row(R_dif_index);
             arma::rowvec R_origin(3,arma::fill::zeros);
 
-            T_aux(index*n_atoms + t_i_index,t_j_index) = this->computesinglePolarizability(R_dif, R_origin, t_i_index, t_j_index);
+            T_aux(index*n_atoms + t_i_index,t_j_index) = this->realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
         }
 
         // Builds the big T matrix (making use of symmetry property of transposition, Chi(R_i + t_i, R_j + t_j) = Chi(R_j + t_j, R_i + t_i))
@@ -2133,7 +2230,7 @@ void ExcitonTB::invertDielectricMatrix(){
 
         std::cout << "\nInverting Dyson's equation... " << std::flush;
 
-        arma::mat lattice_vectors = system->bravaisLattice;
+        arma::mat lattice_vectors = this->trunLattice_;
         int n_R_vectors = lattice_vectors.n_rows;
         int n_atoms = system->motif.n_rows;
         int n_positions = n_R_vectors*n_atoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
