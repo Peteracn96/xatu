@@ -229,6 +229,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void writeInverseDielectricMatrix(std::string) const;     
         // Write BZ mesh in a file
         void writeBZtofile() const;
+        // Read inverse of dielectric matrix from a pre-existent file
+        void readInverseDielectricMatrix(std::string);
 
         // Verifies if potential chosen is 'rpa' and if a screening file was not provided
         void verifypotential();
