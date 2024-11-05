@@ -2215,7 +2215,7 @@ void ExcitonTB::computeDielectricMatrix(){
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
 
-    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << std::endl << std::flush;
+    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
 }
 
 /**
