@@ -1,0 +1,914 @@
+g++ -c src/ExcitonTB.cpp -o build/ExcitonTB.o -g -Wall -lm -I/home/juanjo-uam/work/xatu/include -I/home/juanjo-uam/packages/armadillo-code/include -DARMA_DONT_USE_WRAPPER -L/home/juanjo-uam/work/xatu -L/home/juanjo-uam/packages/arpack-ng/build/lib -L/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen3/gcc-11.3.0/netlib-lapack-3.10.1-w4ll4ab5vlyfedksmq4onku35nqr3atw/lib64 -L/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen3/gcc-11.3.0/netlib-lapack-3.10.1-w4ll4ab5vlyfedksmq4onku35nqr3atw/lib64 -L/home/juanjo-uam/packages/armadillo-code/ -lxatu -larmadillo -lblas -llapack -larpack -fopenmp -lgfortran 
+src/ExcitonTB.cpp: In member function 'void xatu::ExcitonTB::initializeExcitonAttributes(const xatu::ExcitonConfiguration&)':
+src/ExcitonTB.cpp:82:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+   82 |     for(int i = 0; i < bands.n_elem; i++){
+      |                    ~~^~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In member function 'arma::mat xatu::ExcitonTB::generateReciprocalVectors(int)':
+src/ExcitonTB.cpp:171:23: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::array<int, 2> >::size_type' {aka 'long unsigned int'} [-Wsign-compare]
+  171 |     if (ncombinations != combinations.size()){
+      |         ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In member function 'void xatu::ExcitonTB::initializeScreeningAttributes(const xatu::ScreeningConfiguration&)':
+src/ExcitonTB.cpp:216:9: warning: unused variable 'nGs' [-Wunused-variable]
+  216 |     int nGs = this->nReciprocalVectors_;
+      |         ^~~
+src/ExcitonTB.cpp: In constructor 'xatu::ExcitonTB::ExcitonTB(const xatu::SystemConfiguration&, int, const ivec&, const rowvec&, const rowvec&)':
+src/ExcitonTB.cpp:299:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  299 |     for(int i = 0; i < bands.n_elem; i++){
+      |                    ~~^~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In constructor 'xatu::ExcitonTB::ExcitonTB(std::shared_ptr<xatu::SystemTB>, int, const ivec&, const rowvec&, const rowvec&)':
+src/ExcitonTB.cpp:372:22: warning: comparison of integer expressions of different signedness: 'const uword' {aka 'const long long unsigned int'} and 'const int' [-Wsign-compare]
+  372 |     if (bands.n_elem > system->basisdim){
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:379:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  379 |     for(int i = 0; i < bands.n_elem; i++){
+      |                    ~~^~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In member function 'double (xatu::ExcitonTB::* xatu::ExcitonTB::selectPotential(std::string))(double) const':
+src/ExcitonTB.cpp:623:28: error: cannot convert 'double (xatu::ExcitonTB::*)(double)' to 'xatu::potptr' {aka 'double (xatu::ExcitonTB::*)(double) const'} in return
+  623 |         return &ExcitonTB::keldysh;
+      |                            ^~~~~~~
+src/ExcitonTB.cpp:626:28: error: cannot convert 'double (xatu::ExcitonTB::*)(double)' to 'xatu::potptr' {aka 'double (xatu::ExcitonTB::*)(double) const'} in return
+  626 |         return &ExcitonTB::coulomb;
+      |                            ^~~~~~~
+src/ExcitonTB.cpp:629:28: error: cannot convert 'double (xatu::ExcitonTB::*)(double)' to 'xatu::potptr' {aka 'double (xatu::ExcitonTB::*)(double) const'} in return
+  629 |         return &ExcitonTB::keldysh;
+      |                            ^~~~~~~
+src/ExcitonTB.cpp: In member function 'double xatu::ExcitonTB::coulombFT(int, int, arma::vec) const':
+src/ExcitonTB.cpp:650:12: warning: unused variable 'radius' [-Wunused-variable]
+  650 |     double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
+      |            ^~~~~~
+src/ExcitonTB.cpp: In member function 'double xatu::ExcitonTB::keldyshFT(int, int, arma::vec) const':
+src/ExcitonTB.cpp:678:12: warning: unused variable 'radius' [-Wunused-variable]
+  678 |     double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
+      |            ^~~~~~
+src/ExcitonTB.cpp: In member function 'std::complex<double> xatu::ExcitonTB::rpaFT(int, int, arma::vec) const':
+src/ExcitonTB.cpp:718:43: error: 'eps_bar' was not declared in this scope
+  718 |     potential = potential*ec*1E10/(2*eps0*eps_bar*system->unitCellArea*totalCells);
+      |                                           ^~~~~~~
+src/ExcitonTB.cpp: In member function 'std::complex<double> xatu::ExcitonTB::motifFourierTransform(int, int, const rowvec&, const mat&, xatu::potptr)':
+src/ExcitonTB.cpp:740:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  740 |     for(int n = 0; n < cells.n_rows; n++){
+      |                    ~~^~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In member function 'std::complex<double> xatu::ExcitonTB::reciprocalInteractionTerm(const cx_vec&, const cx_vec&, const cx_vec&, const cx_vec&, const rowvec&, const rowvec&, const rowvec&, const rowvec&, int)':
+src/ExcitonTB.cpp:871:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  871 |     for(int i = 0; i < reciprocalVectors.n_rows; i++){
+      |                    ~~^~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:877:38: error: no matching function for call to 'xatu::ExcitonTB::keldyshFT(arma::enable_if2<true, const arma::eGlue<arma::eGlue<arma::Row<double>, arma::Row<double>, arma::eglue_minus>, arma::subview_row<double>, arma::eglue_plus> >::result)'
+  877 |         term += Ic*conj(Iv)*keldyshFT(k - k2 + G);
+      |                             ~~~~~~~~~^~~~~~~~~~~~
+src/ExcitonTB.cpp:672:8: note: candidate: 'double xatu::ExcitonTB::keldyshFT(int, int, arma::vec) const'
+  672 | double ExcitonTB::keldyshFT(int g, int g2, arma::vec q) const {
+      |        ^~~~~~~~~
+src/ExcitonTB.cpp:672:8: note:   candidate expects 3 arguments, 1 provided
+src/ExcitonTB.cpp: In member function 'arma::imat xatu::ExcitonTB::specifyBasisSubset(const ivec&)':
+src/ExcitonTB.cpp:947:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  947 |     for(int i = 0; i < bands.n_elem; i++){
+      |                    ~~^~~~~~~~~~~~~~
+src/ExcitonTB.cpp:945:9: warning: unused variable 'reducedBasisDim' [-Wunused-variable]
+  945 |     int reducedBasisDim = system->nk*bands.n_elem;
+      |         ^~~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In member function 'arma::cx_mat xatu::ExcitonTB::fixGlobalPhase(arma::cx_mat&)':
+src/ExcitonTB.cpp:972:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  972 |     for(int j = 0; j < sums.n_elem; j++){
+      |                    ~~^~~~~~~~~~~~~
+src/ExcitonTB.cpp: In member function 'void xatu::ExcitonTB::initializeResultsH0()':
+src/ExcitonTB.cpp:1030:13: warning: unused variable 'displayNext' [-Wunused-variable]
+ 1030 |         int displayNext = step;
+      |             ^~~~~~~~~~~
+src/ExcitonTB.cpp:1031:13: warning: unused variable 'percent' [-Wunused-variable]
+ 1031 |         int percent = 0;
+      |             ^~~~~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:1133:22: error: no declaration matches 'std::complex<double> xatu::ExcitonTB::computesinglePolarizability(const rowvec&, const rowvec&, int, int)'
+ 1133 | std::complex<double> ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) {
+      |                      ^~~~~~~~~
+In file included from src/ExcitonTB.cpp:3:
+/home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:180:16: note: candidates are: 'double xatu::ExcitonTB::computesinglePolarizability(const rowvec&, const rowvec&, int, int) const'
+  180 |         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const; // Temporarily public
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:173:14: note:                 'void xatu::ExcitonTB::computesinglePolarizability()'
+  173 |         void computesinglePolarizability();
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:163:30: note:                 'std::complex<double> xatu::ExcitonTB::computesinglePolarizability(arma::rowvec&)'
+  163 |         std::complex<double> computesinglePolarizability(arma::rowvec&);
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:28:7: note: 'class xatu::ExcitonTB' defined here
+   28 | class ExcitonTB : public Exciton<SystemTB> {
+      |       ^~~~~~~~~
+src/ExcitonTB.cpp: In member function 'std::complex<double> xatu::ExcitonTB::computesinglePolarizability(arma::rowvec&)':
+src/ExcitonTB.cpp:1354:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+ 1354 |     for(int i = 0; i < this->trunreciprocalLattice_.n_rows; i++){
+      |                    ~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:1280:9: warning: unused variable 'lowerindexvbands' [-Wunused-variable]
+ 1280 |     int lowerindexvbands = nvbands - nvbandsincluded;
+      |         ^~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In function 'arma::mat xatu::generatecombinations(int, int, int)':
+src/ExcitonTB.cpp:1372:1: warning: no return statement in function returning non-void [-Wreturn-type]
+ 1372 | }
+      | ^
+src/ExcitonTB.cpp: In member function 'std::complex<double> xatu::ExcitonTB::reciprocalPolarizabilityMatrixElement(const vec&, const vec&, int) const':
+src/ExcitonTB.cpp:1412:37: error: invalid conversion from 'const arma::Mat<std::complex<double> >*' to 'arma::cx_dmat*' {aka 'arma::Mat<std::complex<double> >*'} [-fpermissive]
+ 1412 |         arma::cx_dmat *auxk_slice = &eigveckStack_.slice(ik);
+      |                                     ^~~~~~~~~~~~~~~~~~~~~~~~
+      |                                     |
+      |                                     const arma::Mat<std::complex<double> >*
+src/ExcitonTB.cpp:1413:38: error: invalid conversion from 'const arma::Mat<std::complex<double> >*' to 'arma::cx_dmat*' {aka 'arma::Mat<std::complex<double> >*'} [-fpermissive]
+ 1413 |         arma::cx_dmat *auxkq_slice = &eigveckStack_.slice(kqindex);
+      |                                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                      |
+      |                                      const arma::Mat<std::complex<double> >*
+src/ExcitonTB.cpp:1433:65: error: passing 'const xatu::ExcitonTB' as 'this' argument discards qualifiers [-fpermissive]
+ 1433 |                 std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
+      |                                             ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:892:22: note:   in call to 'std::complex<double> xatu::ExcitonTB::blochCoherenceFactor(const cx_vec&, const cx_vec&, const rowvec&, const rowvec&, const rowvec&)'
+  892 | std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1, const arma::cx_vec& coefs2,
+      |                      ^~~~~~~~~
+src/ExcitonTB.cpp:1434:66: error: passing 'const xatu::ExcitonTB' as 'this' argument discards qualifiers [-fpermissive]
+ 1434 |                 std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
+      |                                              ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:892:22: note:   in call to 'std::complex<double> xatu::ExcitonTB::blochCoherenceFactor(const cx_vec&, const cx_vec&, const rowvec&, const rowvec&, const rowvec&)'
+  892 | std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1, const arma::cx_vec& coefs2,
+      |                      ^~~~~~~~~
+src/ExcitonTB.cpp:1385:9: warning: unused variable 'natoms' [-Wunused-variable]
+ 1385 |     int natoms = system->natoms;
+      |         ^~~~~~
+src/ExcitonTB.cpp:1386:9: warning: unused variable 'basisdim' [-Wunused-variable]
+ 1386 |     int basisdim = system->basisdim;
+      |         ^~~~~~~~
+src/ExcitonTB.cpp:1389:9: warning: unused variable 'ncbands' [-Wunused-variable]
+ 1389 |     int ncbands = conductionbands.size();
+      |         ^~~~~~~
+src/ExcitonTB.cpp:1395:9: warning: unused variable 'lowerindexvbands' [-Wunused-variable]
+ 1395 |     int lowerindexvbands = nvbands - nvbandsincluded;
+      |         ^~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp: In member function 'int xatu::ExcitonTB::fetchReciprocalLatticeVector(arma::vec)':
+src/ExcitonTB.cpp:1514:9: error: 'G_index' was not declared in this scope; did you mean 'rindex'?
+ 1514 |         G_index++;
+      |         ^~~~~~~
+      |         rindex
+src/ExcitonTB.cpp: In member function 'void xatu::ExcitonTB::computeDielectricMatrix()':
+src/ExcitonTB.cpp:1574:19: error: 'class xatu::ExcitonTB' has no member named 'Polarizabilitymatrix_'; did you mean 'PolarizabilityMesh'?
+ 1574 |             this->Polarizabilitymatrix_(r*nAtoms + t, r2*nAtoms + t2) = this->computesinglePolarizability(R,R2,t,t2);
+      |                   ^~~~~~~~~~~~~~~~~~~~~
+      |                   PolarizabilityMesh
+src/ExcitonTB.cpp:1537:13: warning: unused variable 'nlattice_sites' [-Wunused-variable]
+ 1537 |         int nlattice_sites = nRvectors*nAtoms;
+      |             ^~~~~~~~~~~~~~
+src/ExcitonTB.cpp:1691:44: error: 'iq' was not declared in this scope; did you mean 'q'?
+ 1691 |                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+      |                                            ^~
+      |                                            q
+src/ExcitonTB.cpp:1691:52: error: 'g' was not declared in this scope
+ 1691 |                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+      |                                                    ^
+src/ExcitonTB.cpp:1691:55: error: 'g2' was not declared in this scope
+ 1691 |                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+      |                                                       ^~
+src/ExcitonTB.cpp:1691:61: error: 'kroneckerdelta' was not declared in this scope
+ 1691 |                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+      |                                                             ^~~~~~~~~~~~~~
+src/ExcitonTB.cpp:1691:78: error: 'potentialg' was not declared in this scope; did you mean 'potential_'?
+ 1691 |                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*this->Chimatrix_.slice(iq).row(g)(g2);
+      |                                                                              ^~~~~~~~~~
+      |                                                                              potential_
+src/ExcitonTB.cpp:1692:78: error: 'potentialg2' was not declared in this scope; did you mean 'potential_'?
+ 1692 |                 this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*this->Chimatrix_.slice(iq).row(g2)(g);
+      |                                                                              ^~~~~~~~~~~
+      |                                                                              potential_
+src/ExcitonTB.cpp:1731:13: error: 'odd' was not declared in this scope
+ 1731 |         if (odd == 1){
+      |             ^~~
+src/ExcitonTB.cpp:1733:33: error: 'nq' was not declared in this scope; did you mean 'q'?
+ 1733 |             for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+      |                                 ^~
+      |                                 q
+src/ExcitonTB.cpp:1733:36: error: 'nGs' was not declared in this scope; did you mean 'Gs'?
+ 1733 |             for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+      |                                    ^~~
+      |                                    Gs
+src/ExcitonTB.cpp:1735:26: error: 'indecesqg' was not declared in this scope
+ 1735 |                 int iq = indecesqg.at(0,i);
+      |                          ^~~~~~~~~
+src/ExcitonTB.cpp:1739:31: error: 'ReciprocalVectors' was not declared in this scope; did you mean 'nReciprocalVectors'?
+ 1739 |                 arma::vec G = ReciprocalVectors.col(g);
+      |                               ^~~~~~~~~~~~~~~~~
+      |                               nReciprocalVectors
+src/ExcitonTB.cpp:1748:40: error: 'Nktotal' was not declared in this scope
+ 1748 |                 this->Chimatrix_.slice(Nktotal - iq - 1).at(negativeG2,negativeG) = Chi_aux;
+      |                                        ^~~~~~~
+src/ExcitonTB.cpp:1751:35: error: 'BZ_mesh' was not declared in this scope
+ 1751 |                 arma::vec q_aux = BZ_mesh.col(iq);
+      |                                   ^~~~~~~
+src/ExcitonTB.cpp:1733:13: error: invalid controlling predicate
+ 1733 |             for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+      |             ^~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:1771:102: error: 'start' was not declared in this scope
+ 1771 |     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+      |                                                                                                      ^~~~~
+src/ExcitonTB.cpp:1773:10: error: 'cout' in namespace 'std' does not name a type
+ 1773 |     std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << std::endl << std::flush;
+      |          ^~~~
+In file included from /home/juanjo-uam/packages/armadillo-code/include/armadillo:39,
+                 from /home/juanjo-uam/work/xatu/include/xatu/Lattice.hpp:2,
+                 from /home/juanjo-uam/work/xatu/include/xatu/System.hpp:2,
+                 from /home/juanjo-uam/work/xatu/include/xatu/SystemTB.hpp:2,
+                 from /home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:5,
+                 from src/ExcitonTB.cpp:3:
+/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen2/gcc-9.4.0/gcc-11.3.0-2zeeydcvsjlyc5zd7bioutj7rifu6l2k/lib/gcc/x86_64-pc-linux-gnu/11.3.0/../../../../include/c++/11.3.0/iostream:61:18: note: 'std::cout' declared here
+   61 |   extern ostream cout;          /// Linked to standard output
+      |                  ^~~~
+src/ExcitonTB.cpp:1780:6: error: 'ExcitonTB' has not been declared
+ 1780 | void ExcitonTB::invertDielectricMatrix(){
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void invertDielectricMatrix()':
+src/ExcitonTB.cpp:1786:15: error: invalid use of 'this' in non-member function
+ 1786 |     int nGs = this->trunreciprocalLattice_.n_rows;
+      |               ^~~~
+src/ExcitonTB.cpp:1787:27: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 1787 |     int Nktotal = system->nk;
+      |                           ^~
+src/ExcitonTB.cpp:1797:9: error: invalid use of 'this' in non-member function
+ 1797 |         this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+      |         ^~~~
+src/ExcitonTB.cpp:1797:57: error: invalid use of 'this' in non-member function
+ 1797 |         this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+      |                                                         ^~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:1813:6: error: 'ExcitonTB' has not been declared
+ 1813 | void ExcitonTB::computesingleDielectricFunction() {
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void computesingleDielectricFunction()':
+src/ExcitonTB.cpp:1816:32: error: 'duration_dielectric_matrix_mesh' was not declared in this scope; did you mean 'xatu::duration_dielectric_matrix_mesh'?
+ 1816 |     std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << " s.\nInverting the dielectric matrix... " << std::flush;
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                xatu::duration_dielectric_matrix_mesh
+src/ExcitonTB.cpp:1771:10: note: 'xatu::duration_dielectric_matrix_mesh' declared here
+ 1771 |     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:1862:66: error: 'start_dielectric_matrix_inversion' was not declared in this scope
+ 1862 |     auto duration_inversion = duration_cast<milliseconds>(stop - start_dielectric_matrix_inversion);
+      |                                                                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:1879:6: error: 'ExcitonTB' has not been declared
+ 1879 | void ExcitonTB::computesingleDielectricFunction() {
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp:1879:6: error: redefinition of 'void computesingleDielectricFunction()'
+src/ExcitonTB.cpp:1813:6: note: 'void computesingleDielectricFunction()' previously defined here
+ 1813 | void ExcitonTB::computesingleDielectricFunction() {
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void computesingleDielectricFunction()':
+src/ExcitonTB.cpp:1881:8: error: 'mode' was not declared in this scope; did you mean 'modf'?
+ 1881 |     if(mode == "realspace"){
+      |        ^~~~
+      |        modf
+src/ExcitonTB.cpp:1889:22: error: invalid use of 'this' in non-member function
+ 1889 |     arma::rowvec q = this->q_;
+      |                      ^~~~
+src/ExcitonTB.cpp:1891:22: error: invalid use of 'this' in non-member function
+ 1891 |     arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
+      |                      ^~~~
+src/ExcitonTB.cpp:1891:55: error: invalid use of 'this' in non-member function
+ 1891 |     arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
+      |                                                       ^~~~
+src/ExcitonTB.cpp:1892:23: error: invalid use of 'this' in non-member function
+ 1892 |     arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
+      |                       ^~~~
+src/ExcitonTB.cpp:1892:56: error: invalid use of 'this' in non-member function
+ 1892 |     arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
+      |                                                        ^~~~
+src/ExcitonTB.cpp:1894:11: error: 'computesinglePolarizability' was not declared in this scope
+ 1894 |     Chi = computesinglePolarizability(q);
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:1896:24: error: 'coulombFT' was not declared in this scope
+ 1896 |     double potential = coulombFT(q + g);
+      |                        ^~~~~~~~~
+src/ExcitonTB.cpp:1898:29: error: invalid use of 'this' in non-member function
+ 1898 |     double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
+      |                             ^~~~
+src/ExcitonTB.cpp:1898:45: error: invalid use of 'this' in non-member function
+ 1898 |     double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
+      |                                             ^~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:1909:6: error: 'ExcitonTB' has not been declared
+ 1909 | void ExcitonTB::BShamiltonian(){
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void BShamiltonian()':
+src/ExcitonTB.cpp:1911:18: error: too many arguments to function 'void BShamiltonian()'
+ 1911 |     BShamiltonian(basis);
+      |     ~~~~~~~~~~~~~^~~~~~~
+src/ExcitonTB.cpp:1909:6: note: declared here
+ 1909 | void ExcitonTB::BShamiltonian(){
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:1927:6: error: 'ExcitonTB' has not been declared
+ 1927 | void ExcitonTB::BShamiltonian(const arma::imat& basis){
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void BShamiltonian(const imat&)':
+src/ExcitonTB.cpp:1929:30: error: invalid use of 'this' in non-member function
+ 1929 |     arma::imat basisStates = this->basisStates;
+      |                              ^~~~
+src/ExcitonTB.cpp:1938:5: error: 'HBS_' was not declared in this scope
+ 1938 |     HBS_ = arma::zeros<cx_mat>(basisDimBSE, basisDimBSE);
+      |     ^~~~
+src/ExcitonTB.cpp:1955:17: error: 'bandToIndex' was not declared in this scope
+ 1955 |         int v = bandToIndex[basisStates(i, 0)];
+      |                 ^~~~~~~~~~~
+src/ExcitonTB.cpp:1965:12: error: 'gauge' was not declared in this scope
+ 1965 |         if(gauge == "atomic"){
+      |            ^~~~~
+src/ExcitonTB.cpp:1966:22: error: 'system_' was not declared in this scope; did you mean 'system'?
+ 1966 |             coefsK = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
+      |                      ^~~~~~~
+      |                      system
+src/ExcitonTB.cpp:1966:52: error: 'eigvecKStack' was not declared in this scope
+ 1966 |             coefsK = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
+      |                                                    ^~~~~~~~~~~~
+src/ExcitonTB.cpp:1966:96: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1966 |             coefsK = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
+      |                                                                                                ^~~~~~~
+src/ExcitonTB.cpp:1967:53: error: 'eigvecKQStack' was not declared in this scope
+ 1967 |             coefsKQ = system_->latticeToAtomicGauge(eigvecKQStack.slice(kQ_index).col(c), system->kpoints.row(kQ_index));
+      |                                                     ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:1967:99: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1967 |             coefsKQ = system_->latticeToAtomicGauge(eigvecKQStack.slice(kQ_index).col(c), system->kpoints.row(kQ_index));
+      |                                                                                                   ^~~~~~~
+src/ExcitonTB.cpp:1968:99: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1968 |             coefsK2 = system_->latticeToAtomicGauge(eigvecKStack.slice(k2_index).col(v2), system->kpoints.row(k2_index));
+      |                                                                                                   ^~~~~~~
+src/ExcitonTB.cpp:1969:102: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1969 |             coefsK2Q = system_->latticeToAtomicGauge(eigvecKQStack.slice(k2Q_index).col(c2), system->kpoints.row(k2Q_index));
+      |                                                                                                      ^~~~~~~
+src/ExcitonTB.cpp:1972:22: error: 'eigvecKStack' was not declared in this scope
+ 1972 |             coefsK = eigvecKStack.slice(k_index).col(v);
+      |                      ^~~~~~~~~~~~
+src/ExcitonTB.cpp:1973:23: error: 'eigvecKQStack' was not declared in this scope
+ 1973 |             coefsKQ = eigvecKQStack.slice(kQ_index).col(c);
+      |                       ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:1979:13: error: 'mode' was not declared in this scope; did you mean 'modf'?
+ 1979 |         if (mode == "realspace"){
+      |             ^~~~
+      |             modf
+src/ExcitonTB.cpp:1980:42: error: 'system_' was not declared in this scope; did you mean 'system'?
+ 1980 |             uint32_t effective_k_index = system_->findEquivalentPointBZ(system->kpoints.row(k2_index) - system->kpoints.row(k_index), ncell);
+      |                                          ^~~~~~~
+      |                                          system
+src/ExcitonTB.cpp:1980:81: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1980 |             uint32_t effective_k_index = system_->findEquivalentPointBZ(system->kpoints.row(k2_index) - system->kpoints.row(k_index), ncell);
+      |                                                                                 ^~~~~~~
+src/ExcitonTB.cpp:1980:113: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1980 |             uint32_t effective_k_index = system_->findEquivalentPointBZ(system->kpoints.row(k2_index) - system->kpoints.row(k_index), ncell);
+      |                                                                                                                 ^~~~~~~
+src/ExcitonTB.cpp:1980:135: error: 'ncell' was not declared in this scope
+ 1980 |             uint32_t effective_k_index = system_->findEquivalentPointBZ(system->kpoints.row(k2_index) - system->kpoints.row(k_index), ncell);
+      |                                                                                                                                       ^~~~~
+src/ExcitonTB.cpp:1981:36: error: 'ftMotifStack' was not declared in this scope
+ 1981 |             arma::cx_mat motifFT = ftMotifStack.slice(effective_k_index);
+      |                                    ^~~~~~~~~~~~
+src/ExcitonTB.cpp:1982:17: error: 'realSpaceInteractionTerm' was not declared in this scope
+ 1982 |             D = realSpaceInteractionTerm(coefsKQ, coefsK2, coefsK2Q, coefsK, motifFT);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:1983:16: error: invalid use of 'this' in non-member function
+ 1983 |             if(this->exchange){
+      |                ^~~~
+src/ExcitonTB.cpp:1984:82: error: invalid use of 'this' in non-member function
+ 1984 |                 X = realSpaceInteractionTerm(coefsKQ, coefsK2, coefsK, coefsK2Q, this->ftMotifQ);
+      |                                                                                  ^~~~
+src/ExcitonTB.cpp:1988:38: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1988 |             arma::rowvec k = system->kpoints.row(k_index);
+      |                                      ^~~~~~~
+src/ExcitonTB.cpp:1989:39: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 1989 |             arma::rowvec k2 = system->kpoints.row(k2_index);
+      |                                       ^~~~~~~
+src/ExcitonTB.cpp:1990:93: error: invalid use of 'this' in non-member function
+ 1990 |             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->nReciprocalVectors);
+      |                                                                                             ^~~~
+src/ExcitonTB.cpp:1990:17: error: 'reciprocalInteractionTerm' was not declared in this scope
+ 1990 |             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->nReciprocalVectors);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:1991:16: error: invalid use of 'this' in non-member function
+ 1991 |             if(this->exchange){
+      |                ^~~~
+src/ExcitonTB.cpp:1992:88: error: 'Q' was not declared in this scope
+ 1992 |                 X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, this->nReciprocalVectors);
+      |                                                                                        ^
+src/ExcitonTB.cpp:1992:105: error: invalid use of 'this' in non-member function
+ 1992 |                 X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, this->nReciprocalVectors);
+      |                                                                                                         ^~~~
+src/ExcitonTB.cpp:1997:27: error: invalid use of 'this' in non-member function
+ 1997 |             HBS_(i, j) = (this->scissor +
+      |                           ^~~~
+src/ExcitonTB.cpp:1998:27: error: 'eigvalKQStack' was not declared in this scope
+ 1998 |                           eigvalKQStack.col(kQ_index)(c) - eigvalKStack.col(k_index)(v))/2.
+      |                           ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:1998:60: error: 'eigvalKStack' was not declared in this scope
+ 1998 |                           eigvalKQStack.col(kQ_index)(c) - eigvalKStack.col(k_index)(v))/2.
+      |                                                            ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2006:12: error: 'HBS' was not declared in this scope
+ 2006 |     HBS_ = HBS + HBS.t();
+      |            ^~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2017:1: error: 'ResultTB' does not name a type
+ 2017 | ResultTB* ExcitonTB::diagonalizeRaw(std::string method, int nstates){
+      | ^~~~~~~~
+src/ExcitonTB.cpp:2057:17: error: 'ResultTB' was not declared in this scope; did you mean 'xatu::ResultTB'?
+ 2057 | std::unique_ptr<ResultTB> ExcitonTB::diagonalize(std::string method, int nstates){
+      |                 ^~~~~~~~
+      |                 xatu::ResultTB
+In file included from /home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:9,
+                 from src/ExcitonTB.cpp:3:
+/home/juanjo-uam/work/xatu/include/xatu/ResultTB.hpp:28:7: note: 'xatu::ResultTB' declared here
+   28 | class ResultTB : public Result<SystemTB> {
+      |       ^~~~~~~~
+src/ExcitonTB.cpp:2057:25: error: template argument 1 is invalid
+ 2057 | std::unique_ptr<ResultTB> ExcitonTB::diagonalize(std::string method, int nstates){
+      |                         ^
+src/ExcitonTB.cpp:2057:25: error: template argument 2 is invalid
+src/ExcitonTB.cpp:2057:27: error: 'ExcitonTB' has not been declared
+ 2057 | std::unique_ptr<ResultTB> ExcitonTB::diagonalize(std::string method, int nstates){
+      |                           ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'int diagonalize(std::string, int)':
+src/ExcitonTB.cpp:2058:28: error: 'ResultTB' was not declared in this scope; did you mean 'xatu::ResultTB'?
+ 2058 |     return std::unique_ptr<ResultTB>(diagonalizeRaw(method, nstates));
+      |                            ^~~~~~~~
+      |                            xatu::ResultTB
+In file included from /home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:9,
+                 from src/ExcitonTB.cpp:3:
+/home/juanjo-uam/work/xatu/include/xatu/ResultTB.hpp:28:7: note: 'xatu::ResultTB' declared here
+   28 | class ResultTB : public Result<SystemTB> {
+      |       ^~~~~~~~
+src/ExcitonTB.cpp:2058:36: error: template argument 1 is invalid
+ 2058 |     return std::unique_ptr<ResultTB>(diagonalizeRaw(method, nstates));
+      |                                    ^
+src/ExcitonTB.cpp:2058:36: error: template argument 2 is invalid
+src/ExcitonTB.cpp:2058:38: error: 'diagonalizeRaw' was not declared in this scope; did you mean 'diagonalize'?
+ 2058 |     return std::unique_ptr<ResultTB>(diagonalizeRaw(method, nstates));
+      |                                      ^~~~~~~~~~~~~~
+      |                                      diagonalize
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2070:8: error: 'ExcitonTB' has not been declared
+ 2070 | double ExcitonTB::pairDensityOfStates(double energy, double delta) const {
+      |        ^~~~~~~~~
+src/ExcitonTB.cpp:2070:68: error: non-member function 'double pairDensityOfStates(double, double)' cannot have cv-qualifier
+ 2070 | double ExcitonTB::pairDensityOfStates(double energy, double delta) const {
+      |                                                                    ^~~~~
+src/ExcitonTB.cpp: In function 'double pairDensityOfStates(double, double)':
+src/ExcitonTB.cpp:2073:29: error: 'valenceBands' was not declared in this scope
+ 2073 |     for(int v = 0; v < (int)valenceBands.n_elem; v++){
+      |                             ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2074:33: error: 'conductionBands' was not declared in this scope
+ 2074 |         for(int c = 0; c < (int)conductionBands.n_elem; c++){
+      |                                 ^~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2075:40: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2075 |             for(int i = 0; i < system->nk; i++){
+      |                                        ^~
+src/ExcitonTB.cpp:2077:37: error: 'bandToIndex' was not declared in this scope
+ 2077 |                 arma::uword vband = bandToIndex.at(valenceBands(v)); // Unsigned integer
+      |                                     ^~~~~~~~~~~
+src/ExcitonTB.cpp:2080:38: error: 'eigvalKStack' was not declared in this scope
+ 2080 |                 double stateEnergy = eigvalKStack.col(i)(cband) - eigvalKStack.col(i)(vband);
+      |                                      ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2081:33: error: 'rGreenF' was not declared in this scope; did you mean 'xatu::rGreenF'?
+ 2081 |                 dos += -PI*imag(rGreenF(energy, delta, stateEnergy));
+      |                                 ^~~~~~~
+      |                                 xatu::rGreenF
+In file included from src/ExcitonTB.cpp:4:
+/home/juanjo-uam/work/xatu/include/xatu/utils.hpp:25:22: note: 'xatu::rGreenF' declared here
+   25 | std::complex<double> rGreenF(double, double, double);
+      |                      ^~~~~~~
+src/ExcitonTB.cpp:2085:21: error: request for member 'a' in '* system', which is of non-class type 'int(const char*)'
+ 2085 |     dos /= (system->a * system->nk);
+      |                     ^
+src/ExcitonTB.cpp:2085:33: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2085 |     dos /= (system->a * system->nk);
+      |                                 ^~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2098:6: error: 'ExcitonTB' has not been declared
+ 2098 | void ExcitonTB::writePairDOS(FILE* file, double delta, int n){
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void writePairDOS(FILE*, double, int)':
+src/ExcitonTB.cpp:2100:19: error: 'eigvalKStack' was not declared in this scope
+ 2100 |     double eMin = eigvalKStack.min();
+      |                   ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2101:19: error: 'eigvalKQStack' was not declared in this scope
+ 2101 |     double eMax = eigvalKQStack.max();
+      |                   ^~~~~~~~~~~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2118:8: error: 'ExcitonTB' has not been declared
+ 2118 | cx_vec ExcitonTB::ehPairCoefs(double energy, const vec& gapEnergy, std::string side){
+      |        ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'arma::cx_vec ehPairCoefs(double, const vec&, std::string)':
+src/ExcitonTB.cpp:2120:48: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2120 |     cx_vec coefs = arma::zeros<cx_vec>(system->nk);
+      |                                                ^~
+src/ExcitonTB.cpp:2125:32: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2125 |     for(int n = 1; n < system->nk/2; n++){
+      |                                ^~
+src/ExcitonTB.cpp:2134:44: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2134 |     std::cout << "Selected k: " << system->kpoints(closestKindex) << "\t" << closestKindex << std::endl;
+      |                                            ^~~~~~~
+src/ExcitonTB.cpp:2137:40: error: request for member 'a' in '* system', which is of non-class type 'int(const char*)'
+ 2137 |     double dispersion = PI/(16*system->a);
+      |                                        ^
+src/ExcitonTB.cpp:2142:23: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2142 |         coefs(system->nk - 1 - closestKindex) = 1.;
+      |                       ^~
+src/ExcitonTB.cpp:2146:58: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2146 |     std::cout << "Energy gap (k): " << gapEnergy(system->nk - 1 - closestKindex) << std::endl;
+      |                                                          ^~
+src/ExcitonTB.cpp:2137:12: warning: unused variable 'dispersion' [-Wunused-variable]
+ 2137 |     double dispersion = PI/(16*system->a);
+      |            ^~~~~~~~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2159:8: error: 'ExcitonTB' has not been declared
+ 2159 | double ExcitonTB::fermiGoldenRule(const ExcitonTB& targetExciton,
+      |        ^~~~~~~~~
+src/ExcitonTB.cpp:2159:41: error: 'ExcitonTB' does not name a type
+ 2159 | double ExcitonTB::fermiGoldenRule(const ExcitonTB& targetExciton,
+      |                                         ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'double fermiGoldenRule(const int&, const cx_vec&, const cx_vec&, double)':
+src/ExcitonTB.cpp:2164:31: error: 'basisStates' was not declared in this scope
+ 2164 |     arma::imat initialBasis = basisStates;
+      |                               ^~~~~~~~~~~
+src/ExcitonTB.cpp:2165:43: error: request for member 'basisStates' in 'targetExciton', which is of non-class type 'const int'
+ 2165 |     arma::imat finalBasis = targetExciton.basisStates;
+      |                                           ^~~~~~~~~~~
+src/ExcitonTB.cpp:2170:23: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+ 2170 |     for (int i = 0; i < finalBasis.n_rows; i++){
+      |                     ~~^~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2171:27: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+ 2171 |         for (int j = 0; j < initialBasis.n_rows; j++){
+      |                         ~~^~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2175:36: error: request for member 'bandToIndex' in 'targetExciton', which is of non-class type 'const int'
+ 2175 |             int vf = targetExciton.bandToIndex.at(finalBasis(i, 0));
+      |                                    ^~~~~~~~~~~
+src/ExcitonTB.cpp:2176:36: error: request for member 'bandToIndex' in 'targetExciton', which is of non-class type 'const int'
+ 2176 |             int cf = targetExciton.bandToIndex.at(finalBasis(i, 1));
+      |                                    ^~~~~~~~~~~
+src/ExcitonTB.cpp:2179:22: error: 'bandToIndex' was not declared in this scope
+ 2179 |             int vi = bandToIndex[initialBasis(j, 0)];
+      |                      ^~~~~~~~~~~
+src/ExcitonTB.cpp:2184:16: error: 'gauge' was not declared in this scope
+ 2184 |             if(gauge == "atomic"){
+      |                ^~~~~
+src/ExcitonTB.cpp:2185:26: error: 'system_' was not declared in this scope; did you mean 'system'?
+ 2185 |                 coefsK = system_->latticeToAtomicGauge(
+      |                          ^~~~~~~
+      |                          system
+src/ExcitonTB.cpp:2186:35: error: request for member 'eigvecKStack' in 'targetExciton', which is of non-class type 'const int'
+ 2186 |                     targetExciton.eigvecKStack.slice(kf_index).col(vf), system->kpoints.row(kf_index));
+      |                                   ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2186:81: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2186 |                     targetExciton.eigvecKStack.slice(kf_index).col(vf), system->kpoints.row(kf_index));
+      |                                                                                 ^~~~~~~
+src/ExcitonTB.cpp:2188:35: error: request for member 'eigvecKQStack' in 'targetExciton', which is of non-class type 'const int'
+ 2188 |                     targetExciton.eigvecKQStack.slice(kf_index).col(cf), system->kpoints.row(kf_index));
+      |                                   ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:2188:82: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2188 |                     targetExciton.eigvecKQStack.slice(kf_index).col(cf), system->kpoints.row(kf_index));
+      |                                                                                  ^~~~~~~
+src/ExcitonTB.cpp:2190:21: error: 'eigvecKStack' was not declared in this scope
+ 2190 |                     eigvecKStack.slice(ki_index).col(vi), system->kpoints.row(ki_index));
+      |                     ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2190:67: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2190 |                     eigvecKStack.slice(ki_index).col(vi), system->kpoints.row(ki_index));
+      |                                                                   ^~~~~~~
+src/ExcitonTB.cpp:2192:21: error: 'eigvecKQStack' was not declared in this scope
+ 2192 |                     eigvecKQStack.slice(ki_index).col(ci), system->kpoints.row(ki_index));
+      |                     ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:2192:68: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2192 |                     eigvecKQStack.slice(ki_index).col(ci), system->kpoints.row(ki_index));
+      |                                                                    ^~~~~~~
+src/ExcitonTB.cpp:2195:40: error: request for member 'eigvecKStack' in 'targetExciton', which is of non-class type 'const int'
+ 2195 |                 coefsK = targetExciton.eigvecKStack.slice(kf_index).col(vf);
+      |                                        ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2196:41: error: request for member 'eigvecKQStack' in 'targetExciton', which is of non-class type 'const int'
+ 2196 |                 coefsKQ = targetExciton.eigvecKQStack.slice(kf_index).col(cf);
+      |                                         ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:2197:27: error: 'eigvecKStack' was not declared in this scope
+ 2197 |                 coefsK2 = eigvecKStack.slice(ki_index).col(vi);
+      |                           ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2198:28: error: 'eigvecKQStack' was not declared in this scope
+ 2198 |                 coefsK2Q = eigvecKQStack.slice(ki_index).col(ci);
+      |                            ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:2202:17: error: 'mode' was not declared in this scope; did you mean 'modf'?
+ 2202 |             if (mode == "realspace"){
+      |                 ^~~~
+      |                 modf
+src/ExcitonTB.cpp:2203:41: error: 'system_' was not declared in this scope; did you mean 'system'?
+ 2203 |                 int effective_k_index = system_->findEquivalentPointBZ(
+      |                                         ^~~~~~~
+      |                                         system
+src/ExcitonTB.cpp:2204:29: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2204 |                     system->kpoints.row(ki_index) - system->kpoints.row(kf_index), ncell);
+      |                             ^~~~~~~
+src/ExcitonTB.cpp:2204:61: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2204 |                     system->kpoints.row(ki_index) - system->kpoints.row(kf_index), ncell);
+      |                                                             ^~~~~~~
+src/ExcitonTB.cpp:2204:84: error: 'ncell' was not declared in this scope
+ 2204 |                     system->kpoints.row(ki_index) - system->kpoints.row(kf_index), ncell);
+      |                                                                                    ^~~~~
+src/ExcitonTB.cpp:2205:40: error: 'ftMotifStack' was not declared in this scope
+ 2205 |                 arma::cx_mat motifFT = ftMotifStack.slice(effective_k_index);
+      |                                        ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2206:21: error: 'realSpaceInteractionTerm' was not declared in this scope
+ 2206 |                 D = realSpaceInteractionTerm(coefsKQ, coefsK2, coefsK2Q, coefsK, motifFT);
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2211:42: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2211 |                 arma::rowvec k = system->kpoints.row(kf_index);
+      |                                          ^~~~~~~
+src/ExcitonTB.cpp:2212:43: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2212 |                 arma::rowvec k2 = system->kpoints.row(ki_index);
+      |                                           ^~~~~~~
+src/ExcitonTB.cpp:2213:97: error: invalid use of 'this' in non-member function
+ 2213 |                 D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->nReciprocalVectors);
+      |                                                                                                 ^~~~
+src/ExcitonTB.cpp:2213:21: error: 'reciprocalInteractionTerm' was not declared in this scope
+ 2213 |                 D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->nReciprocalVectors);
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2221:27: error: 'ncell' was not declared in this scope
+ 2221 |     double delta = 2.4/(2*ncell); // Adjust delta depending on number of k points
+      |                           ^~~~~
+src/ExcitonTB.cpp:2222:32: error: request for member 'pairDensityOfStates' in 'targetExciton', which is of non-class type 'const int'
+ 2222 |     double rho = targetExciton.pairDensityOfStates(energy, delta);
+      |                                ^~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2241:14: error: 'ExcitonTB' has not been declared
+ 2241 | arma::rowvec ExcitonTB::findElectronHolePair(const ExcitonTB& targetExciton, double energy, std::string side, bool increasing){
+      |              ^~~~~~~~~
+src/ExcitonTB.cpp:2241:52: error: 'ExcitonTB' does not name a type
+ 2241 | arma::rowvec ExcitonTB::findElectronHolePair(const ExcitonTB& targetExciton, double energy, std::string side, bool increasing){
+      |                                                    ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'arma::rowvec findElectronHolePair(const int&, double, std::string, bool)':
+src/ExcitonTB.cpp:2246:22: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2246 |     int nk = system->nk;
+      |                      ^~
+src/ExcitonTB.cpp:2248:25: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2248 |         min_k = system->kpoints.row(nk/2);
+      |                         ^~~~~~~
+src/ExcitonTB.cpp:2249:27: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2249 |         max_k = - system->kpoints.row(0);
+      |                           ^~~~~~~
+src/ExcitonTB.cpp:2252:25: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2252 |         max_k = system->kpoints.row(0);
+      |                         ^~~~~~~
+src/ExcitonTB.cpp:2253:25: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2253 |         min_k = system->kpoints.row(nk/2 - 1);
+      |                         ^~~~~~~
+src/ExcitonTB.cpp:2270:27: error: request for member 'system' in 'targetExciton', which is of non-class type 'const int'
+ 2270 |             targetExciton.system->solveBands(k, eigval, eigvec);
+      |                           ^~~~~~
+src/ExcitonTB.cpp:2272:43: error: request for member 'bandList' in 'targetExciton', which is of non-class type 'const int'
+ 2272 |             eigval = eigval(targetExciton.bandList);
+      |                                           ^~~~~~~~
+src/ExcitonTB.cpp:2275:27: error: 'Q' was not declared in this scope
+ 2275 |             if(arma::norm(Q) != 0){
+      |                           ^
+src/ExcitonTB.cpp:2277:31: error: request for member 'system' in 'targetExciton', which is of non-class type 'const int'
+ 2277 |                 targetExciton.system->solveBands(kQ, eigval, eigvec);
+      |                               ^~~~~~
+src/ExcitonTB.cpp:2279:47: error: request for member 'bandList' in 'targetExciton', which is of non-class type 'const int'
+ 2279 |                 eigval = eigval(targetExciton.bandList);
+      |                                               ^~~~~~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2327:8: error: 'ExcitonTB' has not been declared
+ 2327 | double ExcitonTB::edgeFermiGoldenRule(const ExcitonTB& targetExciton,
+      |        ^~~~~~~~~
+src/ExcitonTB.cpp:2327:45: error: 'ExcitonTB' does not name a type
+ 2327 | double ExcitonTB::edgeFermiGoldenRule(const ExcitonTB& targetExciton,
+      |                                             ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'double edgeFermiGoldenRule(const int&, const cx_vec&, double, std::string, bool)':
+src/ExcitonTB.cpp:2332:31: error: 'basisStates' was not declared in this scope
+ 2332 |     arma::imat initialBasis = basisStates;
+      |                               ^~~~~~~~~~~
+src/ExcitonTB.cpp:2340:19: error: request for member 'system' in 'targetExciton', which is of non-class type 'const int'
+ 2340 |     targetExciton.system->solveBands(k, eigval, eigvec);
+      |                   ^~~~~~
+src/ExcitonTB.cpp:2342:14: error: 'fixGlobalPhase' was not declared in this scope
+ 2342 |     eigvec = fixGlobalPhase(eigvec);
+      |              ^~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2343:40: error: request for member 'bandList' in 'targetExciton', which is of non-class type 'const int'
+ 2343 |     eigvec = eigvec.cols(targetExciton.bandList);
+      |                                        ^~~~~~~~
+src/ExcitonTB.cpp:2346:19: error: 'Q' was not declared in this scope
+ 2346 |     if(arma::norm(Q) != 0){
+      |                   ^
+src/ExcitonTB.cpp:2348:23: error: request for member 'system' in 'targetExciton', which is of non-class type 'const int'
+ 2348 |         targetExciton.system->solveBands(kQ, eigval, eigvec);
+      |                       ^~~~~~
+src/ExcitonTB.cpp:2351:44: error: request for member 'bandList' in 'targetExciton', which is of non-class type 'const int'
+ 2351 |         eigvec = eigvec.cols(targetExciton.bandList);
+      |                                            ^~~~~~~~
+src/ExcitonTB.cpp:2358:31: error: request for member 'system' in 'targetExciton', which is of non-class type 'const int'
+ 2358 |         int N = targetExciton.system->basisdim;
+      |                               ^~~~~~
+src/ExcitonTB.cpp:2375:40: error: request for member 'bravaisLattice' in '* system', which is of non-class type 'int(const char*)'
+ 2375 |     double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
+      |                                        ^~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2375:65: error: 'cutoff_' was not declared in this scope
+ 2375 |     double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
+      |                                                                 ^~~~~~~
+src/ExcitonTB.cpp:2376:23: error: 'system_' was not declared in this scope; did you mean 'system'?
+ 2376 |     arma::mat cells = system_->truncateSupercell(ncell, radius);
+      |                       ^~~~~~~
+      |                       system
+src/ExcitonTB.cpp:2376:50: error: 'ncell' was not declared in this scope
+ 2376 |     arma::mat cells = system_->truncateSupercell(ncell, radius);
+      |                                                  ^~~~~
+src/ExcitonTB.cpp:2377:5: error: 'potptr' was not declared in this scope; did you mean 'xatu::potptr'?
+ 2377 |     potptr potential = selectPotential(this->potential_);
+      |     ^~~~~~
+      |     xatu::potptr
+In file included from src/ExcitonTB.cpp:3:
+/home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:22:29: note: 'xatu::potptr' declared here
+   22 | typedef double (ExcitonTB::*potptr)(double) const;
+      |                             ^~~~~~
+src/ExcitonTB.cpp:2379:26: error: request for member 'natoms' in '* system', which is of non-class type 'int(const char*)'
+ 2379 |     int natoms = system->natoms;
+      |                          ^~~~~~
+src/ExcitonTB.cpp:2380:72: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2380 |     arma::cx_cube ftMotifStack = arma::cx_cube(natoms, natoms, system->kpoints.n_rows);
+      |                                                                        ^~~~~~~
+src/ExcitonTB.cpp:2383:32: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2383 |     for(int i = 0; i < system->nk; i++){
+      |                                ^~
+src/ExcitonTB.cpp:2387:71: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2387 |                 motifFourierTransform(fAtomIndex, sAtomIndex, system->kpoints.row(i) - k, cells, potential);
+      |                                                                       ^~~~~~~
+src/ExcitonTB.cpp:2387:98: error: 'potential' was not declared in this scope
+ 2387 |                 motifFourierTransform(fAtomIndex, sAtomIndex, system->kpoints.row(i) - k, cells, potential);
+      |                                                                                                  ^~~~~~~~~
+src/ExcitonTB.cpp:2387:17: error: 'motifFourierTransform' was not declared in this scope
+ 2387 |                 motifFourierTransform(fAtomIndex, sAtomIndex, system->kpoints.row(i) - k, cells, potential);
+      |                 ^~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2383:5: error: invalid controlling predicate
+ 2383 |     for(int i = 0; i < system->nk; i++){
+      |     ^~~
+src/ExcitonTB.cpp:2397:23: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+ 2397 |     for (int i = 0; i < initialBasis.n_rows; i++){
+      |                     ~~^~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2401:18: error: 'bandToIndex' was not declared in this scope
+ 2401 |         int vi = bandToIndex[initialBasis(i, 0)];
+      |                  ^~~~~~~~~~~
+src/ExcitonTB.cpp:2406:12: error: 'gauge' was not declared in this scope
+ 2406 |         if(gauge == "atomic"){
+      |            ^~~~~
+src/ExcitonTB.cpp:2407:53: error: 'eigvecKStack' was not declared in this scope
+ 2407 |             coefsK2 = system_->latticeToAtomicGauge(eigvecKStack.slice(ki_index).col(vi), system->kpoints.row(ki_index));
+      |                                                     ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2407:99: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2407 |             coefsK2 = system_->latticeToAtomicGauge(eigvecKStack.slice(ki_index).col(vi), system->kpoints.row(ki_index));
+      |                                                                                                   ^~~~~~~
+src/ExcitonTB.cpp:2408:54: error: 'eigvecKQStack' was not declared in this scope
+ 2408 |             coefsK2Q = system_->latticeToAtomicGauge(eigvecKQStack.slice(ki_index).col(ci), system->kpoints.row(ki_index));
+      |                                                      ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:2408:101: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2408 |             coefsK2Q = system_->latticeToAtomicGauge(eigvecKQStack.slice(ki_index).col(ci), system->kpoints.row(ki_index));
+      |                                                                                                     ^~~~~~~
+src/ExcitonTB.cpp:2411:23: error: 'eigvecKStack' was not declared in this scope
+ 2411 |             coefsK2 = eigvecKStack.slice(ki_index).col(vi);
+      |                       ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2412:24: error: 'eigvecKQStack' was not declared in this scope
+ 2412 |             coefsK2Q = eigvecKQStack.slice(ki_index).col(ci);
+      |                        ^~~~~~~~~~~~~
+src/ExcitonTB.cpp:2416:13: error: 'mode' was not declared in this scope; did you mean 'modf'?
+ 2416 |         if (mode == "realspace"){
+      |             ^~~~
+      |             modf
+src/ExcitonTB.cpp:2418:17: error: 'realSpaceInteractionTerm' was not declared in this scope
+ 2418 |             D = realSpaceInteractionTerm(coefsKQ, coefsK2, coefsK2Q, coefsK, motifFT);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2423:39: error: request for member 'kpoints' in '* system', which is of non-class type 'int(const char*)'
+ 2423 |             arma::rowvec k2 = system->kpoints.row(ki_index);
+      |                                       ^~~~~~~
+src/ExcitonTB.cpp:2424:93: error: invalid use of 'this' in non-member function
+ 2424 |             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->nReciprocalVectors);
+      |                                                                                             ^~~~
+src/ExcitonTB.cpp:2424:17: error: 'reciprocalInteractionTerm' was not declared in this scope
+ 2424 |             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->nReciprocalVectors);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2431:38: error: request for member 'system' in 'targetExciton', which is of non-class type 'const int'
+ 2431 |     double delta = 2.0/targetExciton.system->nk; // Adjust delta depending on number of k points
+      |                                      ^~~~~~
+src/ExcitonTB.cpp:2432:32: error: request for member 'pairDensityOfStates' in 'targetExciton', which is of non-class type 'const int'
+ 2432 |     double rho = targetExciton.pairDensityOfStates(energy, delta);
+      |                                ^~~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2436:37: error: request for member 'a' in '* system', which is of non-class type 'int(const char*)'
+ 2436 |     transitionRate = (ncell*system->a)*2*PI*std::norm(arma::dot(W, initialState))*rho/hbar;
+      |                                     ^
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2446:6: error: 'ExcitonTB' has not been declared
+ 2446 | void ExcitonTB::printInformation(){
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void printInformation()':
+src/ExcitonTB.cpp:2447:66: error: 'ncell' was not declared in this scope
+ 2447 |     cout << std::left << std::setw(30) << "Number of cells: " << ncell << endl;
+      |                                                                  ^~~~~
+src/ExcitonTB.cpp:2449:25: error: 'valenceBands' was not declared in this scope
+ 2449 |     for (int i = 0; i < valenceBands.n_elem; i++){
+      |                         ^~~~~~~~~~~~
+src/ExcitonTB.cpp:2455:25: error: 'conductionBands' was not declared in this scope
+ 2455 |     for (int i = 0; i < conductionBands.n_elem; i++){
+      |                         ^~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2460:61: error: 'gauge' was not declared in this scope
+ 2460 |     cout << std::left << std::setw(30) << "Gauge used: " << gauge << endl;
+      |                                                             ^~~~~
+src/ExcitonTB.cpp:2461:67: error: 'mode' was not declared in this scope; did you mean 'modf'?
+ 2461 |     cout << std::left << std::setw(30) << "Calculation mode: " << mode << endl;
+      |                                                                   ^~~~
+      |                                                                   modf
+src/ExcitonTB.cpp:2463:57: error: 'nReciprocalVectors' was not declared in this scope
+ 2463 |         cout << std::left << std::setw(30) << "nG: " << nReciprocalVectors << endl;
+      |                                                         ^~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2465:60: error: 'potential_' was not declared in this scope
+ 2465 |     cout << std::left << std::setw(30) << "Potential: " << potential_ << endl;
+      |                                                            ^~~~~~~~~~
+src/ExcitonTB.cpp:2466:8: error: 'exchange' was not declared in this scope; did you mean 'std::exchange'?
+ 2466 |     if(exchange){
+      |        ^~~~~~~~
+      |        std::exchange
+In file included from /opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen2/gcc-9.4.0/gcc-11.3.0-2zeeydcvsjlyc5zd7bioutj7rifu6l2k/lib/gcc/x86_64-pc-linux-gnu/11.3.0/../../../../include/c++/11.3.0/bits/unique_ptr.h:36,
+                 from /opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen2/gcc-9.4.0/gcc-11.3.0-2zeeydcvsjlyc5zd7bioutj7rifu6l2k/lib/gcc/x86_64-pc-linux-gnu/11.3.0/../../../../include/c++/11.3.0/bits/locale_conv.h:41,
+                 from /opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen2/gcc-9.4.0/gcc-11.3.0-2zeeydcvsjlyc5zd7bioutj7rifu6l2k/lib/gcc/x86_64-pc-linux-gnu/11.3.0/../../../../include/c++/11.3.0/locale:43,
+                 from /opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen2/gcc-9.4.0/gcc-11.3.0-2zeeydcvsjlyc5zd7bioutj7rifu6l2k/lib/gcc/x86_64-pc-linux-gnu/11.3.0/../../../../include/c++/11.3.0/iomanip:43,
+                 from src/ExcitonTB.cpp:2:
+/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen2/gcc-9.4.0/gcc-11.3.0-2zeeydcvsjlyc5zd7bioutj7rifu6l2k/lib/gcc/x86_64-pc-linux-gnu/11.3.0/../../../../include/c++/11.3.0/utility:291:5: note: 'std::exchange' declared here
+  291 |     exchange(_Tp& __obj, _Up&& __new_val)
+      |     ^~~~~~~~
+src/ExcitonTB.cpp:2468:73: error: 'exchangePotential_' was not declared in this scope
+ 2468 |         cout << std::left << std::setw(30) << "Exchange potential: " << exchangePotential_ << endl;
+      |                                                                         ^~~~~~~~~~~~~~~~~~
+src/ExcitonTB.cpp:2470:19: error: 'Q' was not declared in this scope
+ 2470 |     if(arma::norm(Q) > 1E-7){
+      |                   ^
+src/ExcitonTB.cpp:2477:62: error: 'scissor_' was not declared in this scope
+ 2477 |     cout << std::left << std::setw(30) << "Scissor cut: " << scissor_ << endl;
+      |                                                              ^~~~~~~~
+src/ExcitonTB.cpp:2479:9: error: invalid use of 'this' in non-member function
+ 2479 |     if (this->isscreeningset == true){
+      |         ^~~~
+src/ExcitonTB.cpp:2480:93: error: invalid use of 'this' in non-member function
+ 2480 |         std::cout<< std::left << std::setw(40) << "\nNumber of valence bands included: " << this->nvalencebands_ << std::endl;
+      |                                                                                             ^~~~
+src/ExcitonTB.cpp:2481:94: error: invalid use of 'this' in non-member function
+ 2481 |         std::cout<< std::left << std::setw(40) << "Number of conduction bands included: " << this->nconductionbands_ << std::endl;
+      |                                                                                              ^~~~
+src/ExcitonTB.cpp:2482:66: error: invalid use of 'this' in non-member function
+ 2482 |         std::cout<< std::left << std::setw(40) << "Gcutoff: " << this->Gcutoff_ << std::endl;
+      |                                                                  ^~~~
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2489:6: error: 'ExcitonTB' has not been declared
+ 2489 | void ExcitonTB::writeInverseDielectricMatrix(FILE* textfile){
+      |      ^~~~~~~~~
+src/ExcitonTB.cpp: In function 'void writeInverseDielectricMatrix(FILE*)':
+src/ExcitonTB.cpp:2491:15: error: invalid use of 'this' in non-member function
+ 2491 |     int ngs = this->trunreciprocalLattice_.n_rows;
+      |               ^~~~
+src/ExcitonTB.cpp:2492:23: error: request for member 'nk' in '* system', which is of non-class type 'int(const char*)'
+ 2492 |     int nqs = system->nk;
+      |                       ^~
+src/ExcitonTB.cpp:2494:31: warning: comparison of integer expressions of different signedness: 'unsigned int' and 'int' [-Wsign-compare]
+ 2494 |     for(unsigned int i = 0; i < nqs; i++){
+      |                             ~~^~~~~
+src/ExcitonTB.cpp:2495:36: warning: comparison of integer expressions of different signedness: 'unsigned int' and 'int' [-Wsign-compare]
+ 2495 |         for (unsigned int g = 0; g < ngs; g++){
+      |                                  ~~^~~~~
+src/ExcitonTB.cpp:2496:42: warning: comparison of integer expressions of different signedness: 'unsigned int' and 'int' [-Wsign-compare]
+ 2496 |             for (unsigned int g2 = 0; g2 < ngs; g2++){
+      |                                       ~~~^~~~~
+src/ExcitonTB.cpp:2497:58: error: invalid use of 'this' in non-member function
+ 2497 |                 fprintf(textfile, "%11.7lf%11.7lf", real(this->Invepsilonmatrix_.slice(i).row(g)(g2)), imag(this->Invepsilonmatrix_.slice(i).row(g)(g2)));
+      |                                                          ^~~~
+src/ExcitonTB.cpp:2497:109: error: invalid use of 'this' in non-member function
+ 2497 |                 fprintf(textfile, "%11.7lf%11.7lf", real(this->Invepsilonmatrix_.slice(i).row(g)(g2)), imag(this->Invepsilonmatrix_.slice(i).row(g)(g2)));
+      |                                                                                                             ^~~~
+src/ExcitonTB.cpp:2504:62: error: invalid use of 'this' in non-member function
+ 2504 |     std::string filename_k_points = "kgrid" + std::to_string(this->ncell) + ".dat";
+      |                                                              ^~~~
+src/ExcitonTB.cpp:2516:31: warning: comparison of integer expressions of different signedness: 'unsigned int' and 'int' [-Wsign-compare]
+ 2516 |     for(unsigned int i = 0; i < nqs; i++){
+      |                             ~~^~~~~
+src/ExcitonTB.cpp:2517:18: error: 'system_' was not declared in this scope; did you mean 'system'?
+ 2517 |         auto k = system_->kpoints.row(i);
+      |                  ^~~~~~~
+      |                  system
+src/ExcitonTB.cpp: At global scope:
+src/ExcitonTB.cpp:2523:1: error: expected declaration before '}' token
+ 2523 | }
+      | ^
+In file included from /home/juanjo-uam/work/xatu/include/xatu/Exciton.hpp:148,
+                 from /home/juanjo-uam/work/xatu/include/xatu/ExcitonTB.hpp:6,
+                 from src/ExcitonTB.cpp:3:
+/home/juanjo-uam/work/xatu/include/xatu/Exciton.tpp: In instantiation of 'void xatu::Exciton<T>::generateBandDictionary() [with T = xatu::SystemTB]':
+src/ExcitonTB.cpp:1117:27:   required from here
+/home/juanjo-uam/work/xatu/include/xatu/Exciton.tpp:194:22: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  194 |     for(int i = 0; i < bandList.n_elem; i++){
+      |                    ~~^~~~~~~~~~~~~~~~~
+/home/juanjo-uam/work/xatu/include/xatu/Exciton.tpp: In instantiation of 'void xatu::Exciton<T>::printInformation() [with T = xatu::SystemTB]':
+/home/juanjo-uam/work/xatu/include/xatu/Exciton.tpp:206:6:   required from here
+/home/juanjo-uam/work/xatu/include/xatu/Exciton.tpp:209:23: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  209 |     for (int i = 0; i < valenceBands.n_elem; i++){
+      |                     ~~^~~~~~~~~~~~~~~~~~~~~
+/home/juanjo-uam/work/xatu/include/xatu/Exciton.tpp:215:23: warning: comparison of integer expressions of different signedness: 'int' and 'const uword' {aka 'const long long unsigned int'} [-Wsign-compare]
+  215 |     for (int i = 0; i < conductionBands.n_elem; i++){
+      |                     ~~^~~~~~~~~~~~~~~~~~~~~~~~
+make: *** [Makefile:49: build/ExcitonTB.o] Error 1

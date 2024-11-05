@@ -2387,6 +2387,181 @@ void ExcitonTB::invertDielectricMatrix(){
 }
 
 /**
+ * Method to compute the static polarizability matrix in the BZ mesh.
+ * @return void
+*/
+void ExcitonTB::computePolarizabilityMatrix(){
+
+    auto start = high_resolution_clock::now();
+
+    if (this->mode == "realspace"){
+        std::cout << "PolarizabilityMatrix in realspace not implemented yet. Terminating." << std::endl;
+        exit(0);
+    }
+    
+    if (this->mode == "reciprocalspace"){
+
+        std::cout << "Computing polarizability matrix in the BZ mesh... \n" << std::flush;
+
+        arma::mat BZ_mesh = arma::trans(system->kpoints);
+        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+        int nGs = ReciprocalVectors.n_cols;
+        int Ncells = this->ncell_;
+        int odd = Ncells%2;
+        int nq = odd == 1? Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1 : (2*Ncells -1) + (Ncells-1)*(Ncells-2)/2 + Ncells/2 + 1; //Only half of the BZ
+        int Nktotal = system->nk;
+        nq = Nktotal;
+
+        arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
+        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+
+        arma::imat indecesqg(nq*nGs*(nGs+1)/2,3,arma::fill::zeros);
+
+        if (odd == 0){ // If Ncells is even, then q points at the boundaries of the BZ with no symmetric counterpart are computed seperately
+            int i=0;
+            
+            for (int iq = 0; iq < Ncells; iq++){ // 1st BZ boundary
+                for (int g = 0; g < nGs; g++){
+                    for (int g2 = g; g2 < nGs; g2++){
+                        indecesqg.at(i,0) = iq;
+                        indecesqg.at(i,1) = g;
+                        indecesqg.at(i,2) = g2;
+                        i++;
+                    }
+                }
+            }
+
+            for (int iq = 1; iq < Ncells; iq++){ // 2nd BZ boundary
+                for (int g = 0; g < nGs; g++){
+                    for (int g2 = g; g2 < nGs; g2++){
+                        indecesqg.at(i,0) = iq*Ncells;
+                        indecesqg.at(i,1) = g;
+                        indecesqg.at(i,2) = g2;
+                        i++;
+                    }
+                }
+            }
+
+            for (int iq = 1; iq < Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
+                for (int iq2 = 1; iq2 < Ncells; iq2++){    
+                    for (int g = 0; g < nGs; g++){
+                        for (int g2 = g; g2 < nGs; g2++){
+                            indecesqg.at(i,0) = iq2 + iq*Ncells;
+                            indecesqg.at(i,1) = g;
+                            indecesqg.at(i,2) = g2;
+                            i++;
+                        }
+                    }
+                }
+            }
+
+            for (int iq = 0; iq < Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
+                for (int g = 0; g < nGs; g++){
+                    for (int g2 = g; g2 < nGs; g2++){
+                        indecesqg.at(i,0) = 1 + iq + Ncells*Ncells/2;
+                        indecesqg.at(i,1) = g;
+                        indecesqg.at(i,2) = g2;
+                        i++;
+                    }
+                }
+            }
+        } else if (odd == 1) { // If Ncells is odd, the full BZ mesh is automatically center-symmetric
+            int i=0;
+            
+            for (int iq = 0; iq < nq; iq++){
+                for (int g = 0; g < nGs; g++){
+                    for (int g2 = g; g2 < nGs; g2++){
+                        indecesqg.at(i,0) = iq;
+                        indecesqg.at(i,1) = g;
+                        indecesqg.at(i,2) = g2;
+                        i++;
+                    }
+                }
+            }
+        }
+        std::cout << "Here are all the reciprocal lattice vectors included:\n" << std::flush;
+        for (int i = 0; i < nGs; i++){     
+
+            arma::vec G = ReciprocalVectors.col(i);                
+
+            //std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+            std::cout << "G[[" << i+1 << "]] = {" << G(0) << "," << G(1) << "," << G(2) << "}; ";        
+        }
+
+        std::cout << std::endl;
+        
+        if (odd == 0){
+            #pragma omp parallel for // Computes first the dielectric matrix at the points q with no symmetric counterpart 
+            for (int i = 0; i < (2*Ncells - 1)*nGs*(nGs+1)/2; i++){
+
+                int iq = indecesqg.at(i,0);//system->findEquivalentPointBZ(system->kpoints.row(indecesqg.row(i)(0)),Ncells);
+                int g  = indecesqg.at(i,1);
+                int g2 = indecesqg.at(i,2);
+
+                arma::vec G = ReciprocalVectors.col(g);                
+                arma::vec G2 = ReciprocalVectors.col(g2);
+
+                std::complex<double> Chi_aux = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+                this->Chimatrix_.slice(iq).at(g,g2) = Chi_aux;
+                this->Chimatrix_.slice(iq).at(g2,g) = std::conj(Chi_aux);
+            } 
+
+            #pragma omp parallel for // Computes the dielectric matrix at the centersymmetric submesh of the BZ
+            for (int i = (2*Ncells - 1)*nGs*(nGs+1)/2; i < nq*nGs*(nGs+1)/2; i++){
+
+                int iq = indecesqg.at(i,0);//system->findEquivalentPointBZ(system->kpoints.row(indecesqg.row(i)(0)),Ncells);
+                int g  = indecesqg.at(i,1);
+                int g2 = indecesqg.at(i,2);
+
+                arma::vec G = ReciprocalVectors.col(g);                
+                arma::vec G2 = ReciprocalVectors.col(g2);
+
+                int negativeG = fetchReciprocalLatticeVector(-G);
+                int negativeG2 = fetchReciprocalLatticeVector(-G2);
+
+                std::complex<double> Chi_aux = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+                this->Chimatrix_.slice(iq).at(g,g2) = Chi_aux;
+                this->Chimatrix_.slice(iq).at(g,g2) = std::conj(Chi_aux);
+
+                int negativeqindex = system->findEquivalentPointBZ(-BZ_mesh.col(iq),Ncells);
+
+                this->Chimatrix_.slice(negativeqindex).at(negativeG2,negativeG) = Chi_aux;
+                this->Chimatrix_.slice(negativeqindex).at(negativeG,negativeG2) = std::conj(Chi_aux);
+            } 
+        }
+        
+        if (odd == 1){
+            #pragma omp parallel for
+            for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+
+                int iq = indecesqg.at(i,0);
+                int g  = indecesqg.at(i,1);
+                int g2 = indecesqg.at(i,2);
+
+                arma::vec G = ReciprocalVectors.col(g);                
+                arma::vec G2 = ReciprocalVectors.col(g2);
+
+                int negativeG = fetchReciprocalLatticeVector(-G);
+                int negativeG2 = fetchReciprocalLatticeVector(-G2);
+
+                std::complex<double> Chi_aux = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+                this->Chimatrix_.slice(iq).at(g,g2) = Chi_aux;
+                this->Chimatrix_.slice(iq).at(g,g2) = std::conj(Chi_aux);
+
+                this->Chimatrix_.slice(Nktotal - iq - 1).at(negativeG2,negativeG) = Chi_aux;
+                this->Chimatrix_.slice(Nktotal - iq - 1).at(negativeG,negativeG2) = std::conj(Chi_aux);
+            } 
+        }
+    }
+
+
+    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
+    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+
+    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0 << std::endl << std::flush;
+}
+
+/**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
  * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
  * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
