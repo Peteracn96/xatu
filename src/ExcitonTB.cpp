@@ -3259,4 +3259,95 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     
     fclose(textfile);
 }
+
+/* Method to read the inverse of the dielectric matrix from a pre-existent file.
+ * @return void 
+ */
+void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
+
+    std::ifstream file;
+
+    file.open(filename_screening);
+
+    if (!file.is_open()){
+        std::cout << "File for inverse of the dielectric matrix failed to open or does not exist. Terminating." << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Reading inverse of dielectric matrix from file: " << filename_screening << std::endl;
+
+    if (this->mode == "realspace"){
+        int n_atoms = this->system->motif.n_rows;
+        int n_R_vectors = this->system->bravaisLattice.n_rows;
+        int n_positions = n_R_vectors*n_atoms - 1;
+
+        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
+
+        exit(0);
+    }
+
+    if (this->mode == "reciprocalspace"){
+
+        int ngs = this->trunreciprocalLattice_.n_rows;
+        int nqs = system->nk;
+        int line_counter = 0;
+        int column_counter = 0;
+        int k_counter = 0;
+        std::string line;
+
+        std::string fl;
+        std::getline(file, fl); // get first line
+
+        std::istringstream iss(fl);
+        double m_element;
+        while(iss >> m_element) {
+            column_counter++;
+        }
+
+        if (ngs != column_counter/2){
+            std::cout << "The number of reciprocal vectors read from file and from the configuration do not coincide! Terminating." << std::endl;
+            exit(0); 
+        }
+
+        file.seekg(0); // go back to the beginning of the file
+
+        while (std::getline(file, line)) //contador de filas
+        {
+            ++line_counter;
+        }
+
+        file.clear(); // clear the error state
+
+        if (nqs != line_counter/ngs) {
+            std::cout << "The number of k points read from file and from the configuration do not coincide! Terminating." << std::endl;
+            exit(0); 
+        }
+
+        line_counter = 0;
+        while (std::getline(file, line)) //contador de filas
+        {
+            std::istringstream ss(line);
+            double num;
+            column_counter = 0;
+            int pair_counter = 0;
+            while(ss >> num)
+            {
+
+                //this->Invepsilonmatrix_.slice(k_counter)(line_counter%ngs, column_counter) >> num;
+            }
+
+            //std::cout << "\n";
+            ++line_counter;
+            if ( (line_counter + 1)%ngs == 0){
+                k_counter++;
+            }
+        }
+
+        std::cout << "Number of columns = " << column_counter << std::endl;
+        std::cout << "Number of k points = " << line_counter/ngs << std::endl;
+    }
+
+
+    file.close();
+}
 }
