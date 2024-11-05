@@ -313,7 +313,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     if (this->mode == "realspace"){
         if (cfg.screeningInfo.function == "exciton"){
-            int natoms = system->motif.n_cols;
+            int n_atoms = system->motif.n_cols;
 
             double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
             arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
