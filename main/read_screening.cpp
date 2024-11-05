@@ -43,7 +43,13 @@ int main(){
 
     std::cout << "Area of unit cell = " << mos2_exciton.system->unitCellArea << std::endl;
 
-    mos2_exciton.readInverseDielectricMatrix("MoS2_TB_screening_43Gs.dat");
+    //mos2_exciton.readInverseDielectricMatrix("MoS2_TB_screening_43Gs.dat");
+
+    mos2_exciton.computeDielectricMatrix();
+
+    mos2_exciton.invertDielectricMatrix();
+
+    mos2_exciton.writeInverseDielectricMatrix("test_optimized_screening_faster.dat");
 
     return 0;
 }
