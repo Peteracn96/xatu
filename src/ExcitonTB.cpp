@@ -3428,13 +3428,14 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->trunreciprocalLattice_.n_rows;
+        int ngs = this->trunreciprocalLattice_.n_cols;
         int nqs = system->nk;
 
         for(unsigned int i = 0; i < nqs; i++){
             for (unsigned int g = 0; g < ngs; g++){
                 for (unsigned int g2 = 0; g2 < ngs; g2++){
-                    fprintf(textfile, "%11.7lf%11.7lf", real(this->Invepsilonmatrix_.slice(i).row(g)(g2)), imag(this->Invepsilonmatrix_.slice(i).row(g)(g2)));
+                    std::complex<double> aux = this->Invepsilonmatrix_.slice(i).at(g,g2);
+                    fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
                 }
                 fprintf(textfile, "\n");
             }
