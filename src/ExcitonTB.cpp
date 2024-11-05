@@ -3,7 +3,9 @@
 #include "xatu/ExcitonTB.hpp"
 #include "xatu/utils.hpp"
 #include "xatu/davidson.hpp"
-
+#include <set>
+#include <fstream>
+#include <sstream>
 using namespace arma;
 using namespace std::chrono;
 
@@ -305,8 +307,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         }
 
         if (cfg.screeningInfo.function == "exciton"){
-            std::cout << "Computation of the exciton using the RPA dielectric function in real space not implemented yet. Terminating." << std::endl;
-            exit(1);
+            std::cout << "Computation of the exciton using the RPA dielectric function in real space under development." << std::endl;
         }
     }
 
@@ -318,9 +319,13 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
             arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
             int nRvectors = lattice_vectors.n_rows;
 
-            int nlattice_sites = nRvectors*natoms;
+            int nlattice_sites = nRvectors*n_atoms;
 
             this->Polarizabilitymatrix_ = arma::mat(nlattice_sites,nlattice_sites,arma::fill::zeros);
+
+            int n_positions = nlattice_sites - 1;
+
+            this->Wmatrix_ = arma::mat(nlattice_sites,n_atoms,arma::fill::zeros);
         }
 
     } else if (this->mode == "reciprocalspace"){
@@ -1394,6 +1399,10 @@ void ExcitonTB::initializeHamiltonian(){
 */
 double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) const {
 
+    if (this->mode != "realspace"){
+        std::cout << "Can not compute polarizability in real space if not in the 'realspace' mode" << std::endl;
+        exit(1);
+    }
 
     std::ofstream polarfile("polarizability_convergence.dat"); 
 
@@ -1590,6 +1599,104 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::vec& q) {
 }
 
 /**
+ * Method to compute the matrix element of the static polarizability at the specified pair the (R + t_i, R' + t_j).
+ * @param R 1st Lattice vector
+ * @param R2 2nd Lattice vector
+ * @param t_i 1st atom of the motif
+ * @param t_j 2nd atom of the motif
+ * @return Polarizability
+*/
+double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const arma::rowvec& R2, const int i, const int j) const {
+
+    if (this->mode != "realspace"){
+        std::cout << "Can not compute polarizability in real space if not in the 'realspace' mode" << std::endl;
+        exit(1);
+    }
+
+    std::complex<double> I(0, 1);
+
+    int nk = system->nk;
+
+    int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
+    std::complex<double> term = 0.;
+    arma::cx_vec coefsk, coefsk2;
+
+    int i_index = 0;
+    int j_index = 0;
+
+    for(unsigned int atom_index = 0; atom_index < i; atom_index++){
+        int norbitals = system->orbitals(system->motif.row(atom_index)(3));
+        i_index += norbitals;
+    }
+
+    for(unsigned int atom_index = 0; atom_index < j; atom_index++){
+        int norbitals = system->orbitals(system->motif.row(atom_index)(3));
+
+        j_index += norbitals;
+    }
+
+    arma::rowvec t_i = system->motif.row(i).subvec(0,2);
+    arma::rowvec t_j = system->motif.row(j).subvec(0,2);
+
+    int norbitals_alpha = system->orbitals(system->motif.row(i)(3));
+    int norbitals_beta = system->orbitals(system->motif.row(j)(3));
+
+    std::complex<double> Nsquared = (std::complex<double>)totalCells*(std::complex<double>)totalCells;
+
+    for (int ic = nvbands; ic <= upperindexcband; ic++){
+    
+        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
+
+            for (int ik = 0; ik < nk; ik++){
+
+                arma::rowvec k = system->kpoints.row(ik);
+
+                // Using the atomic gauge
+                if(gauge == "atomic"){
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                }
+                else{                            
+                    coefsk = eigveckStack_.slice(ik).col(iv);
+                }
+                
+                for (int ik2 = 0; ik2 < nk; ik2++){
+
+                    arma::rowvec k2 = system->kpoints.row(ik2);
+
+                    // Using the atomic gauge
+                    if(gauge == "atomic"){
+                        coefsk2 = system_->latticeToAtomicGauge(eigveckStack_.slice(ik2).col(ic), system->kpoints.row(ik));
+                    }
+                    else{                            
+                        coefsk2 = eigveckStack_.slice(ik2).col(ic);
+                    }
+
+                    arma::cx_vec CoefArray =  arma::conj(coefsk) % coefsk2;
+
+                    std::complex<double> sum_alpha, sum_beta = 0;
+
+                    sum_alpha = std::conj(arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1)));
+                    sum_beta = arma::sum(CoefArray.subvec(j_index, j_index + norbitals_beta - 1));
+
+                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));      
+                }
+            }
+        }
+    }
+
+    return real(term)/real(Nsquared);
+}
+
+
+/**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q.
  * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh
  * @param G Reciprocal lattice vector G
@@ -1656,7 +1763,6 @@ std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma
 
     return term/(system->unitCellArea*totalCells);
 }
-
 /**
  * Method to compute the (G,G') static polarizability in the BZ mesh.
  * @details Opens 'polarizability_mesh.dat' file and writes in it the values of the polarizability at each point in the BZ mesh
@@ -1810,52 +1916,123 @@ void ExcitonTB::computeDielectricMatrix(){
         int nAtoms = system->motif.n_cols;
 
         double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
-        arma::mat lattice_vectors = system_->truncateSupercell(ncell, radius);
-        int nRvectors = lattice_vectors.n_rows;
+        arma::mat lattice_vectors = system->bravaisLattice;
+        int n_Rvectors = lattice_vectors.n_rows;
 
-        int nlattice_sites = nRvectors*nAtoms;
+        // Generates all the possible differences R_i-R_j and stores them
 
-        // Let's implement first by brute force, and optimize later
+        int n_R_differences = n_Rvectors*n_Rvectors;
+        arma::mat Rdifferences(n_R_differences,3,arma::fill::zeros);
 
-        //Generate combinations for parallelization
-        int ncombinations = pow(nRvectors*nAtoms,2);
-        arma::imat combinations(ncombinations,4,arma::fill::zeros);
-        int ii = 0;
-
-        for (int r = 0; r < nRvectors; r++)
+        int index_row = 0;
+        for (int i = 0; i < n_Rvectors; i++)
         {
-            for (int t = 0; t < nAtoms; ++t){
-                
-                for (int r2 = 0; r2 < nRvectors; r2++){
+            arma::rowvec Ri = lattice_vectors.row(i);
 
-                    for (int t2 = 0; t2 < nAtoms; ++t2){
-                        combinations(ii,0) = r;
-                        combinations(ii,1) = t;
-                        combinations(ii,2) = r2;
-                        combinations(ii,3) = t2;
-                        ++ii;
-                    }
+            for (int j = 0; j < n_Rvectors; j++)
+            {
+                arma::rowvec Rj = lattice_vectors.row(j);
+                Rdifferences.row(index_row).subvec(0,2) = Ri - Rj;
+
+                ++index_row;
+            }
+        }
+
+        // Initializes the array that maps the index of a difference to the index of its first appearance in the Rdifferences matrix
+
+        int index_array[n_R_differences]={0};
+
+        for (arma::uword i = 0; i < n_R_differences; ++i){
+            index_array[i] = i;
+        }
+
+        int index = 0;
+
+        for (int i = 0; i < n_R_differences; ++i){
+            arma::rowvec Rdif_aux = Rdifferences.row(i);
+            for (int j = 0; j < n_R_differences; ++j) {
+                arma::rowvec Rdif_aux2 = Rdifferences.row(j);
+                if (arma::norm(Rdif_aux - Rdif_aux2) < 1E-7){
+                    index_array[index] = j;
+                    break;
+                }
+            }
+            index++;
+        }
+
+        // Initializes array that stores all the non-repeated indexes of the previous array
+
+        std::set<int> indexes_set = std::set<int>(index_array, index_array + n_R_differences);
+
+        int n_non_equivalent_vectors = indexes_set.size();
+
+        int indexes_array[n_non_equivalent_vectors];
+
+        int i_aux = 0;
+        for (int const& index : indexes_set)
+        {
+            indexes_array[i_aux] = index;
+            i_aux++;
+        }
+
+        // Initiates the polarizability and computes it at the non-equivalent sites. Generates all non equivalent combinations to compute the non-equivalent matrix elements, stored in T_aux
+
+        int n_atoms = this->system->natoms;
+        int n_rows = n_Rvectors*n_atoms;
+
+        int n_positive_vectors = (n_non_equivalent_vectors - 1)/2 + 1; // Needs only to compute the blocks of T at the upper right part of the matrix. +1->to include the origin
+        int n_non_equivalent_combinations = n_positive_vectors*n_atoms*n_atoms;
+
+        arma::imat non_equivalent_combinations(n_non_equivalent_combinations,4,arma::fill::zeros);
+
+        arma::mat T_aux(n_positive_vectors*n_atoms,n_atoms,arma::fill::zeros);
+
+        i_aux = 0;
+        for (int index = 0; index < n_positive_vectors; ++index){
+            for (int t_i = 0; t_i < n_atoms; ++t_i){
+                for (int t_j = 0; t_j < n_atoms; ++t_j){
+                    non_equivalent_combinations(i_aux,0) = indexes_array[index]; // index of the row in the matrix storing all R differences
+                    non_equivalent_combinations(i_aux,1) = t_i;
+                    non_equivalent_combinations(i_aux,2) = t_j;
+                    non_equivalent_combinations(i_aux,3) = index; // index of the element 'indexes_array[index]' in 'indexes_array'
+                    ++i_aux;
                 }
             }
         }
 
+        // Computes non equivalent matrix elements of T
+
+        std::cout << "Computing all the polarizability matrix elements... " << std::flush;
+
         #pragma omp parallel for
-        for (int index = 0; index < ncombinations; index++)
+        for (int i = 0; i < n_non_equivalent_combinations; i++)
         {
-            int r = combinations(index,0);
-            int t = combinations(index,1);
-            int r2 = combinations(index,2);
-            int t2 = combinations(index,3);
+            int index = non_equivalent_combinations(i,3);
+            int R_dif_index = non_equivalent_combinations(i,0);
+            int t_i_index = non_equivalent_combinations(i,1);
+            int t_j_index = non_equivalent_combinations(i,2);
 
-            arma::rowvec R = lattice_vectors.row(r);
-            arma::rowvec R2 = lattice_vectors.row(r2);
+            arma::rowvec R_dif = Rdifferences.row(R_dif_index);
+            arma::rowvec R_origin(3,arma::fill::zeros);
 
-            this->Polarizabilitymatrix_(r*nAtoms + t, r2*nAtoms + t2) = this->computesinglePolarizability(R,R2,t,t2);
+            T_aux(index*n_atoms + t_i_index,t_j_index) = this->realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
         }
 
-        std::cout << "Polarizability matrix computed. Nothing else to do as implementation is nopt finished." << std::endl;
+        // Builds the big T matrix (making use of symmetry property of transposition, Chi(R_i + t_i, R_j + t_j) = Chi(R_j + t_j, R_i + t_i))
 
-        exit(1);
+        for (int R_i = 0; R_i < n_Rvectors; R_i++){
+            
+            for (int R_j = R_i; R_j < n_Rvectors; R_j++){
+
+                auto ptr = std::find(indexes_array, indexes_array + n_Rvectors*n_Rvectors, index_array[R_i*n_Rvectors + R_j]);
+                int found_index = ptr - indexes_array;
+                arma::mat T_aux_mat = T_aux.submat(found_index, 0, found_index + n_atoms - 1, n_atoms - 1);
+                this->Polarizabilitymatrix_.submat(R_i*n_atoms, R_j*n_atoms, R_i*n_atoms + n_atoms - 1, R_j*n_atoms + n_atoms - 1) = T_aux_mat;
+                this->Polarizabilitymatrix_.submat(R_j*n_atoms, R_i*n_atoms, R_j*n_atoms + n_atoms - 1, R_i*n_atoms + n_atoms - 1) = arma::trans(T_aux_mat);
+            }
+        }
+
+        std::cout << "Done." << std::flush << std::endl;
     }
     
     if (this->mode == "reciprocalspace"){
@@ -1938,14 +2115,17 @@ void ExcitonTB::computeDielectricMatrix(){
                 }
             }
         }
-        
+        std::cout << "Here are all the reciprocal lattice vectors included:\n" << std::flush;
         for (int i = 0; i < nGs; i++){     
 
             arma::vec G = ReciprocalVectors.col(i);                
 
-            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+            //std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+            std::cout << "G[[" << i+1 << "]] = {" << G(0) << "," << G(1) << "," << G(2) << "}; ";        
         }
 
+        std::cout << std::endl;
+        
         if (odd == 0){
             #pragma omp parallel for // Computes first the dielectric matrix at the points q with no symmetric counterpart 
             for (int i = 0; i < (2*Ncells - 1)*nGs*(nGs+1)/2; i++){
@@ -2058,24 +2238,150 @@ void ExcitonTB::invertDielectricMatrix(){
 
     auto start = high_resolution_clock::now();
 
-    std::cout << "Computing dielectric matrix in the BZ mesh... \n" << std::flush;
+    if (this->mode_ == "realspace"){
+
+        std::cout << "\nInverting Dyson's equation... " << std::flush;
+
+        arma::mat lattice_vectors = this->trunLattice_;
+        int n_R_vectors = lattice_vectors.n_rows;
+        int n_atoms = system->motif.n_rows;
+        int n_positions = n_R_vectors*n_atoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+        arma::mat V(n_positions, n_atoms, arma::fill::zeros);
+        arma::mat W(n_positions, n_atoms, arma::fill::zeros); 
+        arma::cube epsilon(n_positions,n_positions,n_atoms);
+
+        // Initialize epsilon matrices as identity matrices
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            epsilon.slice(t_j) = arma::mat(n_positions,n_positions,arma::fill::eye);
+        }
+
+        arma::ucube combinations(n_positions,2,n_atoms);
+
+        // Generates all the combinations, for each t_j
+
+        int origin_index = (n_R_vectors - 1)/2;
+        int origin_index_aux = origin_index*n_atoms;
+
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            int index_aux = 0;
+
+            for (arma::uword R_i = 0; R_i < n_R_vectors; ++R_i){
+
+                if (R_i == origin_index){
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+
+                        if (t_i != t_j){
+                            combinations.slice(t_j).row(index_aux)(0) = R_i;
+                            combinations.slice(t_j).row(index_aux)(1) = t_i;
+                            ++index_aux;
+                        }
+                    }
+
+                } else {
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+                        combinations.slice(t_j).row(index_aux)(0) = R_i;
+                        combinations.slice(t_j).row(index_aux)(1) = t_i;
+                        ++index_aux;
+                    }
+                }
+                
+            }
+        }
+
+        // Computes the bare Coulomb potential column vectors
+
+        arma::mat motif = this->system->motif;
+
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            
+            arma::rowvec t_j_vector = motif.row(t_j).subvec(0,2);
+
+            for (arma::uword index = 0; index < n_positions; ++index){
+
+                int R_i = combinations.slice(t_j).row(index)(0);
+                int t_i = combinations.slice(t_j).row(index)(1);
+
+                arma::rowvec R = lattice_vectors.row(R_i);
+                arma::rowvec t = motif.row(t_i).subvec(0,2);
+                V.col(t_j)(index) = coulomb(arma::norm(R + t - t_j_vector));
+            }
+        }
+
+        // Sets the "epsilon" matrices
+
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            
+            arma::rowvec t_j_vector = motif.row(t_j).subvec(0,2);
+
+            for (arma::uword index = 0; index < n_positions; ++index){
+
+                arma::rowvec R = lattice_vectors.row(combinations.slice(t_j).row(index)(0));
+                arma::rowvec t_i = motif.row(combinations.slice(t_j).row(index)(1)).subvec(0,2);
+
+                for (arma::uword index2 = 0; index2 < n_positions; ++index2){
+
+                    // Lambda function to compute the sum
+                    auto sum_func = [index2,&R,&t_i,n_R_vectors,n_atoms,&combinations,&lattice_vectors,&motif,this]() -> double {
+                        double sum = 0;
+                        for (arma::uword R2 = 0; R2 < n_R_vectors; ++R2){
+
+                            arma::rowvec R2_vector = lattice_vectors.row(R2);
+
+                            for (arma::uword i2 = 0; i2 < n_atoms; ++i2){
+
+                                arma::rowvec t2 = motif.row(i2).subvec(0,2);
+
+                                double norm = arma::norm(R + t_i - (R2 + t2));
+
+                                double v_c = coulomb(norm);
+
+                                if (norm > 1E-7){
+                                    sum += v_c*this->Polarizabilitymatrix_(R2*n_atoms + i2,index2); // Recall that the polarizability matrix is by blocks that are n_atoms by n_atoms
+                                }
+                            }
+                        }
+
+                        return sum;
+                    };
+
+                    epsilon.slice(t_j)(index,index2) -= sum_func();
+                }
+            }
+        }
+
+        // Finally, inverts Dyson equation to obtain the screened potential
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            W.col(t_j) = arma::solve(epsilon.slice(t_j), V.col(t_j));
+        }
+
+        this->Wmatrix_ = W;
+
+        // Prints the W columns
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            
+            W.col(t_j).print("W(.,t_" + std::to_string(t_j) + "):");
+        }
+    }
+
+    if (this->mode_ == "reciprocalspace"){
 
     int nGs = this->trunreciprocalLattice_.n_cols;
     int Nktotal = system->nk;
 
-    arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
-    std::cout << "\nInverting the dielectric matrix... " << std::flush;
+        std::cout << "\nInverting the dielectric matrix... " << std::flush;
 
-    auto start_dielectric_matrix_inversion = high_resolution_clock::now();
-
-    #pragma omp parallel for
-    for (int iq = 0; iq < Nktotal; iq++){
-        this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+        #pragma omp parallel for
+        for (int iq = 0; iq < Nktotal; iq++){
+            this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+        }
     }
 
     auto stop = high_resolution_clock::now();
-    auto duration_inversion = duration_cast<milliseconds>(stop - start_dielectric_matrix_inversion);
+    auto duration_inversion = duration_cast<milliseconds>(stop - start);
 
     std::cout << "Done in " << duration_inversion.count()/1000.0 << " s." << std::endl;
 }
@@ -2889,17 +3195,168 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
 
     std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
 
-    int ngs = this->trunreciprocalLattice_.n_rows;
-    int nqs = system->nk;
+    if (this->mode == "realspace"){
+        int n_atoms = this->system->motif.n_rows;
+        int n_R_vectors = this->system->bravaisLattice.n_rows;
+        int n_positions = n_R_vectors*n_atoms - 1;
 
-    for(unsigned int i = 0; i < nqs; i++){
-        for (unsigned int g = 0; g < ngs; g++){
-            for (unsigned int g2 = 0; g2 < ngs; g2++){
-                fprintf(textfile, "%11.7lf%11.7lf", real(this->Invepsilonmatrix_.slice(i).row(g)(g2)), imag(this->Invepsilonmatrix_.slice(i).row(g)(g2)));
+        arma::ucube combinations(n_positions,2,n_atoms);
+
+        // Generates all the combinations, for each t_j
+
+        int origin_index = (n_R_vectors - 1)/2;
+        int origin_index_aux = origin_index*n_atoms;
+
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            int index_aux = 0;
+
+            for (arma::uword R_i = 0; R_i < n_R_vectors; ++R_i){
+
+                if (R_i == origin_index){
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+
+                        if (t_i != t_j){
+                            combinations.slice(t_j).row(index_aux)(0) = R_i;
+                            combinations.slice(t_j).row(index_aux)(1) = t_i;
+                            ++index_aux;
+                        }
+                    }
+
+                } else {
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+                        combinations.slice(t_j).row(index_aux)(0) = R_i;
+                        combinations.slice(t_j).row(index_aux)(1) = t_i;
+                        ++index_aux;
+                    }
+                }
+                
             }
+        }
+
+        for(arma::uword t_j = 0; t_j < n_atoms; t_j++){
+            for (arma::uword pos_index = 0; pos_index < n_positions; pos_index++){
+                arma::rowvec R = this->system->bravaisLattice.row(combinations.slice(t_j).row(pos_index)(0));
+                arma::rowvec t = this->system->motif.row(combinations.slice(t_j).row(pos_index)(1));
+                fprintf(textfile, "%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), this->Wmatrix_.col(t_j)(pos_index));
+            }
+
             fprintf(textfile, "\n");
         }
+
+        fclose(textfile);
+
+        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
+
+        exit(0);
     }
+
+    if (this->mode == "reciprocalspace"){
+        int ngs = this->trunreciprocalLattice_.n_rows;
+        int nqs = system->nk;
+
+        for(unsigned int i = 0; i < nqs; i++){
+            for (unsigned int g = 0; g < ngs; g++){
+                for (unsigned int g2 = 0; g2 < ngs; g2++){
+                    fprintf(textfile, "%11.7lf%11.7lf", real(this->Invepsilonmatrix_.slice(i).row(g)(g2)), imag(this->Invepsilonmatrix_.slice(i).row(g)(g2)));
+                }
+                fprintf(textfile, "\n");
+            }
+        }
+    }
+    
     fclose(textfile);
+}
+
+/* Method to read the inverse of the dielectric matrix from a pre-existent file.
+ * @return void 
+ */
+void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
+
+    std::ifstream file;
+
+    file.open(filename_screening);
+
+    if (!file.is_open()){
+        std::cout << "File for inverse of the dielectric matrix failed to open or does not exist. Terminating." << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Reading inverse of dielectric matrix from file: " << filename_screening << std::endl;
+
+    if (this->mode == "realspace"){
+        int n_atoms = this->system->motif.n_rows;
+        int n_R_vectors = this->system->bravaisLattice.n_rows;
+        int n_positions = n_R_vectors*n_atoms - 1;
+
+        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
+
+        exit(0);
+    }
+
+    if (this->mode == "reciprocalspace"){
+
+        int ngs = this->trunreciprocalLattice_.n_rows;
+        int nqs = system->nk;
+        int line_counter = 0;
+        int column_counter = 0;
+        int k_counter = 0;
+        std::string line;
+
+        std::string fl;
+        std::getline(file, fl); // get first line
+
+        std::istringstream iss(fl);
+        double m_element;
+        while(iss >> m_element) {
+            column_counter++;
+        }
+
+        if (ngs != column_counter/2){
+            std::cout << "The number of reciprocal vectors read from file and from the configuration do not coincide! Terminating." << std::endl;
+            exit(0); 
+        }
+
+        file.seekg(0); // go back to the beginning of the file
+
+        while (std::getline(file, line)) //contador de filas
+        {
+            ++line_counter;
+        }
+
+        file.clear(); // clear the error state
+
+        if (nqs != line_counter/ngs) {
+            std::cout << "The number of k points read from file and from the configuration do not coincide! Terminating." << std::endl;
+            exit(0); 
+        }
+
+        line_counter = 0;
+        while (std::getline(file, line)) //contador de filas
+        {
+            std::istringstream ss(line);
+            double num;
+            column_counter = 0;
+            int pair_counter = 0;
+            while(ss >> num)
+            {
+
+                //this->Invepsilonmatrix_.slice(k_counter)(line_counter%ngs, column_counter) >> num;
+            }
+
+            //std::cout << "\n";
+            ++line_counter;
+            if ( (line_counter + 1)%ngs == 0){
+                k_counter++;
+            }
+        }
+
+        std::cout << "Number of columns = " << column_counter << std::endl;
+        std::cout << "Number of k points = " << line_counter/ngs << std::endl;
+    }
+
+
+    file.close();
 }
 }

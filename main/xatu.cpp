@@ -186,7 +186,9 @@ int main(int argc, char* argv[]){
             
             bulkExciton.writeInverseDielectricMatrix(filename_dielectric);
 
-            bulkExciton.writeBZtofile();
+            if (bulkExciton.mode == "reciprocalspace"){
+                bulkExciton.writeBZtofile();
+            }
 
             std::cout << "\nComputation of the exciton with screening under testing.\n" << std::endl;
 

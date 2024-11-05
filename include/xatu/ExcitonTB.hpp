@@ -69,6 +69,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::cx_cube Invepsilonmatrix_;
 
         arma::mat Polarizabilitymatrix_;
+        arma::mat Wmatrix_;
 
     public:
         // Returns dielectric constant of embedding medium
@@ -87,6 +88,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         const int& nReciprocalVectors = nReciprocalVectors_;
         // Return motif vectors where the real space dielectric function is computed at
         const arma::ivec& ts = ts_;
+        // Returns polarizability matrix in real space
+        const arma::mat& Polarizabilitymatrix = Polarizabilitymatrix_;
+        // Returns matrix of the screened potential
+        const arma::mat& Wmatrix = Wmatrix_;
 
         // Return momentum to compute the dielectric matrix at
         const arma::vec& q = q_;
@@ -194,11 +199,11 @@ class ExcitonTB : public Exciton<SystemTB> {
     public:
         // Static dielectric function, BSE initialization and energies
         void initializeHamiltonian();
-
         void initializeScreeningAttributes(const ScreeningConfiguration&);
         void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
         void computesingleDielectricFunction();
         void computesingleInverseDielectricMatrix(std::string);
+        double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const; //Temporarily public
         void PolarizabilityMesh() const;
         void computeDielectricMatrix();
         void invertDielectricMatrix();
@@ -223,6 +228,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void writeInverseDielectricMatrix(std::string) const;     
         // Write BZ mesh in a file
         void writeBZtofile() const;
+        // Read inverse of dielectric matrix from a pre-existent file
+        void readInverseDielectricMatrix(std::string);
 
         // Verifies if potential chosen is 'rpa' and if a screening file was not provided
         void verifypotential();
