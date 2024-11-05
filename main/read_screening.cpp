@@ -28,11 +28,11 @@ int main(){
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+    xatu::SystemConfiguration model_config("MoS2.model");
 
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    xatu::ExcitonConfiguration exciton_config("MoS2_test.txt");
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
+    xatu::ScreeningConfiguration screening_config("MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 

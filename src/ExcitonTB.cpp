@@ -3265,6 +3265,8 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
  */
 void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
+    std::complex<double> imag(0,1);
+    
     std::ifstream file;
 
     file.open(filename_screening);
@@ -3311,8 +3313,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
         file.seekg(0); // go back to the beginning of the file
 
-        while (std::getline(file, line)) //contador de filas
-        {
+        while (std::getline(file, line)) {
             ++line_counter;
         }
 
@@ -3323,28 +3324,41 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
             exit(0); 
         }
 
+        file.seekg(0);
+
+        std::cout << "Number of slices = " << this->Invepsilonmatrix_.n_slices << std::endl;
+        std::cout << "Number of columns = " << this->Invepsilonmatrix_.slice(0).n_cols << std::endl;
+        std::cout << "Number of rows = " << this->Invepsilonmatrix_.slice(0).n_rows << std::endl;
+
         line_counter = 0;
-        while (std::getline(file, line)) //contador de filas
-        {
+        while (std::getline(file, line)) {
             std::istringstream ss(line);
-            double num;
+            double Re_part;
+            double Im_part;
+            double aux;
             column_counter = 0;
             int pair_counter = 0;
-            while(ss >> num)
-            {
-
-                //this->Invepsilonmatrix_.slice(k_counter)(line_counter%ngs, column_counter) >> num;
+            while(ss >> aux) {   
+                if (column_counter%2 == 0) {
+                    Re_part = aux;
+                } else {
+                    Im_part = aux;
+                    this->Invepsilonmatrix_.slice(k_counter)(line_counter%ngs, (column_counter - 1)/2) = Re_part + imag*Im_part;
+                }
+                column_counter++;
             }
 
             //std::cout << "\n";
             ++line_counter;
-            if ( (line_counter + 1)%ngs == 0){
+            if ( line_counter%ngs == 0){
                 k_counter++;
             }
         }
 
         std::cout << "Number of columns = " << column_counter << std::endl;
         std::cout << "Number of k points = " << line_counter/ngs << std::endl;
+
+        std::cout << "Element invespilon(" << 3 << "," << 4 << ") = " << this->Invepsilonmatrix_.slice(0)(3, 4) << std::endl;
     }
 
 
