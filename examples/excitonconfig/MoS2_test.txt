@@ -1,7 +1,7 @@
 # label
 MoS2_Wannier_
 # ncells
-10
+20
 # bands
 2
 # Dielectric
@@ -11,6 +11,6 @@ MoS2_Wannier_
 # gcutoff
 4
 # reciprocal
-11
+4
 # potential
 rpa

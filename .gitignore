@@ -9,4 +9,6 @@ docs/
 examples/
 xatu_data
 test
+*.txt
+data
 Makefile
