@@ -8,6 +8,8 @@ docs/
 .vscode/
 examples/
 xatu_data
+*.txt
+data
 test
 *.txt
 data
