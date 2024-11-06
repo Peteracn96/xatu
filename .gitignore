@@ -10,6 +10,7 @@ examples/
 xatu_data
 *.txt
 data
+*.out
 test
 *.txt
 data

@@ -1,5 +1,5 @@
 # label
-MoS2_Wannier_
+MoS2_test_speed
 # ncells
 20
 # bands
@@ -11,6 +11,6 @@ MoS2_Wannier_
 # gcutoff
 4
 # reciprocal
-4
+10
 # potential
 rpa
