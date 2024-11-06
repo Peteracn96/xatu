@@ -28,11 +28,11 @@ int main(){
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("MoS2.model");
+    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
 
-    xatu::ExcitonConfiguration exciton_config("MoS2_test.txt");
+    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
 
-    xatu::ScreeningConfiguration screening_config("MoS2_TB_screening.txt");
+    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
@@ -80,7 +80,7 @@ int main(){
         std::cout << "R(" << i << ") = " << Raux << std::endl;
     }
 
-    int nRdif = nRvectors*nRvectors;
+    int nRdif = (nRvectors*nRvectors-1)/2 + nRvectors;
 
     arma::mat Rdifferences(nRdif,5,arma::fill::zeros);
 
@@ -89,7 +89,7 @@ int main(){
     {
         arma::rowvec Ri = LatticeVectors.row(i);
 
-        for (int j = 0; j < nRvectors; j++)
+        for (int j = i; j < nRvectors; j++)
         {
             arma::rowvec Rj = LatticeVectors.row(j);
 
@@ -121,12 +121,12 @@ int main(){
         index++;
     }
 
-    std::cout << "List of the non-equivalent vectors:\n";
+    //std::cout << "List of the non-equivalent vectors:\n";
 
-    for (int i = 0; i < nRdif; ++i){
-        arma::rowvec Rdif_aux = Rdifferences.row(i).subvec(0,2);
+    //for (int i = 0; i < nRdif; ++i){
+    //    arma::rowvec Rdif_aux = Rdifferences.row(i).subvec(0,2);
         //std::cout << "index = " << index_array[i]  << ", R2-R1(" << i << ") = " << Rdif_aux  << std::endl;
-    }
+    //}
 
     std::set<int> indexes_set = std::set<int>(index_array, index_array + nRdif);
 
@@ -143,7 +143,7 @@ int main(){
 
     std::cout << "The indices are:" <<  std::endl;
 
-    for (int const& index : indexes_set)
+    for (int const& index : indexes_array)
     {
         std::cout << index << ", ";
     }
@@ -162,7 +162,7 @@ int main(){
 
     // Generates all non equivalent to compute T
 
-    int n_positive_vectors = (n_non_equivalent_vectors - 1)/2 + 1; // Needs only to compute the T blocks for the upper diagonal part. +1->is the origin
+    int n_positive_vectors = n_non_equivalent_vectors;//(n_non_equivalent_vectors - 1)/2 + 1; Needs only to compute the T blocks for the upper diagonal part. +1->is the origin
     int n_non_equivalent_combinations = n_positive_vectors*NAtoms*NAtoms;
 
     arma::imat non_equivalent_combinations(n_non_equivalent_combinations,4,arma::fill::zeros);
@@ -212,16 +212,30 @@ int main(){
     
     
     // Builds the big T matrix
-
+    std::cout << "T_aux number of rows: " << T_aux.n_rows << std::endl;
     i_aux = 0;
 
     for (int R_i = 0; R_i < nRvectors; R_i++){
         
         for (int R_j = R_i; R_j < nRvectors; R_j++){
 
-            auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
-            int found_index = ptr - indexes_array;
-            arma::cx_mat T_aux_mat = T_aux.submat(found_index, 0, found_index + NAtoms - 1, NAtoms - 1);
+            // auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
+            // int found_index = ptr - indexes_array;
+            int found_index = 0;
+            arma::rowvec R_dif_aux = LatticeVectors.row(R_i) - LatticeVectors.row(R_j);
+
+            for (int j = 0; j < nRdif; ++j) {
+                arma::rowvec Rdif_aux2 = Rdifferences.row(j).subvec(0,2);
+                if (arma::norm(R_dif_aux - Rdif_aux2) < 1E-7){
+                    found_index = j;
+                    break;
+                }
+            }
+            
+            auto ptr = std::find(indexes_array, indexes_array + n_non_equivalent_vectors, found_index);
+            int found_index_2 = ptr - indexes_array;
+            std::cout << found_index_2 << ", " << std::flush;
+            arma::cx_mat T_aux_mat = T_aux.submat(found_index_2*NAtoms, 0, found_index_2*NAtoms + NAtoms - 1, NAtoms - 1);
             T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
             T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
         }
@@ -281,6 +295,9 @@ int main(){
     //     combinations.slice(t_j).print("t_j = " + std::to_string(t_j));
     // }
 
+    //Prints combinations of selected t_j
+    //combinations.slice(0).print("Combinations for t_j=0");
+
     // Computes the bare Coulomb potential matrix
 
     arma::mat motif = mos2_exciton.system->motif;
@@ -314,12 +331,14 @@ int main(){
             for (arma::uword index2 = 0; index2 < n_positions; ++index2){
 
                 //Lambda function to compute the sum
-                auto sum_func = [index2,&R,t_j,&t_i,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif]() -> std::complex<double> {
+                auto sum_func = [index2,&R,t_j,&t_i,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif,&mos2_exciton]() -> std::complex<double> {
                     std::complex<double> sum = 0;
 
                     int Rprime_index = combinations.slice(t_j).row(index2)(0);
                     int tprime_index = combinations.slice(t_j).row(index2)(1);
                     int pos_prime_index = Rprime_index*NAtoms + tprime_index;
+                    arma::rowvec Rprime_vector = LatticeVectors.row(Rprime_index);
+                    arma::rowvec tprime_vector = motif.row(tprime_index).subvec(0,2);
 
                     for (arma::uword R2 = 0; R2 < nRvectors; ++R2){
 
@@ -329,10 +348,10 @@ int main(){
 
                             arma::rowvec t2 = motif.row(i2).subvec(0,2);
 
-                            double norm = arma::norm(R + t_i - (R2 + t2));
+                            double norm = arma::norm(R + t_i - (R2_vector + t2));
                             
                             if (norm > 1E-7){
-                                //sum += my_coulomb(norm)*T(R2*NAtoms + i2,index2);
+                                //sum += my_coulomb(norm)*mos2_exciton.realPolarizabilityMatrixElement(R2_vector, Rprime_vector, i2, tprime_index);
                                 sum += my_coulomb(norm)*T(R2*NAtoms + i2,pos_prime_index);
                             }
                         }
@@ -351,7 +370,7 @@ int main(){
         
     //     epsilon.slice(t_j).print(std::to_string(t_j) + ":");
     // }
-
+    NAtoms = 1;
     // Solves for W
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
         W.col(t_j) = arma::solve(epsilon.slice(t_j), V.col(t_j));
@@ -369,29 +388,40 @@ int main(){
         W.col(t_j).print("W(.,t_" + std::to_string(t_j) + "):");
     }
 
-    FILE* textfile = fopen("test_W_screening.dat", "w");
-
-    if (textfile == NULL){
-        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
-        exit(0);
-    }
-
-    std::cout << "Writing inverse of dielectric matrix fo file: " << textfile << std::endl;
-    for(arma::uword t_j = 0; t_j < NAtoms; t_j++){
-        for (arma::uword pos_index = 0; pos_index < n_positions; pos_index++){
-            arma::rowvec R = LatticeVectors.row(combinations.slice(t_j).row(pos_index)(0));
-            arma::rowvec t = motif.row(combinations.slice(t_j).row(pos_index)(1));
-            fprintf(textfile, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), W.col(t_j)(pos_index));
+    // Prints the W columns in mathematica format
+    /*for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+        for (arma::uword i = 0; i < W.col(t_j).n_rows; ++i){
+            arma::rowvec R = LatticeVectors.row(combinations.row(i)(0));
+            arma::rowvec t_i = motif.row(combinations.row(i)(1)).subvec(0,2);
+            
+            std::cout << "{{" << R(0) + t_i(0) <<"," << R(1) + t_i(1) << "," << R(2) + t_i(2) <<"}," <<  real(W.col(t_j)(i)) << "},";
         }
+    }lolo*/
 
-        fprintf(textfile, "\n");
-    }
+    // FILE* textfile = fopen("test_W_screening.dat", "w");
 
-    fclose(textfile);
+    // if (textfile == NULL){
+    //     std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+    //     exit(0);
+    // }
+
+    // std::cout << "Writing screened potential fo file: " << textfile << std::endl;
+    // for(arma::uword t_j = 0; t_j < NAtoms; t_j++){
+    //     for (arma::uword pos_index = 0; pos_index < n_positions; pos_index++){
+    //         arma::rowvec R = LatticeVectors.row(combinations.slice(t_j).row(pos_index)(0));
+    //         arma::rowvec t = motif.row(combinations.slice(t_j).row(pos_index)(1));
+    //         fprintf(textfile, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), W.col(t_j)(pos_index));
+    //     }
+
+    //     fprintf(textfile, "\n");
+    // }
+
+    // fclose(textfile);
 
     /****************Now is the inversion of Dyson's equation including singularities*****************/
 
-    int npositions = nRvectors*NAtoms; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+    /*int npositions = nRvectors*NAtoms; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
     arma::cx_mat V_2(npositions, NAtoms, arma::fill::zeros);
     arma::cx_mat W_2(npositions, NAtoms, arma::fill::zeros); 
     arma::cx_mat epsilon_2(npositions,npositions,arma::fill::zeros);
@@ -505,30 +535,41 @@ int main(){
         W_2.col(t_j).print("W_2(.,t_" + std::to_string(t_j) + "):");
     }
 
-    // FILE* textfile_2 = fopen("test_sing_W_screening.dat", "w");
-
-    // if (textfile_2 == NULL){
-    //     std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
-    //     exit(0);
-    // }
-
-    // std::cout << "Writing inverse of dielectric matrix fo file: " << textfile_2 << std::endl;
-    // for(arma::uword t_j = 0; t_j < NAtoms; t_j++){
-    //     for (arma::uword pos_index = 0; pos_index < npositions; pos_index++){
-    //         arma::rowvec R = LatticeVectors.row(combinations_2.row(pos_index)(0));
-    //         arma::rowvec t = motif.row(combinations_2.row(pos_index)(1));
-    //         fprintf(textfile_2, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), W_2.col(t_j)(pos_index));
+    // Prints the W columns in mathematica format
+    // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+    //     for (arma::uword i = 0; i < W_2.col(t_j).n_rows; ++i){
+    //         arma::rowvec R = LatticeVectors.row(combinations_2.row(i)(0));
+    //         arma::rowvec t_i = motif.row(combinations_2.row(i)(1)).subvec(0,2);
+            
+    //         std::cout << "{{" << R(0) + t_i(0) <<"," << R(1) + t_i(1) << "," << R(2) + t_i(2) <<"}," <<  real(W_2.col(t_j)(i)) << "},";
     //     }
-
-    //     fprintf(textfile_2, "\n");
     // }
 
-    // fclose(textfile_2);
+    FILE* textfile_2 = fopen("test_sing_W_screening.dat", "w");
+
+    if (textfile_2 == NULL){
+        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Writing inverse of dielectric matrix fo file: " << textfile_2 << std::endl;
+    for(arma::uword t_j = 0; t_j < NAtoms; t_j++){
+        for (arma::uword pos_index = 0; pos_index < npositions; pos_index++){
+            arma::rowvec R = LatticeVectors.row(combinations_2.row(pos_index)(0));
+            arma::rowvec t = motif.row(combinations_2.row(pos_index)(1));
+            fprintf(textfile_2, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf %11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), W_2.col(t_j)(pos_index));
+        }
+
+        fprintf(textfile_2, "\n");
+    }
+
+    fclose(textfile_2);*/
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
 
-    std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
+    std::cout << "\nDone in " << duration.count()/1000.0 << " s." << std::endl;
 
     return 0;
 }
