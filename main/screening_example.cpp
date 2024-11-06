@@ -197,7 +197,7 @@ int main(){
         arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
         arma::rowvec R_origin(3,arma::fill::zeros);
 
-        T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
+        T_aux(index*NAtoms + t_i_index,t_j_index) = -mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
 
         //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
         //std::cout << i << ", " << std::flush;
@@ -377,16 +377,36 @@ int main(){
     }
 
     // Prints the V columns
-    for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+    // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
         
-        V.col(t_j).print("V(.,t_" + std::to_string(t_j) + "):");
-    }
+    //     V.col(t_j).print("V(.,t_" + std::to_string(t_j) + "):");
+    // }
     
     // Prints the W columns
+    // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+        
+    //     W.col(t_j).print("W(.,t_" + std::to_string(t_j) + "):");
+    // }
+
+    // Prints the V and W columns side by side
+    NAtoms = 1;
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
         
-        W.col(t_j).print("W(.,t_" + std::to_string(t_j) + "):");
+        for (int pos = 0; pos < n_positions; ++pos){
+
+            int R_index = combinations.slice(t_j).row(pos)(0);
+            int t_index = combinations.slice(t_j).row(pos)(1);
+            
+            arma::rowvec R = LatticeVectors.row(R_index);
+            arma::rowvec t_i = motif.row(t_index).subvec(0,2);
+
+            //std::cout << "R(" << R_index << ") = ("  << std::setw(5) << R(0)  <<"," << R(1) << "," << R(2) <<")," << "t(" << t_index << ") = ("  << t_i(0) << "," << t_i(1) << "," << t_i(2) << ")," << std::right << "V = " << real(V.col(t_j)(pos)) << ", W = " <<  real(W.col(t_j)(pos)) << ";\n";
+            std::cout << "R(" << R_index << "), t(" << t_index <<  std::setw(2) << "), V = " << real(V.col(t_j)(pos)) << ", W = " <<  real(W.col(t_j)(pos)) << ";\n";
+
+        }
+        
     }
+
 
     // Prints the W columns in mathematica format
     /*for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
