@@ -182,7 +182,7 @@ int main(int argc, char* argv[]){
 
             bulkExciton.invertDielectricMatrix();
             
-            std::string filename_dielectric = excitonConfig->excitonInfo.label + "_screening.dat";
+            std::string filename_dielectric = "../" + excitonConfig->excitonInfo.label + "_screening.dat";
             
             bulkExciton.writeInverseDielectricMatrix(filename_dielectric);
 
