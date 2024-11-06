@@ -185,6 +185,7 @@ int main(int argc, char* argv[]){
             std::string filename_dielectric = "../data/" + excitonConfig->excitonInfo.label + "_screening.dat";
             
             bulkExciton.writeInverseDielectricMatrix(filename_dielectric);
+            bulkExciton.writePolarizabilityMatrix("../data/polarizability_matrix.dat");
 
             if (bulkExciton.mode == "reciprocalspace"){
                 bulkExciton.writeBZtofile();

@@ -3445,6 +3445,95 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     fclose(textfile);
 }
 
+/* Method to print information of the inverse of the dielectric matrix into a file.
+ * @return void 
+ */
+void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const {
+
+    FILE* textfile = fopen(filename_dielectric.c_str(), "w");
+
+    if (textfile == NULL){
+        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
+
+    if (this->mode == "realspace"){
+        int n_atoms = this->system->motif.n_rows;
+        int n_R_vectors = this->system->bravaisLattice.n_rows;
+        int n_positions = n_R_vectors*n_atoms - 1;
+
+        arma::ucube combinations(n_positions,2,n_atoms);
+
+        // Generates all the combinations, for each t_j
+
+        int origin_index = (n_R_vectors - 1)/2;
+        int origin_index_aux = origin_index*n_atoms;
+
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            int index_aux = 0;
+
+            for (arma::uword R_i = 0; R_i < n_R_vectors; ++R_i){
+
+                if (R_i == origin_index){
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+
+                        if (t_i != t_j){
+                            combinations.slice(t_j).row(index_aux)(0) = R_i;
+                            combinations.slice(t_j).row(index_aux)(1) = t_i;
+                            ++index_aux;
+                        }
+                    }
+
+                } else {
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+                        combinations.slice(t_j).row(index_aux)(0) = R_i;
+                        combinations.slice(t_j).row(index_aux)(1) = t_i;
+                        ++index_aux;
+                    }
+                }
+                
+            }
+        }
+
+        for(arma::uword t_j = 0; t_j < n_atoms; t_j++){
+            for (arma::uword pos_index = 0; pos_index < n_positions; pos_index++){
+                arma::rowvec R = this->system->bravaisLattice.row(combinations.slice(t_j).row(pos_index)(0));
+                arma::rowvec t = this->system->motif.row(combinations.slice(t_j).row(pos_index)(1));
+                fprintf(textfile, "%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), this->Wmatrix_.col(t_j)(pos_index));
+            }
+
+            fprintf(textfile, "\n");
+        }
+
+        fclose(textfile);
+
+        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
+
+        exit(0);
+    }
+
+    if (this->mode == "reciprocalspace"){
+        int ngs = this->trunreciprocalLattice_.n_cols;
+        int nqs = system->nk;
+
+        for(unsigned int i = 0; i < nqs; i++){
+            for (unsigned int g = 0; g < ngs; g++){
+                for (unsigned int g2 = 0; g2 < ngs; g2++){
+                    std::complex<double> aux = this->Chimatrix_.slice(i).at(g,g2);
+                    fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
+                }
+                fprintf(textfile, "\n");
+            }
+        }
+    }
+    
+    fclose(textfile);
+}
+
 /* Method to read the inverse of the dielectric matrix from a pre-existent file.
  * @return void 
  */
