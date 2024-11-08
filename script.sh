@@ -5,9 +5,9 @@
 ###########################################################################
 
 #SBATCH --nodes=1                      #Numero de Nós
-#SBATCH --ntasks=16                    #Numero total de tarefas MPI/OPENMP
+#SBATCH --ntasks=12                    #Numero total de tarefas MPI/OPENMP
 #SBATCH -p z1-short                         #Fila (partition) a ser utilizada
-#SBATCH  -J Pedro_polarizability                  #Nome job e identificacao
+#SBATCH  -J Pedro_invepsilon                  #Nome job e identificacao
 
 ###########################################################################
 ###				Opcionais do SLURM			###
@@ -35,8 +35,8 @@ cd $SLURM_SUBMIT_DIR
 ## Carrega o Necessário
 #module load intel/2023.1.0 mpi/2021.9.
 #module swap intel gnu9/9.4.0
-module load gnu9/9.4.0
-module load openmpi4/4.1.1
+#module load gnu9/9.4.0
+#module load openmpi4/4.1.1
 
 module load gcc-11.3.0-gcc-9.4.0-2zeeydc netlib-lapack-3.10.1-gcc-11.3.0-w4ll4ab openblas/0.3.7
 
@@ -71,7 +71,7 @@ XATU_DIR=/home/juanjo-uam/work/xatu/bin
 #mpiexec -np $SLURM_NTASKS $PW_DIR/pw.x  < nscf.in > nscf.out
 #mpiexec -np 1 $WANNIER_DIR/wannier90.x -pp AGNR
 #mpiexec -np $SLURM_NTASKS $WANNIER_DIR/pw2wannier90.x  < AGNR.pw2wan > pw2wan.out
-mpiexec -np 1 $XATU_DIR/xatu $XATU_DIR/MoS2.model -z $XATU_DIR/MoS2_TB_screening.txt $XATU_DIR/MoS2_test.txt > output_MoS2_TB_polarizability_matrix.out
+mpiexec -np 1 $XATU_DIR/xatu $XATU_DIR/MoS2.model  $XATU_DIR/MoS2_test.txt -z $XATU_DIR/MoS2_TB_screening.txt > ../output_MoS2_TB_polarizability.out
 #process 13877
 
 

@@ -186,6 +186,8 @@ int main(int argc, char* argv[]){
             
             bulkExciton.writeInverseDielectricMatrix(filename_dielectric);
 
+            bulkExciton.writePolarizabilityMatrix("../polarizability_matrix");
+
             if (bulkExciton.mode == "reciprocalspace"){
                 bulkExciton.writeBZtofile();
             }
