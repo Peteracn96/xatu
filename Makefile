@@ -5,10 +5,10 @@ CFLAGS = -O2 -Wall -lm
 FFLAGS = -O2 -Wall -Wno-tabs -lm
 
 # Include folders
-INCLUDE = -I$(PWD)/include -I/home/juanjo-uam/packages/armadillo-code/include
+INCLUDE = -I$(PWD)/include
 
 # Libraries
-LIBS = -DARMA_DONT_USE_WRAPPER -L$(PWD) -L/home/juanjo-uam/packages/arpack-ng/build/lib -L/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen3/gcc-11.3.0/netlib-lapack-3.10.1-w4ll4ab5vlyfedksmq4onku35nqr3atw/lib64 -L/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen3/gcc-11.3.0/netlib-lapack-3.10.1-w4ll4ab5vlyfedksmq4onku35nqr3atw/lib64 -L/home/juanjo-uam/packages/armadillo-code/ -lxatu -larmadillo -lblas -llapack -larpack -fopenmp -lgfortran
+LIBS = -DARMA_DONT_USE_WRAPPER -L$(PWD) -lxatu -larmadillo -lopenblas -llapack -larpack -fopenmp -lgfortran
 
 # Conditional flags for compilation
 ifeq ($(DEBUG), 1)
