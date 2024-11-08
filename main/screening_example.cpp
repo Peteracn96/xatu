@@ -199,63 +199,122 @@ int main(){
         }
     }
 
-    // Computes non equivalent matrix elements of T
+    // Temporary tests for development. This seems to be ok
 
-    std::cout << "Computing all the elements... " << std::endl;
+    // arma::rowvec R_i = LatticeVectors.row(1);
+    // arma::rowvec R_j = LatticeVectors.row(4);
+    // int t_i = 0;
+    // int t_j = 0;
 
+    // double Chi = mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i, t_j);
+
+    // std::cout << "Chi = " << Chi << std::endl;
+
+    // t_i = 1;
+    // t_j = 0;
+
+    // Chi = mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i, t_j);
+
+    // std::cout << "Chi = " << Chi << std::endl;
+
+    // // Computes non equivalent matrix elements of T, using only the non-equivalent combinations, and then fill the big matrix
+
+    // std::cout << "Computing all the elements... " << std::endl;
+
+    // #pragma omp parallel for
+    // for (int i = 0; i < n_non_equivalent_combinations; i++)
+    // {
+    //     int index = non_equivalent_combinations(i,3);
+    //     int R_dif_index = non_equivalent_combinations(i,0);
+    //     int t_i_index = non_equivalent_combinations(i,1);
+    //     int t_j_index = non_equivalent_combinations(i,2);
+
+    //     arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
+    //     arma::rowvec R_origin(3,arma::fill::zeros);
+
+    //     T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
+
+    //     //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
+    //     //std::cout << i << ", " << std::flush;
+    // }
+    
+    // // Prints the elements
+    // // for (arma::uword const& i : arma::regspace(0,9))
+    // // {
+    // //     T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
+    // // }
+    // //T_aux.print("T_aux:");
+    
+    
+    // // Builds the big T matrix
+    // std::cout << "T_aux number of rows: " << T_aux.n_rows << std::endl;
+    // i_aux = 0;
+
+    // for (int R_i = 0; R_i < nRvectors; R_i++){
+        
+    //     for (int R_j = R_i; R_j < nRvectors; R_j++){
+
+    //         // auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
+    //         // int found_index = ptr - indexes_array;
+    //         int found_index = 0;
+    //         arma::rowvec R_dif_aux = LatticeVectors.row(R_i) - LatticeVectors.row(R_j);
+
+    //         for (int j = 0; j < nRdif; ++j) {
+    //             arma::rowvec Rdif_aux2 = Rdifferences.row(j).subvec(0,2);
+    //             if (arma::norm(R_dif_aux - Rdif_aux2) < 1E-7){
+    //                 found_index = j;
+    //                 break;
+    //             }
+    //         }
+            
+    //         auto ptr = std::find(indexes_array, indexes_array + n_non_equivalent_vectors, found_index);
+    //         int found_index_2 = ptr - indexes_array;
+    //         std::cout << found_index_2 << ", " << std::flush;
+    //         arma::mat T_aux_mat = T_aux.submat(found_index_2*NAtoms, 0, found_index_2*NAtoms + NAtoms - 1, NAtoms - 1);
+    //         T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
+    //         T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
+    //     }
+    // }
+
+    // Builds the big T matrix by brute force
+
+    int N_all_combinations = nRvectors*NAtoms*nRvectors*NAtoms;
+    arma::imat all_combinations(N_all_combinations,4,arma::fill::zeros);
+    
+    i_aux = 0;
+    for (arma::uword R_i = 0; R_i < nRvectors; ++R_i){
+        
+        for (arma::uword R_j = 0; R_j < nRvectors; ++R_j){
+
+            for (int t_i = 0; t_i < NAtoms; ++t_i){
+
+                for (int t_j = 0; t_j < NAtoms; ++t_j){
+
+                    all_combinations(i_aux,0) = R_i;
+                    all_combinations(i_aux,1) = t_i;
+                    all_combinations(i_aux,2) = R_j;
+                    all_combinations(i_aux,3) = t_j;
+                    ++i_aux;
+                }
+            }
+        }
+    }
+    
     #pragma omp parallel for
-    for (int i = 0; i < n_non_equivalent_combinations; i++)
+    for (int i = 0; i < N_all_combinations; i++)
     {
-        int index = non_equivalent_combinations(i,3);
-        int R_dif_index = non_equivalent_combinations(i,0);
-        int t_i_index = non_equivalent_combinations(i,1);
-        int t_j_index = non_equivalent_combinations(i,2);
+        int R_i_index = all_combinations(i,0);
+        int t_i_index = all_combinations(i,1);
+        int R_j_index = all_combinations(i,2);
+        int t_j_index = all_combinations(i,3);
 
-        arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
-        arma::rowvec R_origin(3,arma::fill::zeros);
+        arma::rowvec R_i = LatticeVectors.row(R_i_index);
+        arma::rowvec R_j = LatticeVectors.row(R_j_index);
 
-        T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
+        T(R_i_index*NAtoms + t_i_index, R_j_index*NAtoms + t_j_index) = -mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i_index, t_j_index);
 
         //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
         //std::cout << i << ", " << std::flush;
-    }
-    
-    // Prints the elements
-    // for (arma::uword const& i : arma::regspace(0,9))
-    // {
-    //     T_aux.submat(i*NAtoms, 0, i*NAtoms + NAtoms - 1, NAtoms - 1).print(std::to_string(i)+":");
-    // }
-    //T_aux.print("T_aux:");
-    
-    
-    // Builds the big T matrix
-    std::cout << "T_aux number of rows: " << T_aux.n_rows << std::endl;
-    i_aux = 0;
-
-    for (int R_i = 0; R_i < nRvectors; R_i++){
-        
-        for (int R_j = R_i; R_j < nRvectors; R_j++){
-
-            // auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
-            // int found_index = ptr - indexes_array;
-            int found_index = 0;
-            arma::rowvec R_dif_aux = LatticeVectors.row(R_i) - LatticeVectors.row(R_j);
-
-            for (int j = 0; j < nRdif; ++j) {
-                arma::rowvec Rdif_aux2 = Rdifferences.row(j).subvec(0,2);
-                if (arma::norm(R_dif_aux - Rdif_aux2) < 1E-7){
-                    found_index = j;
-                    break;
-                }
-            }
-            
-            auto ptr = std::find(indexes_array, indexes_array + n_non_equivalent_vectors, found_index);
-            int found_index_2 = ptr - indexes_array;
-            std::cout << found_index_2 << ", " << std::flush;
-            arma::mat T_aux_mat = T_aux.submat(found_index_2*NAtoms, 0, found_index_2*NAtoms + NAtoms - 1, NAtoms - 1);
-            T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
-            T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
-        }
     }
 
     arma::mat motif = mos2_exciton.system->motif;
@@ -382,15 +441,90 @@ int main(){
         }
     }
 
+    //Computing the (0,0) matrix element of epsilon.slice(0) seperately
+    int t_aux = 0;
+    int row = 0;
+    int column = 0;
+
+    int R_index = combinations.slice(t_aux).row(row)(0);
+    int t_index = combinations.slice(t_aux).row(row)(1);
+    int pos_index = R_index*NAtoms + t_index;
+
+    arma::rowvec R = LatticeVectors.row(R_index);
+    arma::rowvec t = motif.row(t_index).subvec(0,2);
+
+    int Rprime_index = combinations.slice(t_aux).row(column)(0);
+    int tprime_index = combinations.slice(t_aux).row(column)(1);
+    int pos_prime_index = Rprime_index*NAtoms + tprime_index;
+
+    arma::rowvec Rprime = LatticeVectors.row(Rprime_index);
+    arma::rowvec tprime_i = motif.row(tprime_index).subvec(0,2);
+
+    std::cout << "R_index = " << R_index << std::endl;
+    std::cout << "Rprime_index = " << Rprime_index << std::endl;
+
+    std::cout << "t_index = " << t_index << std::endl;
+    std::cout << "tprime_index = " << tprime_index << std::endl;
+
+    std::cout << "pos_prime_index = " << pos_prime_index << std::endl;
+
+    double sum = 0;
+
+    for (arma::uword R2 = 0; R2 < nRvectors; ++R2){
+
+        arma::rowvec R2_vector = LatticeVectors.row(R2);
+
+        for (arma::uword i2 = 0; i2 < NAtoms; ++i2){
+
+            arma::rowvec t2 = motif.row(i2).subvec(0,2);
+
+            double norm = arma::norm(R + t - (R2_vector + t2));
+            
+            if (norm > 1E-7){
+                //sum += my_coulomb(norm)*mos2_exciton.realPolarizabilityMatrixElement(R2_vector, Rprime_vector, i2, tprime_index);
+                double T_m_element = T(R2*NAtoms + i2,pos_prime_index);
+                sum += my_coulomb(norm)*T_m_element;
+                std::cout << T_m_element << ",";
+            }
+        }
+    }
+    std::cout << std::endl;
+
+    std::cout << mos2_exciton.realPolarizabilityMatrixElement(LatticeVectors.row(0),LatticeVectors.row(0),0,1) << std::endl;
+    std::cout << "sum = " << sum << std::endl;
+    std::cout << "epsilon.slice(0)(0,0) = " << 1 - sum << std::endl;
+
     // Prints the epsilon matrices
-    // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+    for (arma::uword t_j = 0; t_j < 1; ++t_j){
         
-    //     epsilon.slice(t_j).print(std::to_string(t_j) + ":");
-    // }
+        epsilon.slice(t_j).print(std::to_string(t_j) + ":");
+    }
     NAtoms = 1;
     // Solves for W
+    // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
+    //     W.col(t_j) = arma::solve(epsilon.slice(t_j), V.col(t_j));
+    // }
+
+    // Verifying the largest singular value of epsilon.slice(0)
+
+    arma::mat epsilonInv = arma::inv(epsilon.slice(0));
+    arma::mat M = arma::trans(epsilonInv)*epsilonInv;
+
+    // Prints the inverse
+
+    epsilonInv.print("epsilon(0)^-1:");
+
+    arma::cx_vec eigval = arma::eig_gen(M);
+
+    eigval.print("Eigenvalues of epsilon^-1(0)^T*epsilon^-1(0)");
+
+    // Square root of all the eigenvalues
+    for (arma::uword i = 0; i < n_positions; ++i){
+        std::cout << "sqrt(eigval(" << i << ")) = " << std::sqrt( eigval(i)) << std::endl;
+    }
+
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
-        W.col(t_j) = arma::solve(epsilon.slice(t_j), V.col(t_j));
+        W.col(t_j) = arma::inv(epsilon.slice(t_j))*V.col(t_j);
     }
 
     // Prints the V columns
