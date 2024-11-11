@@ -5,12 +5,21 @@
 
 using namespace std::chrono;
 
+#define EULER_GAMMA 0.5772156649015329
+
+double RK_small_r(double r, double r0){
+    return -2*(EULER_GAMMA - std::log(2) + std::log(r/r0))/PI;
+}
+
+
+double r0 = 13.55;
 
 double my_coulomb(double r) {
     
-    double a = 1;
-    double v_c_regularization = ec/(4E-10*PI*eps0*a);
-    
+    double a = 0.0002;
+    //double v_c_regularization = ec/(4E-10*PI*eps0*a);
+    double v_c_regularization = RK_small_r(a,r0);
+
     if (r < 1E-7){
         //return 0;
         return v_c_regularization;
