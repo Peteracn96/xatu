@@ -120,7 +120,7 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
             this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
             if (this->nReciprocalVectors_ > this->trunreciprocalLattice_.n_rows){
-                throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton may not exceed the number of vectors included in the screening.");
+                throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
             }
         }
     } else if (this->mode == "realspace"){
@@ -2567,6 +2567,11 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
         basisStates = basis;
     };
 
+    if (((this->potential_ == "rpa" && this->Invepsilonmatrix_.is_zero()) || (this->exchangePotential_ == "rpa" && this->Invepsilonmatrix_.is_zero())) && this->mode == "reciprocalspace"){
+        std::cout << "The Bethe-Salpeter Hamiltonian can not be initialized with the 'rpa' potential if the inverse of the dielectric matrix has not been computed. Terminating." << std::endl;
+        exit(0);
+    }
+
     uint64_t basisDimBSE = basisStates.n_rows;
     std::cout << "BSE dimension: " << basisDimBSE << std::endl;
     std::cout << "Initializing Bethe-Salpeter matrix... " << std::flush;
@@ -3269,7 +3274,7 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
     FILE* textfile = fopen(filename_dielectric.c_str(), "w");
 
     if (textfile == NULL){
-        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting." << std::endl;
         exit(0);
     }
 
@@ -3333,7 +3338,7 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->trunreciprocalLattice_.n_cols;
+        int ngs = this->trunreciprocalLattice_.n_rows;
         int nqs = system->nk;
         std::cout << "ngs = " << ngs << std::endl;
         for(unsigned int i = 0; i < nqs; i++){
@@ -3409,16 +3414,14 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
         file.clear(); // clear the error state
 
-        if (nqs != line_counter/ngs) {
-            std::cout << "The number of k points read from file and from the configuration do not coincide! Terminating." << std::endl;
+        int read_nqs = line_counter/ngs;
+
+        if (nqs != read_nqs) {
+            std::cout << "The number of k points read from file  (" + std::to_string(nqs) + ")  and from the configuration file (" + std::to_string(read_nqs) + ") do not coincide! Terminating." << std::endl;
             exit(0); 
         }
 
         file.seekg(0);
-
-        std::cout << "Number of slices = " << this->Invepsilonmatrix_.n_slices << std::endl;
-        std::cout << "Number of columns = " << this->Invepsilonmatrix_.slice(0).n_cols << std::endl;
-        std::cout << "Number of rows = " << this->Invepsilonmatrix_.slice(0).n_rows << std::endl;
 
         line_counter = 0;
         while (std::getline(file, line)) {
