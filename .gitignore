@@ -13,5 +13,6 @@ data
 *.out
 test
 *.txt
+*.dat
 data
 Makefile
