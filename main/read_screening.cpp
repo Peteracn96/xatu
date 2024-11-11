@@ -22,28 +22,37 @@ double my_coulomb(double r) {
 
 int main(){
 
-    auto start = high_resolution_clock::now();
-    arma::rowvec q = {1.2, 0.3, 0};
+    //auto start = high_resolution_clock::now();
 
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("MoS2.model");
+    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
 
-    xatu::ExcitonConfiguration exciton_config("MoS2_test.txt");
+    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
 
-    xatu::ScreeningConfiguration screening_config("MoS2_TB_screening.txt");
+    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
     mos2_exciton.brillouinZoneMesh(mos2_exciton.ncell);
     mos2_exciton.initializeHamiltonian();
 
-    int NGs = mos2_exciton.getNGs();
+    int NGs = mos2_exciton.nReciprocalVectors;
 
-    std::cout << "Area of unit cell = " << mos2_exciton.system->unitCellArea << std::endl;
+    std::cout << "Number of reciprocal vectors used in the calculation: " << NGs << std::endl;
 
     mos2_exciton.readInverseDielectricMatrix("MoS2_TB_screening_43Gs.dat");
+
+    mos2_exciton.BShamiltonian();
+
+    auto results = mos2_exciton.diagonalize("diag", nstates);
+
+    std::cout << "+---------------------------------------------------------------------------+" << std::endl;
+    std::cout << "|                                    Results                                |" << std::endl;
+    std::cout << "+---------------------------------------------------------------------------+" << std::endl;
+
+    xatu::printEnergies(results, nstates, decimals);
 
     return 0;
 }
