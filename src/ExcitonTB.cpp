@@ -3447,11 +3447,6 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
                 k_counter++;
             }
         }
-
-        std::cout << "Number of columns = " << column_counter << std::endl;
-        std::cout << "Number of k points = " << line_counter/ngs << std::endl;
-
-        std::cout << "Element invespilon(" << 3 << "," << 4 << ") = " << this->Invepsilonmatrix_.slice(0)(3, 4) << std::endl;
     }
 
 
