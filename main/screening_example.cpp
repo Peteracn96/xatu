@@ -8,12 +8,12 @@ using namespace std::chrono;
 
 double my_coulomb(double r) {
     
-    double a = 0.000001;
-    double v_c_regularization =ec/(4E-10*PI*eps0*a);
+    double a = 1;
+    double v_c_regularization = ec/(4E-10*PI*eps0*a);
     
     if (r < 1E-7){
-        return 0;
-        //return v_c_regularization;
+        //return 0;
+        return v_c_regularization;
     }
 
     return ec/(4E-10*PI*eps0*r);    
@@ -219,24 +219,24 @@ int main(){
 
     // // Computes non equivalent matrix elements of T, using only the non-equivalent combinations, and then fill the big matrix
 
-    // std::cout << "Computing all the elements... " << std::endl;
+    std::cout << "Computing all the elements... " << std::endl;
 
-    // #pragma omp parallel for
-    // for (int i = 0; i < n_non_equivalent_combinations; i++)
-    // {
-    //     int index = non_equivalent_combinations(i,3);
-    //     int R_dif_index = non_equivalent_combinations(i,0);
-    //     int t_i_index = non_equivalent_combinations(i,1);
-    //     int t_j_index = non_equivalent_combinations(i,2);
+    #pragma omp parallel for
+    for (int i = 0; i < n_non_equivalent_combinations; i++)
+    {
+        int index = non_equivalent_combinations(i,3);
+        int R_dif_index = non_equivalent_combinations(i,0);
+        int t_i_index = non_equivalent_combinations(i,1);
+        int t_j_index = non_equivalent_combinations(i,2);
 
-    //     arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
-    //     arma::rowvec R_origin(3,arma::fill::zeros);
+        arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
+        arma::rowvec R_origin(3,arma::fill::zeros);
 
-    //     T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
+        T_aux(index*NAtoms + t_i_index,t_j_index) = -mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
 
-    //     //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
-    //     //std::cout << i << ", " << std::flush;
-    // }
+        //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
+        //std::cout << i << ", " << std::flush;
+    }
     
     // // Prints the elements
     // // for (arma::uword const& i : arma::regspace(0,9))
@@ -250,35 +250,35 @@ int main(){
     // std::cout << "T_aux number of rows: " << T_aux.n_rows << std::endl;
     // i_aux = 0;
 
-    // for (int R_i = 0; R_i < nRvectors; R_i++){
+    for (int R_i = 0; R_i < nRvectors; R_i++){
         
-    //     for (int R_j = R_i; R_j < nRvectors; R_j++){
+        for (int R_j = R_i; R_j < nRvectors; R_j++){
 
-    //         // auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
-    //         // int found_index = ptr - indexes_array;
-    //         int found_index = 0;
-    //         arma::rowvec R_dif_aux = LatticeVectors.row(R_i) - LatticeVectors.row(R_j);
+            // auto ptr = std::find(indexes_array, indexes_array + nRvectors*nRvectors, index_array[R_i*nRvectors + R_j]);
+            // int found_index = ptr - indexes_array;
+            int found_index = 0;
+            arma::rowvec R_dif_aux = LatticeVectors.row(R_i) - LatticeVectors.row(R_j);
 
-    //         for (int j = 0; j < nRdif; ++j) {
-    //             arma::rowvec Rdif_aux2 = Rdifferences.row(j).subvec(0,2);
-    //             if (arma::norm(R_dif_aux - Rdif_aux2) < 1E-7){
-    //                 found_index = j;
-    //                 break;
-    //             }
-    //         }
+            for (int j = 0; j < nRdif; ++j) {
+                arma::rowvec Rdif_aux2 = Rdifferences.row(j).subvec(0,2);
+                if (arma::norm(R_dif_aux - Rdif_aux2) < 1E-7){
+                    found_index = j;
+                    break;
+                }
+            }
             
-    //         auto ptr = std::find(indexes_array, indexes_array + n_non_equivalent_vectors, found_index);
-    //         int found_index_2 = ptr - indexes_array;
-    //         std::cout << found_index_2 << ", " << std::flush;
-    //         arma::mat T_aux_mat = T_aux.submat(found_index_2*NAtoms, 0, found_index_2*NAtoms + NAtoms - 1, NAtoms - 1);
-    //         T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
-    //         T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
-    //     }
-    // }
+            auto ptr = std::find(indexes_array, indexes_array + n_non_equivalent_vectors, found_index);
+            int found_index_2 = ptr - indexes_array;
+            //std::cout << found_index_2 << ", " << std::flush;
+            arma::mat T_aux_mat = T_aux.submat(found_index_2*NAtoms, 0, found_index_2*NAtoms + NAtoms - 1, NAtoms - 1);
+            T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
+            T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
+        }
+    }
 
     // Builds the big T matrix by brute force
 
-    int N_all_combinations = nRvectors*NAtoms*nRvectors*NAtoms;
+    /*int N_all_combinations = nRvectors*NAtoms*nRvectors*NAtoms;
     arma::imat all_combinations(N_all_combinations,4,arma::fill::zeros);
     
     i_aux = 0;
@@ -315,7 +315,7 @@ int main(){
 
         //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
         //std::cout << i << ", " << std::flush;
-    }
+    }*/
 
     arma::mat motif = mos2_exciton.system->motif;
     
@@ -426,10 +426,10 @@ int main(){
 
                             double norm = arma::norm(R + t_i - (R2_vector + t2));
                             
-                            if (norm > 1E-7){
+                            //if (norm > 1E-7){
                                 //sum += my_coulomb(norm)*mos2_exciton.realPolarizabilityMatrixElement(R2_vector, Rprime_vector, i2, tprime_index);
                                 sum += my_coulomb(norm)*T(R2*NAtoms + i2,pos_prime_index);
-                            }
+                            //}
                         }
                     }
 
@@ -499,7 +499,7 @@ int main(){
         
         epsilon.slice(t_j).print(std::to_string(t_j) + ":");
     }
-    NAtoms = 1;
+
     // Solves for W
     // for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
     //     W.col(t_j) = arma::solve(epsilon.slice(t_j), V.col(t_j));
@@ -507,7 +507,7 @@ int main(){
 
     // Verifying the largest singular value of epsilon.slice(0)
 
-    arma::mat epsilonInv = arma::inv(epsilon.slice(0));
+    arma::mat epsilonInv = arma::inv(epsilon.slice(1));
     arma::mat M = arma::trans(epsilonInv)*epsilonInv;
 
     // Prints the inverse
@@ -522,7 +522,7 @@ int main(){
     for (arma::uword i = 0; i < n_positions; ++i){
         std::cout << "sqrt(eigval(" << i << ")) = " << std::sqrt( eigval(i)) << std::endl;
     }
-
+    // Solves for W
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
         W.col(t_j) = arma::inv(epsilon.slice(t_j))*V.col(t_j);
     }
@@ -540,7 +540,7 @@ int main(){
     // }
 
     // Prints the V and W columns side by side
-    NAtoms = 1;
+    NAtoms = 2;
     std::cout << std::endl;
 
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
@@ -634,6 +634,10 @@ int main(){
     //     combinations.slice(t_j).print("t_j = " + std::to_string(t_j));
     // }
 
+    // Auxiliary small vector
+
+    arma::rowvec v_aux = {0.01,0,0};
+
     // Computes the bare Coulomb potential matrix
 
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
@@ -647,6 +651,10 @@ int main(){
 
             arma::rowvec R = LatticeVectors.row(R_i);
             arma::rowvec t = motif.row(t_i).subvec(0,2);
+
+            if (arma::norm(R + t - t_j_vector) < 1E-7){
+                R = v_aux;
+            }
 
             double norm = arma::norm(R + t - t_j_vector);
 
@@ -662,15 +670,23 @@ int main(){
         arma::rowvec R = LatticeVectors.row(combinations_2.row(index)(0));
         arma::rowvec t_i = motif.row(combinations_2.row(index)(1)).subvec(0,2);
 
+        arma::rowvec Rt_i = R + t_i;
+
         for (arma::uword index2 = 0; index2 < npositions; ++index2){
 
             //Lambda function to compute the sum
-            auto sum_func = [index2,&R,&t_i,nRvectors,NAtoms,&combinations_2,&T,&LatticeVectors,&motif]() -> double {
+            auto sum_func = [index2,&Rt_i,&v_aux,&R,&t_i,nRvectors,NAtoms,&combinations_2,&T,&LatticeVectors,&motif]() -> double {
                 double sum = 0;
 
                 int Rprime_index = combinations_2.row(index2)(0);
                 int tprime_index = combinations_2.row(index2)(1);
                 int pos_prime_index = Rprime_index*NAtoms + tprime_index;
+
+                arma::rowvec t_j_vector = motif.row(tprime_index).subvec(0,2);
+
+                if (arma::norm(Rt_i - t_j_vector) < 1E-7){
+                    Rt_i = v_aux;
+                }
 
                 for (arma::uword R2 = 0; R2 < nRvectors; ++R2){
 
@@ -680,7 +696,7 @@ int main(){
 
                         arma::rowvec t2 = motif.row(i2).subvec(0,2);
 
-                        double norm = arma::norm(R + t_i - (R2 + t2));
+                        double norm = arma::norm(Rt_i - (R2 + t2));
 
                         double v_c = my_coulomb(norm);
                         
