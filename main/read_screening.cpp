@@ -54,5 +54,59 @@ int main(){
 
     xatu::printEnergies(results, nstates, decimals);
 
+    std::cout << "+---------------------------------------------------------------------------+" << std::endl;
+    std::cout << "|                                    Output                                 |" << std::endl;
+    std::cout << "+---------------------------------------------------------------------------+" << std::endl;
+
+    std::string output = exciton_config.excitonInfo.label;
+
+    // --------------------------- Output ---------------------------
+    bool writeEigvals = true;
+    if(writeEigvals){
+        std::string filename_en = output + ".eigval";
+        FILE* textfile_en = fopen(filename_en.c_str(), "w");
+
+        std::cout << "Writing eigvals to file: " << filename_en << std::endl;
+        fprintf(textfile_en, "%d\n", exciton_config.excitonInfo.ncell);
+        results->writeEigenvalues(textfile_en, nstates);
+
+        fclose(textfile_en);
+    }
+    
+    bool writeStates = true;
+    if(writeStates){
+        std::string filename_st = output + ".states";
+        FILE* textfile_st = fopen(filename_st.c_str(), "w");
+
+        std::cout << "Writing states to file: " << filename_st << std::endl;
+        results->writeStates(textfile_st, nstates);
+
+        fclose(textfile_st);
+    }
+    
+    bool writeWF = true;
+    if(writeWF){
+        std::string filename_kwf = output + ".kwf";
+        FILE* textfile_kwf = fopen(filename_kwf.c_str(), "w");
+
+        std::cout << "Writing k w.f. to file: " << filename_kwf << std::endl;
+        for(int stateindex = 0; stateindex < nstates; stateindex++){
+            if (exciton_config.excitonInfo.submeshFactor != 1){
+                results->writeReciprocalAmplitude(stateindex, textfile_kwf);
+            }
+            else{
+                results->writeExtendedReciprocalAmplitude(stateindex, textfile_kwf);
+            }
+        }
+
+        fclose(textfile_kwf);
+    }
+    
+    bool writeAbs = true;
+    if(writeAbs){
+        std::cout << "Writing absorption spectrum fo file... " << std::endl;
+        results->writeAbsorptionSpectrum();
+    }
+
     return 0;
 }
