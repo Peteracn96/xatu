@@ -30,6 +30,8 @@ allocatable wp(:)
 allocatable skubo_ex_int(:,:,:)
 allocatable sigma_w_ex(:,:,:)
 
+!variable to check if input conductivity file already exists or not
+integer :: iostat_var
 
 complex*16 hhop
 complex*16 fk_ex
@@ -383,7 +385,18 @@ character(100) file_name_sp
 character(100) file_name_ex
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-open(10,file='kubo_w.in')
+! Try to open the file only if it exists
+open(unit=10, file='../kubo_w.in', status='old', iostat=iostat_var)
+
+if (iostat_var /= 0) then
+    print *, "Error: File 'kubo_w.in' does not exist or could not be opened."
+    ! Handle the error, e.g., by stopping the program or taking other actions
+    stop
+else
+    print *, "File 'kubo_w.in' opened successfully."
+end if
+
+  ! Close the file if it was opened
 read(10,*)
 read(10,*) w0
 read(10,*)
