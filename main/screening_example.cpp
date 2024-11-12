@@ -16,9 +16,9 @@ double r0 = 13.55;
 
 double my_coulomb(double r) {
     
-    double a = 0.0002;
-    //double v_c_regularization = ec/(4E-10*PI*eps0*a);
-    double v_c_regularization = RK_small_r(a,r0);
+    double a = 0.0001;
+    double v_c_regularization = ec/(4E-10*PI*eps0*a);
+    //double v_c_regularization = RK_small_r(a,r0);
 
     if (r < 1E-7){
         //return 0;
@@ -54,11 +54,17 @@ int main(){
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+    xatu::CRYSTALConfiguration model_config("../examples/material_models/DFT/hBN_base_HSE06.outp",60);
 
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/hBN_test.txt");
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
+    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/hBN_DFT_screening.txt");
+
+    // xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+
+    // xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+
+    // xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
@@ -230,7 +236,7 @@ int main(){
 
     std::cout << "Computing all the elements... " << std::endl;
 
-    #pragma omp parallel for
+    /*#pragma omp parallel for
     for (int i = 0; i < n_non_equivalent_combinations; i++)
     {
         int index = non_equivalent_combinations(i,3);
@@ -283,11 +289,11 @@ int main(){
             T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
             T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
         }
-    }
+    }*/
 
     // Builds the big T matrix by brute force
 
-    /*int N_all_combinations = nRvectors*NAtoms*nRvectors*NAtoms;
+    int N_all_combinations = nRvectors*NAtoms*nRvectors*NAtoms;
     arma::imat all_combinations(N_all_combinations,4,arma::fill::zeros);
     
     i_aux = 0;
@@ -324,7 +330,7 @@ int main(){
 
         //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
         //std::cout << i << ", " << std::flush;
-    }*/
+    }
 
     arma::mat motif = mos2_exciton.system->motif;
     
@@ -334,7 +340,7 @@ int main(){
 
     // Now is the inversion of Dyson's equation
 
-    int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+    /*int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
     arma::mat V(n_positions, NAtoms, arma::fill::zeros);
     arma::mat W(n_positions, NAtoms, arma::fill::zeros); 
     arma::cube epsilon(n_positions,n_positions,NAtoms);
@@ -594,7 +600,7 @@ int main(){
             index_aux++;
         }
     }
-    std::cout << "}" << std::flush;
+    std::cout << "}" << std::flush;*/
 
     // Write screened potential in a file
 
@@ -620,7 +626,7 @@ int main(){
 
     /****************Now is the inversion of Dyson's equation including singularities*****************/
 
-    /*int npositions = nRvectors*NAtoms ;
+    int npositions = nRvectors*NAtoms ;
     arma::mat V_2(npositions, NAtoms, arma::fill::zeros);
     arma::mat W_2(npositions, NAtoms, arma::fill::zeros); 
     arma::mat epsilon_2(npositions,npositions,arma::fill::zeros);
@@ -661,9 +667,9 @@ int main(){
             arma::rowvec R = LatticeVectors.row(R_i);
             arma::rowvec t = motif.row(t_i).subvec(0,2);
 
-            if (arma::norm(R + t - t_j_vector) < 1E-7){
-                R = v_aux;
-            }
+            // if (arma::norm(R + t - t_j_vector) < 1E-7){
+            //     R = v_aux;
+            // }
 
             double norm = arma::norm(R + t - t_j_vector);
 
@@ -717,6 +723,18 @@ int main(){
             };
             double kronecker_delta = index == index2 ? 1.0:0.0;
             epsilon_2(index,index2) = kronecker_delta - sum_func();
+            
+            if (index = 0 && index2 == 0){
+                epsilon_2(index,index2) = 0.01;
+            }
+
+            if (index = 0 && index2 != 0){
+                epsilon_2(index,index2) = 0.0;
+            }
+
+            if (index != 0 && index2 == 0){
+                epsilon_2(index,index2) = 0.0;
+            }
         }
     }
 
@@ -795,7 +813,7 @@ int main(){
 
             index_aux++;
         }
-    }*/
+    }
 
     /*FILE* textfile_2 = fopen("test_sing_W_screening.dat", "w");
 
