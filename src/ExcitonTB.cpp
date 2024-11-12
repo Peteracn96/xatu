@@ -1702,7 +1702,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
  * @param q Momentum vector q
  * @return Polarizability
 */
-std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, int iq) const {
+inline std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, int iq) const {
 
     int nk = system->nk;
     int natoms = system->natoms;
