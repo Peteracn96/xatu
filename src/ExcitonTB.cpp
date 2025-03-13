@@ -1740,7 +1740,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
  * @param q Momentum vector q
  * @return Polarizability
 */
-inline std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, int iq) const {
+inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, int iq) const {
 
     int nk = system->nk;
     int natoms = system->natoms;
@@ -1797,6 +1797,7 @@ inline std::complex<double> ExcitonTB::reciprocalPolarizabilityMatrixElement(con
 
     return term/(system->unitCellArea*totalCells);
 }
+
 /**
  * Method to compute the (G,G') static polarizability in the BZ mesh.
  * @details Opens 'polarizability_mesh.dat' file and writes in it the values of the polarizability at each point in the BZ mesh
@@ -1899,7 +1900,7 @@ void ExcitonTB::PolarizabilityMesh() const {
 
         #pragma omp parallel for
         for (int iq = 0; iq < nq; iq++){
-            Chi(iq) = this->reciprocalPolarizabilityMatrixElement(g, g2, iq);
+            Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, iq);
         }
 
         std::cout << "Chi computed" << std::endl;
@@ -2165,7 +2166,7 @@ void ExcitonTB::computeDielectricMatrix(){
                 arma::rowvec G = ReciprocalVectors.row(g);                
                 arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-                this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+                this->Chimatrix_.slice(iq).row(g)(g2) = compute_2D_PolarizabilityMatrixElement(G, G2, iq);
                 this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
                 double potentialg = coulombFT(g, g, system->kpoints.row(iq));
@@ -2190,7 +2191,7 @@ void ExcitonTB::computeDielectricMatrix(){
                 int negativeG = fecthReciprocalLatticeVector(-G);
                 int negativeG2 = fecthReciprocalLatticeVector(-G2);
 
-                this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+                this->Chimatrix_.slice(iq).row(g)(g2) = compute_2D_PolarizabilityMatrixElement(G, G2, iq);
                 this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
                 int negativeqindex = system->findEquivalentPointBZ(-this->system->kpoints.row(iq),Ncells);
@@ -2227,7 +2228,7 @@ void ExcitonTB::computeDielectricMatrix(){
                 int negativeG = fecthReciprocalLatticeVector(-G);
                 int negativeG2 = fecthReciprocalLatticeVector(-G2);
 
-                this->Chimatrix_.slice(iq).row(g)(g2) = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+                this->Chimatrix_.slice(iq).row(g)(g2) = compute_2D_PolarizabilityMatrixElement(G, G2, iq);
                 this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(this->Chimatrix_.slice(iq).row(g)(g2));
 
                 this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = this->Chimatrix_.slice(iq).row(g)(g2);
@@ -2542,7 +2543,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        std::complex<double> Chi = reciprocalPolarizabilityMatrixElement(G, G2, iq);
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, iq);
         
         double potentialg = coulombFT(g, g, system->kpoints.row(iq));
         double potentialg2 = coulombFT(g2, g2, system->kpoints.row(iq));

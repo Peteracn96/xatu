@@ -197,7 +197,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
-        std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int) const;
+        std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int) const;
         //double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
 
     public:
