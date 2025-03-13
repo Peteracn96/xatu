@@ -2384,6 +2384,142 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 }
 
 /**
+ * Method to compute the static polarizability matrix in a set of user specified k points. More useful for isotropic systems.
+ * @return void
+*/
+void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
+
+    auto start = high_resolution_clock::now();
+
+    if (this->mode == "realspace"){
+
+        std::cout << "Implementation of the exciton in real space in progress. Exiting." << std::endl;
+
+        std::exit(0);
+    }
+    
+    if (this->mode == "reciprocalspace"){
+
+        // Reads q points from file
+        std::ifstream inputfile;
+        std::string line;
+        double qx, qy, qz;
+        arma::mat q_points;
+
+        try{
+            inputfile.open(kpointsfile.c_str());
+            while(std::getline(inputfile, line)){
+                std::istringstream iss(line);
+                iss >> qx >> qy >> qz;
+                arma::rowvec qpoint{qx, qy, qz};
+                q_points.insert_rows(q_points.n_rows,qpoint);
+            }
+            inputfile.close();
+        }
+        catch(const std::exception& e){
+            std::cerr << e.what() << std::endl;
+        }
+
+        int Nqpoints = q_points.n_rows;
+
+        std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
+
+        int nk = system->nk;
+        int basisdim = system->basisdim;
+
+        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+        int nGs = ReciprocalVectors.n_rows;
+        int Ncells = this->ncell_;
+        int odd = Ncells%2;
+        int nq = odd == 1? Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1 : (2*Ncells -1) + (Ncells-1)*(Ncells-2)/2 + Ncells/2 + 1; //Only half of the BZ
+        int Nktotal = system->nk;
+        nq = Nktotal;
+
+        arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
+        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+
+        if (this->epsilonmatrix_.is_empty()) {
+            this->epsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
+        } else {
+            this->epsilonmatrix_.reshape(nGs,nGs,Nqpoints);
+        }
+
+        arma::cx_cube epsilonmatrix(Nqpoints,nGs,nGs,arma::fill::zeros);
+
+        arma::imat indecesqg(Nqpoints*nGs*(nGs+1)/2,3,arma::fill::zeros);
+
+        // Generates all the combinations of (k,G,G') indices
+        int i = 0;
+        for (int iq = 0; iq < Nqpoints; iq++){
+            for (int g = 0; g < nGs; g++){
+                for (int g2 = g; g2 < nGs; g2++){
+                    indecesqg.row(i)(0) = iq;
+                    indecesqg.row(i)(1) = g;
+                    indecesqg.row(i)(2) = g2;
+                    i++;
+                }
+            }
+        }
+
+      
+        for (int i = 0; i < nGs; i++){     
+
+            arma::rowvec G = ReciprocalVectors.row(i);                
+
+            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+        }
+
+        for (int iq = 0; iq < Nqpoints; iq++){  
+
+            arma:rowvec q = q_points.row(iq);
+
+            if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
+        
+                this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+                this->eigvalkqStack_ = arma::mat(basisdim, nk);
+                vec auxEigVal(basisdim);
+                arma::cx_mat auxEigvec(basisdim, basisdim);
+
+                std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
+
+                for (int i = 0; i < nk; i++){
+                    arma::rowvec kq = system->kpoints.row(i) + q;
+                    system->solveBands(kq, auxEigVal, auxEigvec);
+
+                    auxEigvec = fixGlobalPhase(auxEigvec);
+                    eigvalkqStack_.col(i) = auxEigVal;
+                    eigveckqStack_.slice(i) = auxEigvec;
+                };
+            }
+
+            #pragma omp parallel for 
+            for (int i = 0; i < nGs*(nGs+1)/2; i++){
+                int g  = indecesqg.row(i)(1);
+                int g2 = indecesqg.row(i)(2);
+
+                arma::rowvec G = ReciprocalVectors.row(g);                
+                arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+                std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+
+                double potentialg = coulomb_2D_FT(q + G);
+                double potentialg2 = coulomb_2D_FT(q + G2);
+                double kroneckerdelta = g == g2? 1 : 0;
+
+                this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
+                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+            }
+        } 
+    }
+
+    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
+    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+
+    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
+}
+
+
+/**
  * Method to invert the static polarizability matrix in the BZ mesh.
  * @return void
 */
@@ -2521,7 +2657,7 @@ void ExcitonTB::invertDielectricMatrix(){
     if (this->mode_ == "reciprocalspace"){
 
         int nGs = this->trunreciprocalLattice_.n_rows;
-        int Nktotal = system->nk;
+        int Nktotal = this->epsilonmatrix_.n_slices; // The number of q points can be different from the BZ mesh size
 
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
@@ -3413,7 +3549,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
 
     if (this->mode == "reciprocalspace"){
         int ngs = this->trunreciprocalLattice_.n_rows;
-        int nqs = system->nk;
+        int nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         for(unsigned int i = 0; i < nqs; i++){
             for (unsigned int g = 0; g < ngs; g++){

@@ -237,7 +237,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void writeInverseDielectricMatrix(std::string) const;     
         // Write BZ mesh in a file
         void writeBZtofile() const;
-        // Write polarizability matrix in afile
+        // Write polarizability matrix in a file
         void writePolarizabilityMatrix(std::string) const;
         // Read inverse of dielectric matrix in a file
         void readInverseDielectricMatrix(std::string);
