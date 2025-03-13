@@ -153,10 +153,11 @@ class ExcitonTB : public Exciton<SystemTB> {
         double coulomb(double) const;
         double rpa(double) const; // In principle will accept more than a double
         const potptr selectPotential(std::string);
-        const recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
+        recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
 
         // Fourier transforms
-        double coulombFT(int, int, arma::rowvec) const;
+        double coulombFT(int, int, const arma::rowvec) const;
+        double coulomb_2D_FT(const arma::rowvec&) const;
         double keldyshFT(int, int, arma::rowvec) const;
         std::complex<double> rpaFT(int g, int g2, arma::rowvec) const;
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
@@ -197,7 +198,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
-        std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int) const;
+        std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
+        std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
+        std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
+        std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         //double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
 
     public:
@@ -208,7 +212,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         void computesingleDielectricFunctionMatrixElement();
         void computesingleInverseDielectricMatrix(std::string);
         double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const; //Temporarily public
+        void PolarizabilityMesh();
         void compute_2D_DielectricMatrix();
+        void compute_2D_DielectricMatrix(std::string);
         void invertDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);

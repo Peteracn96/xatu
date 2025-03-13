@@ -829,7 +829,7 @@ double ExcitonTB::rpa(double r) const {
  * @param potential Potential to be used in the direct term.
  * @return Pointer to function representing the potential.
  */
-const recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This function is not being used for now, as rpaFT returns a std::complex<double> and not double.
+recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This function is not being used for now, as rpaFT returns a std::complex<double> and not double.
     if(potential == "keldysh"){
         return &ExcitonTB::keldyshFT;
     }
@@ -850,31 +850,44 @@ const recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //T
 
 /*---------------------------------------- Fourier transforms ----------------------------------------*/
 /**
- * Evaluates the Fourier transform of the Coulomb potential, which is an analytical expression.
- * @param q kpoint where we evaluate the FT.
- * @return Fourier transform of the potential at q, FT[V](q).
+ * Evaluates the 2D Fourier transform of the Coulomb potential, which is an analytical expression.
+ * @param k kpoint where we evaluate the FT.
+ * @return 2D Fourier transform of the potential at q, FT[V](q).
  */
-double ExcitonTB::coulombFT(int g, int g2, arma::rowvec q) const {
+double ExcitonTB::coulomb_2D_FT(const arma::rowvec& k) const {
+
+    double potential = 0;
+    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
+
+    double knorm = arma::norm(k);
+    if (knorm < eps){
+        potential = 0;
+    }
+    else{
+        potential = 1/knorm;
+    }
+    
+    potential = potential*ec*1E10/(2*eps0);
+    
+    return potential;
+}  
+
+/**
+ * Evaluates the 2D Fourier transform of the Coulomb potential, which is an analytical expression.
+ * @param g Index of G.
+ * @param g2 Index of G2.
+ * @param q kpoint where we evaluate the FT.
+ * @return 2D Fourier transform of the potential at q, FT[V](q).
+ */
+double ExcitonTB::coulombFT(int g, int g2, const arma::rowvec q) const {
 
     if (g != g2){
         return 0.;
     }
 
-    double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
-    double potential = 0;
-    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
-
     auto G = this->trunreciprocalLattice_.row(g);
-
-    double qnorm = arma::norm(q + G);
-    if (qnorm < eps){
-        potential = 0;
-    }
-    else{
-        potential = 1/(qnorm);
-    }
     
-    potential = potential*ec*1E10/(2*eps0);
+    double potential = coulomb_2D_FT(q + G);
     
     return potential;
 }  
@@ -1731,16 +1744,110 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
     return real(term)/real(Nsquared);
 }
 
-
 /**
- * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q.
- * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh
+ * Method to compute the (G,G') matrix element of the static polarizability at the specified arbitrary momentum vector q.
+ * @details The purely 2D polarizability is computed
  * @param G Reciprocal lattice vector G
  * @param G2 Reciprocal lattice vector G2
  * @param q Momentum vector q
  * @return Polarizability
 */
-inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, int iq) const {
+std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q) {
+
+    int nk = system->nk;
+    int natoms = system->natoms;
+    int basisdim = system->basisdim;
+
+    int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
+    arma::cx_vec coefskq, coefsk;
+
+    std::complex<double> term = 0.;
+
+    if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
+        
+        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+        this->eigvalkqStack_ = arma::mat(basisdim, nk);
+        vec auxEigVal(basisdim);
+        arma::cx_mat auxEigvec(basisdim, basisdim);
+
+        std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
+
+        for (int i = 0; i < nk; i++){
+            arma::rowvec kq = system->kpoints.row(i) + q;
+            system->solveBands(kq, auxEigVal, auxEigvec);
+
+            auxEigvec = fixGlobalPhase(auxEigvec);
+            eigvalkqStack_.col(i) = auxEigVal;
+            eigveckqStack_.slice(i) = auxEigvec;
+        };
+    }
+
+    for (int ic = nvbands; ic <= upperindexcband; ic++){
+    
+        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
+
+            for (int ik = 0; ik < nk; ik++){
+
+                arma::rowvec k = system->kpoints.row(ik);
+                arma::rowvec kq = system->kpoints.row(ik) + q;
+        
+                // Using the atomic gauge
+                if(gauge == "atomic"){
+                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                }
+                else{                            
+                    coefskq = eigveckqStack_.slice(ik).col(iv);
+                    coefsk = eigveckStack_.slice(ik).col(ic);
+                }
+
+                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
+
+                term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+            }
+        }
+    }
+
+    return term/(system->unitCellArea*totalCells);
+}
+
+/**
+ * Method to compute the (G,G') matrix element of the static polarizability at the specified arbitrary momentum vector q.
+ * @details The purely 2D polarizability is computed
+ * @param G Reciprocal lattice vector G
+ * @param G2 Reciprocal lattice vector G2
+ * @param q Momentum vector q
+ * @return Polarizability
+*/
+std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q) {
+
+    double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
+
+    const double potential = coulomb_2D_FT(G + q);
+
+    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,q);
+            
+    return epsilon/(system->unitCellArea*totalCells);
+}
+
+/**
+ * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q.
+ * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh.  The purely 2D polarizability is computed.
+ * @param G Reciprocal lattice vector G
+ * @param G2 Reciprocal lattice vector G2
+ * @param iq Index of momentum vector q
+ * @return Polarizability
+*/
+inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const int iq) {
 
     int nk = system->nk;
     int natoms = system->natoms;
@@ -1799,11 +1906,30 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
 }
 
 /**
+ * Method to compute the (G,G') matrix element of the static polarizability at the specified arbitrary momentum vector q.
+ * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh. The purely 2D dielectric function is computed.
+ * @param G Reciprocal lattice vector G
+ * @param G2 Reciprocal lattice vector G2
+ * @param iq Index of momentum vector q
+ * @return Polarizability
+*/
+std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const int iq) {
+
+    double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
+
+    double potential = coulomb_2D_FT(G + q);
+
+    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,iq);
+            
+    return epsilon/(system->unitCellArea*totalCells);
+}
+
+/**
  * Method to compute the (G,G') static polarizability in the BZ mesh.
  * @details Opens 'polarizability_mesh.dat' file and writes in it the values of the polarizability at each point in the BZ mesh
  * @return void
 */
-void ExcitonTB::PolarizabilityMesh() const {
+void ExcitonTB::PolarizabilityMesh() {
 
     auto start = high_resolution_clock::now();
 
