@@ -162,7 +162,7 @@ int main(int argc, char* argv[]){
     if(screeningArg.isSet()){
 
         if (screeningConfig->screeningInfo.function == "dielectric") {
-            bulkExciton.computesingleDielectricFunction();
+            bulkExciton.computesingleDielectricFunctionMatrixElement();
             return 0;
         } else if (screeningConfig->screeningInfo.function == "polarizability") {
             bulkExciton.PolarizabilityMesh();

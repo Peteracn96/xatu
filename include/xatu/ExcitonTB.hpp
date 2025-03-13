@@ -175,6 +175,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
                                                   const arma::rowvec&) const;
+        std::complex<double> thick_blochCoherenceFactor(const arma::cx_vec &, const arma::cx_vec &,
+                                                  const arma::rowvec &, const arma::rowvec &,
+                                                  const arma::rowvec &, const double) const;
 
         // Initializers
         void initializeExcitonAttributes(int, const arma::ivec&, const arma::rowvec&, const arma::rowvec&);
@@ -192,7 +195,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Static dielectric function
         int fecthReciprocalLatticeVector(arma::rowvec);
         arma::mat generateReciprocalVectors(int);
-        std::complex<double> computesinglePolarizability(arma::rowvec&);
+        std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
         std::complex<double> reciprocalPolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, int) const;
         //double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
@@ -202,7 +205,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void initializeHamiltonian();
         void initializeScreeningAttributes(const ScreeningConfiguration&);
         void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
-        void computesingleDielectricFunction();
+        void computesingleDielectricFunctionMatrixElement();
         void computesingleInverseDielectricMatrix(std::string);
         double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const; //Temporarily public
         void PolarizabilityMesh() const;

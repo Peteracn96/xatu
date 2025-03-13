@@ -1181,6 +1181,46 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1,
 }
 
 
+/**
+ * Calculation of Bloch coherence factor taking into account the monolayer's finite thickness d
+ * @param coefs1 Vector of eigenstate |n,k>.
+ * @param coefs2 Vector of eigenstate |n',k'>.
+ * @param k1 kpoint k.
+ * @param k2 kpoint k'.
+ * @param G Reciprocal lattice vector used to compute the coherence factor.
+ * @param d Monolayer thickness.
+ * @return Bloch coherence factor I evaluated at G for states |nk>, |n'k'>.
+ */
+std::complex<double> ExcitonTB::thick_blochCoherenceFactor(const arma::cx_vec &coefs1, const arma::cx_vec &coefs2,
+                                                     const arma::rowvec &k1, const arma::rowvec &k2,
+                                                     const arma::rowvec &G, const double d) const
+{
+
+    std::complex<double> imag(0, 1);
+    arma::cx_vec coefs = arma::conj(coefs1) % coefs2;
+    arma::cx_vec phases = arma::ones<arma::cx_vec>(system->basisdim);
+
+    int index_min = 0;
+    int index_max = -1;
+
+    for (int i = 0; i < system->natoms; i++)
+    {
+        int species = system->motif.row(i)(3);
+        arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2);
+
+        double extra_factor = 2 * (1 - exp(-arma::norm(k1 - k2 + G) * d / 2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2))) / arma::norm(k1 - k2 + G);
+
+        index_max += system->orbitals(species);
+        phases.subvec(index_min, index_max) *= extra_factor * exp(- imag * arma::dot(k1 - k2 + G, atomPosition));
+
+        index_min = index_max + 1;
+    }
+
+    std::complex<double> factor = arma::dot(coefs, phases);
+
+    return factor;
+}
+
 /*------------------------------------ Electron-hole pair basis ------------------------------------*/
 
 /**
@@ -1497,11 +1537,12 @@ double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma:
 /**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file.
  * @details Writes the polarizability in the file polarizability_convergence.dat as a 
- * function of the number of included conduction bands
+ * function of the number of included conduction bands. The polarizability is the averaged one for zero thickness.
  * @param q Momentum vector q specified in the input file
  * @return Polarizability
 */
-std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
+std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::rowvec &q, arma::rowvec &G, arma::rowvec& G2)
+{
 
     std::cout << "cutoff = " << cutoff << "\n";
 
@@ -1513,9 +1554,6 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
 
     int nk = system->nk;
     int basisdim = system->basisdim;
-
-    arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs(0)); // Sets G
-    arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs(1)); // Sets G'
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
@@ -1572,8 +1610,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
                     coefsk = eigveckStack_.slice(ik).col(ic);
                 }
 
-                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, g);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, g2);
+                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
 
                 term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
             }
@@ -1590,8 +1628,8 @@ std::complex<double> ExcitonTB::computesinglePolarizability(arma::rowvec& q) {
     }
     
     std::cout << "Selected (G,G') pair:" << "\n";
-    std::cout << "G = G(" << this->Gs(0) << ") = (" << g(0) << ", " << g(1) << ", " << g(2) << ")" << std::endl;
-    std::cout << "G' = G(" << this->Gs(1) << ") = (" << g2(0) << ", " << g2(1) << ", " << g2(2) << ")" << std::endl;
+    std::cout << "G = G(" << this->Gs(0) << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;
+    std::cout << "G' = G(" << this->Gs(1) << ") = (" << G2(0) << ", " << G2(1) << ", " << G2(2) << ")" << std::endl;
 
     return term/(system->unitCellArea*totalCells);
 }
@@ -2381,7 +2419,7 @@ void ExcitonTB::invertDielectricMatrix(){
  * kpoints coincides with the kmesh
  * @return void
 */
-void ExcitonTB::computesingleDielectricFunction() {
+void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
     auto start = high_resolution_clock::now();
 
     if(mode == "realspace"){
@@ -2425,7 +2463,7 @@ void ExcitonTB::computesingleDielectricFunction() {
         arma::rowvec g = this->trunreciprocalLattice_.row(this->Gs_(0)); // Sets G
         arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
 
-        Chi = computesinglePolarizability(q);
+        Chi = computesinglePolarizabilityMatrixElement(q, g, g2);
 
         double potential = coulombFT(this->Gs_(0), this->Gs_(0), q);
 
