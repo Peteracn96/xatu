@@ -1537,7 +1537,7 @@ double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma:
 /**
  * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q in the input file.
  * @details Writes the polarizability in the file polarizability_convergence.dat as a 
- * function of the number of included conduction bands. The polarizability is the averaged one for zero thickness.
+ * function of the number of included conduction bands. The polarizability is the purely 2D version.
  * @param q Momentum vector q specified in the input file
  * @return Polarizability
 */
@@ -2414,9 +2414,7 @@ void ExcitonTB::invertDielectricMatrix(){
 
 /**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
- * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
- * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
- * kpoints coincides with the kmesh
+ * @details Computes the purely 2D version.
  * @return void
 */
 void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
