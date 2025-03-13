@@ -178,7 +178,7 @@ int main(int argc, char* argv[]){
             
             std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
             
-            bulkExciton.computeDielectricMatrix();
+            bulkExciton.compute_2D_DielectricMatrix();
 
             bulkExciton.invertDielectricMatrix();
             

@@ -1941,7 +1941,7 @@ int ExcitonTB::fecthReciprocalLatticeVector(arma::rowvec G){
  * Method to compute the static polarizability matrix in the BZ mesh.
  * @return void
 */
-void ExcitonTB::computeDielectricMatrix(){
+void ExcitonTB::compute_2D_DielectricMatrix(){
 
     auto start = high_resolution_clock::now();
 

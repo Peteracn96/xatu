@@ -208,8 +208,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void computesingleDielectricFunctionMatrixElement();
         void computesingleInverseDielectricMatrix(std::string);
         double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const; //Temporarily public
-        void PolarizabilityMesh() const;
-        void computeDielectricMatrix();
+        void compute_2D_DielectricMatrix();
         void invertDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
