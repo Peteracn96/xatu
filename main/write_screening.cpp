@@ -41,6 +41,8 @@ int main(){
 
     mos2_exciton.compute_2D_DielectricMatrix("MoS2_k_points.dat");
 
+    mos2_exciton.invertDielectricMatrix();
+
     mos2_exciton.writeInverseDielectricMatrix("MoS2_screening.dat");
 
     return 0;
