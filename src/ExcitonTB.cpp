@@ -3565,7 +3565,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     fclose(textfile);
 }
 
-/* Method to print information of the inverse of the dielectric matrix into a file.
+/* Method to print information of the dielectric matrix into a file.
  * @return void 
  */
 void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const {
@@ -3573,11 +3573,11 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
     FILE* textfile = fopen(filename_dielectric.c_str(), "w");
 
     if (textfile == NULL){
-        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting." << std::endl;
+        std::cout << "File for polarizability matrix failed to open. Exiting." << std::endl;
         exit(0);
     }
 
-    std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
+    std::cout << "Writing polarizability matrix fo file: " << filename_dielectric << std::endl;
 
     if (this->mode == "realspace"){
         int n_atoms = this->system->motif.n_rows;
