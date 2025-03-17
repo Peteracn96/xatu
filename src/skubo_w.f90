@@ -84,7 +84,7 @@ wp=0.0d0
 wn_sp=0.0d0
 sigma_w_sp=0.0d0
 do i=1,nw
-  wp(i)=(w0+wrange/dble(nw)*dble(i-1))/27.211385d0
+  wp(i)=(w0+(wrange-w0)/dble(nw)*dble(i-1))/27.211385d0
 end do  
 
 !exciton arrays
