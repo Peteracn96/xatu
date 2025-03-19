@@ -43,6 +43,8 @@ int main(){
 
     mos2_exciton.invertDielectricMatrix();
 
+    mos2_exciton.writePolarizabilityMatrix("MoS2_polarizability.dat");
+
     mos2_exciton.writeInverseDielectricMatrix("MoS2_screening.dat");
 
     return 0;

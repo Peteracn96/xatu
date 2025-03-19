@@ -2384,7 +2384,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 }
 
 /**
- * Method to compute the static polarizability matrix in a set of user specified k points. More useful for isotropic systems.
+ * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified k points. More useful for isotropic systems.
  * @return void
 */
 void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
@@ -2437,6 +2437,14 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 
         arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+
+
+        // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
+        if (this->Chimatrix_.is_empty()) {
+            this->Chimatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
+        } else {
+            this->Chimatrix_.reshape(nGs,nGs,Nqpoints);
+        }
 
         if (this->epsilonmatrix_.is_empty()) {
             this->epsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
@@ -2501,6 +2509,9 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 arma::rowvec G2 = ReciprocalVectors.row(g2);
 
                 std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+
+                this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
+                this->Chimatrix_.slice(iq).row(g2)(g) = Chi;
 
                 double potentialg = coulomb_2D_FT(q + G);
                 double potentialg2 = coulomb_2D_FT(q + G2);
@@ -3565,7 +3576,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     fclose(textfile);
 }
 
-/* Method to print information of the dielectric matrix into a file.
+/* Method to print information of the polarizability matrix into a file.
  * @return void 
  */
 void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const {
