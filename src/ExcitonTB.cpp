@@ -1582,7 +1582,7 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     std::cout << "fermi level = " << system->fermiLevel << "\n";
 
     std::complex<double> term = 0.;
-
+    std::complex<double> term_aux = 0.;
     this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
     this->eigvalkqStack_ = arma::mat(basisdim, nk);
 
@@ -1603,6 +1603,7 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     std::cout << "Done \n";
     
     arma::cx_vec coefskq, coefsk;
+    arma::cx_vec coefskq_c, coefsk_v;
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
@@ -1617,16 +1618,26 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
                 if(gauge == "atomic"){
                     coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
                     coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
                 }
                 else{                            
                     coefskq = eigveckqStack_.slice(ik).col(iv);
                     coefsk = eigveckStack_.slice(ik).col(ic);
+
+                    coefskq_c = eigveckqStack_.slice(ik).col(ic);
+                    coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
                 std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
                 std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
 
                 term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+            
+                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
+                term_aux += std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG)*IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
             }
             
             polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term)/(system->unitCellArea*totalCells) << " " << imag(term)/(system->unitCellArea*totalCells) << "\n";
@@ -1643,6 +1654,8 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     std::cout << "Selected (G,G') pair:" << "\n";
     std::cout << "G = G(" << this->Gs(0) << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;
     std::cout << "G' = G(" << this->Gs(1) << ") = (" << G2(0) << ", " << G2(1) << ", " << G2(2) << ")" << std::endl;
+
+    std::cout << "The value of the polarizability according to the correct expression is = " << term_aux/(system->unitCellArea*totalCells) << std::endl;
 
     return term/(system->unitCellArea*totalCells);
 }
