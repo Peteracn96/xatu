@@ -2414,13 +2414,17 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
     if (this->mode == "reciprocalspace"){
 
         // Reads q points from file
-        std::ifstream inputfile;
+        std::ifstream inputfile(kpointsfile);
+        if (!inputfile) {
+            std::cout << "File for k points failed to open or does not exist. Exiting" << std::endl;
+            exit(1);
+        }
+
         std::string line;
         double qx, qy, qz;
         arma::mat q_points;
 
         try{
-            inputfile.open(kpointsfile.c_str());
             while(std::getline(inputfile, line)){
                 std::istringstream iss(line);
                 iss >> qx >> qy >> qz;
@@ -2435,6 +2439,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 
         int Nqpoints = q_points.n_rows;
 
+        std::cout << "Nqpoints = " << Nqpoints << std::endl;
+
         std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
 
         int nk = system->nk;
@@ -2443,10 +2449,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
         int nGs = ReciprocalVectors.n_rows;
         int Ncells = this->ncell_;
-        int odd = Ncells%2;
-        int nq = odd == 1? Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1 : (2*Ncells -1) + (Ncells-1)*(Ncells-2)/2 + Ncells/2 + 1; //Only half of the BZ
-        int Nktotal = system->nk;
-        nq = Nktotal;
 
         arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -2482,7 +2484,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             }
         }
 
-      
+        std::cout << "Printing all the G vectors:\n";
         for (int i = 0; i < nGs; i++){     
 
             arma::rowvec G = ReciprocalVectors.row(i);                
@@ -2490,28 +2492,27 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
         }
 
+        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+        this->eigvalkqStack_ = arma::mat(basisdim, nk);
+        vec auxEigVal(basisdim);
+        arma::cx_mat auxEigvec(basisdim, basisdim);
+
+        std::cout << "iq = ";
+
         for (int iq = 0; iq < Nqpoints; iq++){  
 
-            arma:rowvec q = q_points.row(iq);
+            arma::rowvec q = q_points.row(iq);
 
-            if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
-        
-                this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-                this->eigvalkqStack_ = arma::mat(basisdim, nk);
-                vec auxEigVal(basisdim);
-                arma::cx_mat auxEigvec(basisdim, basisdim);
+            std::cout << iq << ", " << std::flush;
 
-                std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
+            for (int i = 0; i < nk; i++){
+                arma::rowvec kq = system->kpoints.row(i) + q;
+                system->solveBands(kq, auxEigVal, auxEigvec);
 
-                for (int i = 0; i < nk; i++){
-                    arma::rowvec kq = system->kpoints.row(i) + q;
-                    system->solveBands(kq, auxEigVal, auxEigvec);
-
-                    auxEigvec = fixGlobalPhase(auxEigvec);
-                    eigvalkqStack_.col(i) = auxEigVal;
-                    eigveckqStack_.slice(i) = auxEigvec;
-                };
-            }
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                eigvalkqStack_.col(i) = auxEigVal;
+                eigveckqStack_.slice(i) = auxEigvec;
+            };
 
             #pragma omp parallel for 
             for (int i = 0; i < nGs*(nGs+1)/2; i++){
@@ -2534,6 +2535,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
             }
         } 
+
+        std::cout << "\n";
     }
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
@@ -2686,6 +2689,12 @@ void ExcitonTB::invertDielectricMatrix(){
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
         std::cout << "\nInverting the dielectric matrix... " << std::flush;
+
+        if (this->Invepsilonmatrix_.is_empty()) {
+            this->Invepsilonmatrix_ = arma::cx_cube(nGs,nGs,Nktotal,arma::fill::zeros);
+        } else {
+            this->Invepsilonmatrix_.reshape(nGs,nGs,Nktotal);
+        }
 
         #pragma omp parallel for
         for (int iq = 0; iq < Nktotal; iq++){
