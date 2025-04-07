@@ -3717,11 +3717,6 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
     if (this->mode == "reciprocalspace"){
 
-        if (this->Invepsilonmatrix_.is_empty()) {
-            std::cout << "Error. Inverse of dielectric matrix was not computed. Terminating" << std::endl;
-            std::exit(0);
-        }
-
         int ngs = this->trunreciprocalLattice_.n_rows;
         int nqs = system->nk;
         int line_counter = 0;
@@ -3759,6 +3754,13 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
         }
 
         file.seekg(0);
+
+        if (this->Invepsilonmatrix_.is_empty()) {
+            this->Invepsilonmatrix_ = arma::cx_cube(ngs,ngs,nqs,arma::fill::zeros);
+        } else {
+        
+            this->Invepsilonmatrix_.reshape(ngs,ngs,nqs);
+        }
 
         line_counter = 0;
         while (std::getline(file, line)) {
