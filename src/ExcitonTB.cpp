@@ -1817,14 +1817,20 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
                 arma::rowvec k = system->kpoints.row(ik);
                 arma::rowvec kq = system->kpoints.row(ik) + q;
         
-                // Using the atomic gauge
+               // Using the atomic gauge
                 if(gauge == "atomic"){
                     coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
                     coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
                 }
                 else{                            
                     coefskq = eigveckqStack_.slice(ik).col(iv);
                     coefsk = eigveckStack_.slice(ik).col(ic);
+
+                    coefskq_c = eigveckqStack_.slice(ik).col(ic);
+                    coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
                 std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
