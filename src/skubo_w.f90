@@ -139,41 +139,41 @@ do iw=1,nw
   !feps=4.0d0*pi*1.0d0/137.035999084d0*100.0d0   !absorbance units
   !eps=4.0d0   !\sigma_0 units
   write(50,*) wp(iw)*27.211385d0,-realpart(feps*sigma_w_sp(1,1,iw)), &
-              -imaginarypart(feps*sigma_w_sp(1,1,iw)), &
+              -aimag(feps*sigma_w_sp(1,1,iw)), &
               -realpart(feps*sigma_w_sp(1,2,iw)), &
-              -imaginarypart(feps*sigma_w_sp(1,2,iw)), &
+              -aimag(feps*sigma_w_sp(1,2,iw)), &
               -realpart(feps*sigma_w_sp(1,3,iw)), &
-              -imaginarypart(feps*sigma_w_sp(1,3,iw)), &
+              -aimag(feps*sigma_w_sp(1,3,iw)), &
               -realpart(feps*sigma_w_sp(2,1,iw)), &
-              -imaginarypart(feps*sigma_w_sp(2,1,iw)), &
+              -aimag(feps*sigma_w_sp(2,1,iw)), &
               -realpart(feps*sigma_w_sp(2,2,iw)), &
-              -imaginarypart(feps*sigma_w_sp(2,2,iw)), &
+              -aimag(feps*sigma_w_sp(2,2,iw)), &
               -realpart(feps*sigma_w_sp(2,3,iw)), &
-              -imaginarypart(feps*sigma_w_sp(2,3,iw)), &
+              -aimag(feps*sigma_w_sp(2,3,iw)), &
               -realpart(feps*sigma_w_sp(3,1,iw)), &
-              -imaginarypart(feps*sigma_w_sp(3,1,iw)), &
+              -aimag(feps*sigma_w_sp(3,1,iw)), &
               -realpart(feps*sigma_w_sp(3,2,iw)), &
-              -imaginarypart(feps*sigma_w_sp(3,2,iw)), &
+              -aimag(feps*sigma_w_sp(3,2,iw)), &
               -realpart(feps*sigma_w_sp(3,3,iw)), &
-              -imaginarypart(feps*sigma_w_sp(3,3,iw))               
+              -aimag(feps*sigma_w_sp(3,3,iw))               
   write(60,*) wp(iw)*27.211385d0,realpart(feps*sigma_w_ex(1,1,iw)), &
-              imaginarypart(feps*sigma_w_ex(1,1,iw)), &
+              aimag(feps*sigma_w_ex(1,1,iw)), &
               realpart(feps*sigma_w_ex(1,2,iw)), &
-              imaginarypart(feps*sigma_w_ex(1,2,iw)), &
+              aimag(feps*sigma_w_ex(1,2,iw)), &
               realpart(feps*sigma_w_ex(1,3,iw)), &
-              imaginarypart(feps*sigma_w_ex(1,3,iw)), &
+              aimag(feps*sigma_w_ex(1,3,iw)), &
               realpart(feps*sigma_w_ex(2,1,iw)), &
-              imaginarypart(feps*sigma_w_ex(2,1,iw)), &
+              aimag(feps*sigma_w_ex(2,1,iw)), &
               realpart(feps*sigma_w_ex(2,2,iw)), &
-              imaginarypart(feps*sigma_w_ex(2,2,iw)), &
+              aimag(feps*sigma_w_ex(2,2,iw)), &
               realpart(feps*sigma_w_ex(2,3,iw)), &
-              imaginarypart(feps*sigma_w_ex(2,3,iw)), &
+              aimag(feps*sigma_w_ex(2,3,iw)), &
               realpart(feps*sigma_w_ex(3,1,iw)), &
-              imaginarypart(feps*sigma_w_ex(3,1,iw)), &
+              aimag(feps*sigma_w_ex(3,1,iw)), &
               realpart(feps*sigma_w_ex(3,2,iw)), &
-              imaginarypart(feps*sigma_w_ex(3,2,iw)), &
+              aimag(feps*sigma_w_ex(3,2,iw)), &
               realpart(feps*sigma_w_ex(3,3,iw)), &
-              imaginarypart(feps*sigma_w_ex(3,3,iw))             
+              aimag(feps*sigma_w_ex(3,3,iw))             
 end do
 
 !write exciton oscillator strengths
