@@ -1581,6 +1581,8 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     std::cout << "Total of conduction bands = " << ncbands << "\n";
     std::cout << "fermi level = " << system->fermiLevel << "\n";
 
+    std::complex<double> g_s = 2.0; // Spin degeneracy
+
     std::complex<double> term = 0.;
     std::complex<double> term_aux = 0.;
     this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
@@ -1655,7 +1657,7 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     std::cout << "G = G(" << this->Gs(0) << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;
     std::cout << "G' = G(" << this->Gs(1) << ") = (" << G2(0) << ", " << G2(1) << ", " << G2(2) << ")" << std::endl;
 
-    std::cout << "The value of the polarizability according to the correct expression is = " << term_aux/(system->unitCellArea*totalCells) << std::endl;
+    std::cout << "The value of the polarizability according to the correct expression is = " << g_s*term_aux/(system->unitCellArea*totalCells) << std::endl;
 
     return term/(system->unitCellArea*totalCells);
 }
@@ -1781,8 +1783,11 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
     int lowerindexvbands = nvbands - nvbandsincluded;
 
     arma::cx_vec coefskq, coefsk;
+    arma::cx_vec coefskq_c, coefsk_v;
 
     std::complex<double> term = 0.;
+    std::complex<double> term_aux = 0.;
+    std::complex<double> g_s = 2.0; // Spin degeneracy
 
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
         
@@ -1826,11 +1831,15 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
                 std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
 
                 term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+            
+                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
+                term_aux += std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG)*IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
             }
         }
     }
 
-    return term/(system->unitCellArea*totalCells);
+    return g_s*term_aux/(system->unitCellArea*totalCells);
 }
 
 /**
@@ -3671,7 +3680,7 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
 
     if (this->mode == "reciprocalspace"){
         int ngs = this->trunreciprocalLattice_.n_rows;
-        int nqs = system->nk;
+        int nqs = this->Chimatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
         std::cout << "ngs = " << ngs << std::endl;
         for(unsigned int i = 0; i < nqs; i++){
             for (unsigned int g = 0; g < ngs; g++){
