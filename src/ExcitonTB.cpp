@@ -1782,6 +1782,8 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
     int upperindexcband = nvbands + ncbandsincluded - 1;
     int lowerindexvbands = nvbands - nvbandsincluded;
 
+    //int basisdim = nvbands + ncbands;
+
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
 
@@ -1789,24 +1791,29 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
     std::complex<double> term_aux = 0.;
     std::complex<double> g_s = 2.0; // Spin degeneracy
 
+    vec auxEigVal(basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);
+
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
-        
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
-        vec auxEigVal(basisdim);
-        arma::cx_mat auxEigvec(basisdim, basisdim);
-
-        std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
-
-        for (int i = 0; i < nk; i++){
-            arma::rowvec kq = system->kpoints.row(i) + q;
-            system->solveBands(kq, auxEigVal, auxEigvec);
-
-            auxEigvec = fixGlobalPhase(auxEigvec);
-            eigvalkqStack_.col(i) = auxEigVal;
-            eigveckqStack_.slice(i) = auxEigvec;
-        };
+    } else {
+        if ((this->eigveckqStack_.n_slices != nk || this->eigvalkqStack_.n_rows != basisdim || this->eigvalkqStack_.n_cols != basisdim) || (this->eigvalKQStack_.n_rows != basisdim || this->eigvalKQStack_.n_cols != nk)) {
+            this->eigveckqStack_.reshape(basisdim, basisdim, nk);
+            this->eigvalkqStack_.reshape(basisdim, nk);
+        }
     }
+
+    //std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
+   
+    for (int i = 0; i < nk; i++)
+    {
+        arma::rowvec kq = system->kpoints.row(i) + q;
+        system->solveBands(kq, auxEigVal, auxEigvec);
+        auxEigvec = fixGlobalPhase(auxEigvec);
+        eigvalkqStack_.col(i) = auxEigVal;
+        eigveckqStack_.slice(i) = auxEigvec;
+    };
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
@@ -2052,9 +2059,10 @@ void ExcitonTB::PolarizabilityMesh() {
         arma::rowvec g = reciprocalVectors.row(this->Gs(0)); // Sets G
         arma::rowvec g2 = reciprocalVectors.row(this->Gs(1)); // Sets G'
 
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for (int iq = 0; iq < nq; iq++){
-            Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, iq);
+            arma::rowvec q = system->kpoints.row(iq);
+            Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, q);
         }
 
         std::cout << "Chi computed" << std::endl;
