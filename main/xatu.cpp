@@ -165,8 +165,16 @@ int main(int argc, char* argv[]){
             bulkExciton.computesingleDielectricFunctionMatrixElement();
             return 0;
         } else if (screeningConfig->screeningInfo.function == "polarizability") {
+
+            if (bulkExciton.mode == "reciprocalspace")
+            {
+                bulkExciton.writeBZtofile();
+            }
+
             bulkExciton.PolarizabilityMesh();
+
             return 0;
+
         } else if (screeningConfig->screeningInfo.function =="inversedielectric") {
             std::cout << "Proceeding with computation of the inverse of a dielectric matrix...\n" << std::endl;
 
