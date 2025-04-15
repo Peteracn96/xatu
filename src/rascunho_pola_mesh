@@ -90,7 +90,7 @@
     //     int ig = combinations.row(i)(1);
     //     int ig2 = combinations.row(i)(2);
         
-    //     this->Chimatrix_.slice(iq).row(ig)(ig2) = reciprocalPolarizabilityMatrixElement(reciprocalVectors.row(ig), reciprocalVectors.row(ig2), iq);
+    //     this->Chimatrix_.slice(iq).row(ig)(ig2) = compute_2D_PolarizabilityMatrixElement(reciprocalVectors.row(ig), reciprocalVectors.row(ig2), iq);
 
     //     std::cout << "iq = " << iq << "\n"; 
     // }

@@ -54,6 +54,11 @@ class Exciton {
         arma::mat eigvalkStack_, eigvalkqStack_;
         arma::cx_cube eigveckStack_, eigveckqStack_;
 
+        arma::mat q_points;
+
+        arma::cube eigvalkqStack_test;
+        std::vector<arma::cx_cube> eigveckqStack_test;
+
         // Internals for BSE
         arma::mat eigvalKStack_, eigvalKQStack_;
         arma::cx_cube eigvecKStack_, eigvecKQStack_;

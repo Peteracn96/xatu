@@ -39,13 +39,13 @@ int main(){
 
     std::cout << "Number of reciprocal vectors used in the calculation: " << NGs << std::endl;
 
-    //mos2_exciton.compute_2D_DielectricMatrix("MoS2_k_points.dat");
+    mos2_exciton.compute_2D_DielectricMatrix_Opt("MoS2_TB_q_points_test.dat");
 
-    mos2_exciton.compute_2D_PolarizabilityMatrix("MoS2_TB_q_60_points.dat");
+    mos2_exciton.compute_2D_DielectricMatrix("MoS2_TB_q_points_test.dat");
 
     //mos2_exciton.invertDielectricMatrix();
 
-    mos2_exciton.writePolarizabilityMatrix("MoS2_polarizability.dat");
+    //mos2_exciton.writePolarizabilityMatrix("MoS2_polarizability.dat");
 
     //mos2_exciton.writeInverseDielectricMatrix("MoS2_TB_screening.dat");
 
