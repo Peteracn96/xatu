@@ -56,22 +56,5 @@ int main(){
         mos2_exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening_" + std::to_string(nGs) + ".dat");
     }
 
-    //mos2_exciton.compute_2D_DielectricMatrix_Opt("MoS2_TB_q_points_test.dat"); not optimal at the end
-
-    //mos2_exciton.compute_2D_DielectricMatrix("MoS2_TB_q_points_test.dat");
-
-    //mos2_exciton.invertDielectricMatrix();
-
-    //mos2_exciton.writePolarizabilityMatrix("MoS2_polarizability.dat");
-
-    //mos2_exciton.writeInverseDielectricMatrix("MoS2_TB_screening.dat");
-
-    // Testing the code for RPA calculation
-    // mos2_exciton.compute_2D_RPAInvDielectricMatrix("MoS2_TB_q_points_test.dat");
-
-    // mos2_exciton.writeRPAPolarizabilityMatrix("MoS2_RPA_polarizability.dat");
-
-    // mos2_exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening.dat");
-
     return 0;
 }

@@ -2459,7 +2459,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 }
 
 /**
- * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified k points. More useful for isotropic systems.
+ * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
  * @return void
 */
 void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
@@ -2604,7 +2604,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 }
 
 /**
- * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified k points. More useful for isotropic systems.
+ * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
  * @return void
  */
 void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
@@ -2680,28 +2680,23 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
             this->Chimatrix_.reshape(nGs, nGs, Nqpoints);
         }
 
-        arma::imat indecesqg(Nqpoints * nGs * (nGs + 1) / 2, 3, arma::fill::zeros);
+        arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
 
-        // Generates all the combinations of (k,G,G') indices
+        // Generates all the combinations of (G,G') indices
         int i = 0;
-        for (int iq = 0; iq < Nqpoints; iq++)
+        for (int g = 0; g < nGs; g++)
         {
-            for (int g = 0; g < nGs; g++)
+            for (int g2 = g; g2 < nGs; g2++)
             {
-                for (int g2 = g; g2 < nGs; g2++)
-                {
-                    indecesqg.row(i)(0) = iq;
-                    indecesqg.row(i)(1) = g;
-                    indecesqg.row(i)(2) = g2;
-                    i++;
-                }
+                indecesg.row(i)(0) = g;
+                indecesg.row(i)(1) = g2;
+                i++;
             }
         }
 
         std::cout << "Printing all the G vectors:\n";
         for (int i = 0; i < nGs; i++)
         {
-
             arma::rowvec G = ReciprocalVectors.row(i);
 
             std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
@@ -2711,7 +2706,6 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
 
         for (int iq = 0; iq < Nqpoints; iq++)
         {
-
             arma::rowvec q = q_points.row(iq);
 
             std::cout << iq << ", " << std::flush;
@@ -2729,8 +2723,8 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
             #pragma omp parallel for
             for (int i = 0; i < nGs * (nGs + 1) / 2; i++)
             {
-                int g = indecesqg.row(i)(1);
-                int g2 = indecesqg.row(i)(2);
+                int g = indecesg.row(i)(0);
+                int g2 = indecesg.row(i)(1);
 
                 arma::rowvec G = ReciprocalVectors.row(g);
                 arma::rowvec G2 = ReciprocalVectors.row(g2);
@@ -2753,7 +2747,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
 }
 
 /**
- * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified k points. More useful for isotropic systems.
+ * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
  * @details Optimized version under testing
  * @return void
 */
@@ -2806,9 +2800,6 @@ void ExcitonTB::compute_2D_DielectricMatrix_Opt(std::string kpointsfile){
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
         int nGs = ReciprocalVectors.n_rows;
         int Ncells = this->ncell_;
-
-        arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
-        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
         vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
@@ -2998,7 +2989,252 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
 }
 
 /**
- * Method to invert the static dielectric matrix in the BZ mesh.
+ * Method to compute the strictly 2D static RPA polarizability matrix at a specific q point from the list of q points. More useful for isotropic systems.
+ * @return void
+*/
+arma::cx_mat ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec& q, const int iq){
+
+    int basisdim = system->basisdim;
+    int nk = system->nk;
+    
+    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+    int nGs = this->nReciprocalVectors_; // ReciprocalVectors.n_rows;
+    int Ncells = this->ncell_;
+
+    arma::cx_mat Chi0_GG(nGs, nGs, arma::fill::zeros);
+    arma::cx_mat V_GG(nGs, nGs, arma::fill::zeros);
+    arma::cx_mat M(nGs, nGs, arma::fill::zeros);
+    arma::cx_mat ChiRPA_GG(nGs, nGs, arma::fill::zeros);
+    
+    arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
+    arma::cx_mat Identity(nGs,nGs,arma::fill::eye);
+
+    arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
+
+    // Generates all the combinations of (G,G') indices
+    int i = 0;
+    for (int g = 0; g < nGs; g++)
+    {
+        for (int g2 = g; g2 < nGs; g2++)
+        {
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
+
+    for (int g = 0; g < nGs; ++g) {
+        arma::rowvec G = ReciprocalVectors.row(g); 
+        V_GG(g,g) = coulomb_2D_FT(q + G);
+    }
+
+    #pragma omp parallel for 
+    for (int i = 0; i < nGs*(nGs+1)/2; i++){
+        int g  = indecesg.row(i)(0);
+        int g2 = indecesg.row(i)(1);
+
+        arma::rowvec G = ReciprocalVectors.row(g);                
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+
+        Chi0_GG(g,g2) = Chi;
+        Chi0_GG(g2,g) = std::conj(Chi);
+    }
+
+    M = Identity - Chi0_GG*V_GG;
+
+    auxvecsol = arma::solve(M, Identity);
+
+    ChiRPA_GG = auxvecsol*Chi0_GG;
+
+    return ChiRPA_GG;
+}
+
+/**
+ * Method to compute the strictly 2D static RPA polarizability matrix in a set of user specified q points. More useful for isotropic systems.
+ * @return void
+ */
+void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
+{
+
+    auto start = high_resolution_clock::now();
+
+    if (this->mode == "realspace")
+    {
+
+        std::cout << "Implementation of the exciton in real space in progress. Exiting." << std::endl;
+
+        std::exit(0);
+    }
+
+    if (this->mode == "reciprocalspace")
+    {
+        // Reads q points from file
+        std::ifstream inputfile(kpointsfile);
+        if (!inputfile)
+        {
+            std::cout << "File for k points failed to open or does not exist. Exiting" << std::endl;
+            exit(1);
+        }
+
+        std::string line;
+        double qx, qy, qz;
+        arma::mat q_points;
+
+        try
+        {
+            while (std::getline(inputfile, line))
+            {
+                std::istringstream iss(line);
+                iss >> qx >> qy >> qz;
+                arma::rowvec qpoint{qx, qy, qz};
+                q_points.insert_rows(q_points.n_rows, qpoint);
+            }
+            inputfile.close();
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+
+        int Nqpoints = q_points.n_rows;
+
+        std::cout << "Nqpoints = " << Nqpoints << std::endl;
+
+        int basisdim = system->basisdim;
+        int nk = system->nk;
+
+        vec auxEigVal(basisdim);
+        arma::cx_mat auxEigvec(basisdim, basisdim);
+
+        std::cout << "Diagonalizing H(k+q) for every point q, for every point k... ";
+
+        // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of q points
+        /*if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty()) {
+
+            this->eigvalkqStack_test = arma::cube(basisdim, nk, Nqpoints, arma::fill::zeros);
+
+            std::vector<arma::cx_cube> vector_aux;
+            vector_aux.resize(Nqpoints);
+            this->eigveckqStack_test = vector_aux;
+
+            for (int iq = 0; iq < Nqpoints; ++iq) {
+                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk, arma::fill::zeros);
+            }
+
+        } else {
+            this->eigvalkqStack_test.reshape(basisdim, nk, Nqpoints);
+            this->eigveckqStack_test.resize(Nqpoints);
+
+            for (int iq = 0; iq < Nqpoints; ++iq) {
+                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk, arma::fill::zeros);
+            }
+        }*/
+
+        if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
+            this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+            this->eigvalkqStack_ = arma::mat(basisdim, nk);
+        } else if ((this->eigveckqStack_.n_slices != nk || this->eigvalkqStack_.n_rows != basisdim || this->eigvalkqStack_.n_cols != basisdim) || (this->eigvalKQStack_.n_rows != basisdim || this->eigvalKQStack_.n_cols != nk)) {
+            this->eigveckqStack_.reshape(basisdim, basisdim, nk);
+            this->eigvalkqStack_.reshape(basisdim, nk);
+        }
+
+        //#pragma omp parallel for
+        /*for (int iq = 0; iq < Nqpoints; ++iq) {
+            arma::rowvec q = q_points.row(iq);
+
+            for (int i = 0; i < nk; i++){
+                arma::rowvec kq = system->kpoints.row(i) + q;
+                system->solveBands(kq, auxEigVal, auxEigvec);
+
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
+                eigveckqStack_test[iq].slice(i) = auxEigvec;
+            };
+        }*/
+
+        std::cout << "Computing RPA polarizability matrix in the specified q points... \n" << std::flush;
+
+        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+        int nGs = ReciprocalVectors.n_rows;
+        int Ncells = this->ncell_;
+
+        // In case the RPA polarizability/inverse dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
+        if (this->ChiRPAmatrix_.is_empty())
+        {
+            this->ChiRPAmatrix_ = arma::cx_cube(nGs, nGs, Nqpoints, arma::fill::zeros);
+        }
+        else
+        {
+            this->ChiRPAmatrix_.reshape(nGs, nGs, Nqpoints);
+        }
+
+        if (this->RPAInvepsilonmatrix_.is_empty())
+        {
+            this->RPAInvepsilonmatrix_ = arma::cx_cube(nGs, nGs, Nqpoints, arma::fill::zeros);
+        }
+        else
+        {
+            this->RPAInvepsilonmatrix_.reshape(nGs, nGs, Nqpoints);
+        }
+
+        arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
+
+        std::cout << "Printing all the G vectors:\n";
+        for (int i = 0; i < nGs; i++)
+        {
+            arma::rowvec G = ReciprocalVectors.row(i);
+
+            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+        }
+
+        std::cout << "iq = ";
+
+        for (int iq = 0; iq < Nqpoints; iq++)
+        {
+            std::cout << iq << ", " << std::flush;
+
+            arma::rowvec q = q_points.row(iq);
+
+            for (int i = 0; i < nk; i++){
+                arma::rowvec kq = system->kpoints.row(i) + q;
+                system->solveBands(kq, auxEigVal, auxEigvec);
+
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                eigvalkqStack_.col(i) = auxEigVal;
+                eigveckqStack_.slice(i) = auxEigvec;
+            };
+
+            this->ChiRPAmatrix_.slice(iq) = compute_2D_RPAPolarizabilityMatrix_at_q(q,iq);
+        }
+
+        arma::cx_mat Identity(nGs, nGs, arma::fill::eye);
+
+        for (int iq = 0; iq < Nqpoints; iq++)
+        {
+            arma::rowvec q = q_points.row(iq);
+            arma::cx_mat V_GG(nGs,nGs,arma::fill::zeros);
+            
+            for (int g = 0; g < nGs; ++g){
+                arma::rowvec G = ReciprocalVectors.row(g);
+                V_GG(g,g) = coulomb_2D_FT(q + G);
+            }
+
+            this->RPAInvepsilonmatrix_.slice(iq) = Identity + this->ChiRPAmatrix_.slice(iq)*V_GG;
+        }
+
+        std::cout << "Done.\n" << std::flush;
+
+        std::cout << "Computing RPA inverse dielectric matrix in the specified q points... \n" << std::flush;
+    }
+
+    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
+    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+
+    std::cout << "Done in " << duration_dielectric_matrix_mesh.count() / 1000.0 << " s." << std::endl
+              << std::flush;
+}
 
 /**
  * Method to invert the static polarizability matrix in the BZ mesh.
@@ -4053,6 +4289,95 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     fclose(textfile);
 }
 
+/* Method to print information of the RPA inverse of the dielectric matrix into a file.
+ * @return void 
+ */
+void ExcitonTB::writeRPAInverseDielectricMatrix(std::string filename_dielectric) const {
+
+    FILE* textfile = fopen(filename_dielectric.c_str(), "w");
+
+    if (textfile == NULL){
+        std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
+
+    if (this->mode == "realspace"){
+        int n_atoms = this->system->motif.n_rows;
+        int n_R_vectors = this->system->bravaisLattice.n_rows;
+        int n_positions = n_R_vectors*n_atoms - 1;
+
+        arma::ucube combinations(n_positions,2,n_atoms);
+
+        // Generates all the combinations, for each t_j
+
+        int origin_index = (n_R_vectors - 1)/2;
+        int origin_index_aux = origin_index*n_atoms;
+
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            int index_aux = 0;
+
+            for (arma::uword R_i = 0; R_i < n_R_vectors; ++R_i){
+
+                if (R_i == origin_index){
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+
+                        if (t_i != t_j){
+                            combinations.slice(t_j).row(index_aux)(0) = R_i;
+                            combinations.slice(t_j).row(index_aux)(1) = t_i;
+                            ++index_aux;
+                        }
+                    }
+
+                } else {
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+                        combinations.slice(t_j).row(index_aux)(0) = R_i;
+                        combinations.slice(t_j).row(index_aux)(1) = t_i;
+                        ++index_aux;
+                    }
+                }
+                
+            }
+        }
+
+        for(arma::uword t_j = 0; t_j < n_atoms; t_j++){
+            for (arma::uword pos_index = 0; pos_index < n_positions; pos_index++){
+                arma::rowvec R = this->system->bravaisLattice.row(combinations.slice(t_j).row(pos_index)(0));
+                arma::rowvec t = this->system->motif.row(combinations.slice(t_j).row(pos_index)(1));
+                fprintf(textfile, "%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), this->Wmatrix_.col(t_j)(pos_index));
+            }
+
+            fprintf(textfile, "\n");
+        }
+
+        fclose(textfile);
+
+        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
+
+        exit(0);
+    }
+
+    if (this->mode == "reciprocalspace"){
+        int ngs = this->trunreciprocalLattice_.n_rows;
+        int nqs = this->RPAInvepsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
+
+        for(unsigned int i = 0; i < nqs; i++){
+            for (unsigned int g = 0; g < ngs; g++){
+                for (unsigned int g2 = 0; g2 < ngs; g2++){
+                    std::complex<double> aux = this->RPAInvepsilonmatrix_.slice(i).at(g,g2);
+                    fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
+                }
+                fprintf(textfile, "\n");
+            }
+        }
+    }
+    
+    fclose(textfile);
+}
+
 /* Method to print information of the polarizability matrix into a file.
  * @return void 
  */
@@ -4132,6 +4457,95 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
             for (unsigned int g = 0; g < ngs; g++){
                 for (unsigned int g2 = 0; g2 < ngs; g2++){
                     std::complex<double> aux = this->Chimatrix_.slice(i).at(g,g2);
+                    fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
+                }
+                fprintf(textfile, "\n");
+            }
+        }
+    }
+    
+    fclose(textfile);
+}
+
+/* Method to print information of the RPA polarizability matrix into a file.
+ * @return void 
+ */
+void ExcitonTB::writeRPAPolarizabilityMatrix(std::string filename_dielectric) const {
+
+    FILE* textfile = fopen(filename_dielectric.c_str(), "w");
+
+    if (textfile == NULL){
+        std::cout << "File for polarizability matrix failed to open. Exiting." << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Writing polarizability matrix fo file: " << filename_dielectric << std::endl;
+
+    if (this->mode == "realspace"){
+        int n_atoms = this->system->motif.n_rows;
+        int n_R_vectors = this->system->bravaisLattice.n_rows;
+        int n_positions = n_R_vectors*n_atoms - 1;
+
+        arma::ucube combinations(n_positions,2,n_atoms);
+
+        // Generates all the combinations, for each t_j
+
+        int origin_index = (n_R_vectors - 1)/2;
+        int origin_index_aux = origin_index*n_atoms;
+
+        for (arma::uword t_j = 0; t_j < n_atoms; ++t_j){
+            int index_aux = 0;
+
+            for (arma::uword R_i = 0; R_i < n_R_vectors; ++R_i){
+
+                if (R_i == origin_index){
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+
+                        if (t_i != t_j){
+                            combinations.slice(t_j).row(index_aux)(0) = R_i;
+                            combinations.slice(t_j).row(index_aux)(1) = t_i;
+                            ++index_aux;
+                        }
+                    }
+
+                } else {
+
+                    for (arma::uword t_i = 0; t_i < n_atoms; ++t_i){
+                        combinations.slice(t_j).row(index_aux)(0) = R_i;
+                        combinations.slice(t_j).row(index_aux)(1) = t_i;
+                        ++index_aux;
+                    }
+                }
+                
+            }
+        }
+
+        for(arma::uword t_j = 0; t_j < n_atoms; t_j++){
+            for (arma::uword pos_index = 0; pos_index < n_positions; pos_index++){
+                arma::rowvec R = this->system->bravaisLattice.row(combinations.slice(t_j).row(pos_index)(0));
+                arma::rowvec t = this->system->motif.row(combinations.slice(t_j).row(pos_index)(1));
+                fprintf(textfile, "%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf%11.7lf\n", R(0), R(1), R(2), t(0), t(1), t(2), this->Wmatrix_.col(t_j)(pos_index));
+            }
+
+            fprintf(textfile, "\n");
+        }
+
+        fclose(textfile);
+
+        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
+
+        exit(0);
+    }
+
+    if (this->mode == "reciprocalspace"){
+        int ngs = this->trunreciprocalLattice_.n_rows;
+        int nqs = this->ChiRPAmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
+        std::cout << "ngs = " << ngs << std::endl;
+        for(unsigned int i = 0; i < nqs; i++){
+            for (unsigned int g = 0; g < ngs; g++){
+                for (unsigned int g2 = 0; g2 < ngs; g2++){
+                    std::complex<double> aux = this->ChiRPAmatrix_.slice(i).at(g,g2);
                     fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
                 }
                 fprintf(textfile, "\n");

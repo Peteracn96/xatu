@@ -67,6 +67,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::cx_cube Chimatrix_;
         arma::cx_cube epsilonmatrix_;
         arma::cx_cube Invepsilonmatrix_;
+        arma::cx_cube ChiRPAmatrix_;
+        arma::cx_cube RPAInvepsilonmatrix_;
 
         arma::mat Polarizabilitymatrix_;
         arma::mat Wmatrix_;
@@ -218,6 +220,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void compute_2D_DielectricMatrix_at_q(const arma::rowvec&, const int);
         void compute_2D_DielectricMatrix(std::string);
         void compute_2D_PolarizabilityMatrix(std::string);
+        void compute_2D_RPAInvDielectricMatrix(std::string);
+        arma::cx_mat compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec&, const int);
         void invertDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
@@ -235,15 +239,19 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Print information
         void printInformation();
-
-        // Write inverse of dielectric matrix in a file
-        void writeInverseDielectricMatrix(std::string) const;     
+     
         // Write BZ mesh in a file
         void writeBZtofile() const;
         // Write polarizability matrix in a file
         void writePolarizabilityMatrix(std::string) const;
+        // Write polarizability matrix in a file
+        void writeRPAPolarizabilityMatrix(std::string) const;
         // Read inverse of dielectric matrix in a file
         void readInverseDielectricMatrix(std::string);
+        // Write inverse of dielectric matrix in a file
+        void writeInverseDielectricMatrix(std::string) const;
+        // Write inverse of dielectric matrix in a file
+        void writeRPAInverseDielectricMatrix(std::string) const;
 
         // Verifies if potential chosen is 'rpa' and if a screening file was not provided
         void verifypotential();
