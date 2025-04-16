@@ -10,6 +10,11 @@ INCLUDE = -I$(PWD)/include -I/home/juanjo-uam/packages/armadillo-code/include
 # Libraries
 LIBS = -DARMA_DONT_USE_WRAPPER -L$(PWD) -L/home/juanjo-uam/packages/arpack-ng/build/lib -L/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen3/gcc-11.3.0/netlib-lapack-3.10.1-w4ll4ab5vlyfedksmq4onku35nqr3atw/lib64 -L/opt/ohpc/admin/spack/0.18.1/opt/spack/linux-rocky8-zen3/gcc-11.3.0/netlib-lapack-3.10.1-w4ll4ab5vlyfedksmq4onku35nqr3atw/lib64 -L/home/juanjo-uam/packages/armadillo-code/ -L$(PWD) -lxatu -larmadillo -llapack -larpack -fopenmp -lgfortran -lblas
 
+# Commands to run in the terminal to compile and run:
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/juanjo-uam/packages/armadillo-code
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/juanjo-uam/packages/arpack-ng/build/lib
+# module load gcc-11.3.0-gcc-9.4.0-2zeeydc netlib-lapack-3.10.1-gcc-11.3.0-w4ll4ab openmpi4/4.1.1 openblas/0.3.7
+
 # Conditional flags for compilation
 ifeq ($(DEBUG), 1)
 	CFLAGS = -Wall -lm -g
