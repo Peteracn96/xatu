@@ -202,6 +202,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
+        std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec &, const arma::rowvec &, const arma::rowvec &, const int);
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         //double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const;

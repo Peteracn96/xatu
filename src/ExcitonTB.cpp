@@ -1795,6 +1795,12 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
 
+    // if (this->eigveckqStack_test.empty() && this->eigvalkqStack_test.is_empty())
+    // {
+    //     std::cout << "Bloch Hamiltonian has to be diagonalized at every k+q point before computing polarizability matrix elements. Terminating" << std::endl;
+    //     exit(0);
+    // }
+
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
@@ -1963,6 +1969,110 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
     }
 
     return g_s*term_aux/(system->unitCellArea*totalCells);
+}
+
+/**
+ * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q from list of q points read from file.
+ * @details The momentum q has to be specified through the vector coordinates and index.  The purely 2D polarizability is computed.
+ * @param G Reciprocal lattice vector G
+ * @param G2 Reciprocal lattice vector G2
+ * @param q Momentum vector q
+ * @param iq Index of momentum vector q
+ * @return Polarizability
+ */
+std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const int iq)
+{
+
+    int nk = system->nk;
+    int natoms = system->natoms;
+    int basisdim = system->basisdim;
+
+    int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
+    arma::cx_vec coefskq, coefsk;
+    arma::cx_vec coefskq_c, coefsk_v;
+
+    std::complex<double> term = 0.;
+    std::complex<double> term_aux = 0.;
+    std::complex<double> g_s = 2.0; // Spin degeneracy
+
+    for (int ik = 0; ik < nk; ik++)
+    {
+
+        arma::rowvec k = system->kpoints.row(ik);
+        arma::rowvec kq = system->kpoints.row(ik) + q;
+        std::cout << "Aqui 0\n"
+                  << std::flush;
+
+        arma::cx_mat *auxk_slice = &eigveckStack_.slice(ik);
+        //arma::cx_mat *auxkq_slice = &eigveckqStack_test[iq].slice(ik);
+        std::cout << "Aqui 1\n"
+                  << std::flush;
+
+        for (int ic = nvbands; ic <= upperindexcband; ic++)
+        {
+
+            // Using the atomic gauge
+            if (gauge == "atomic")
+            {
+                coefsk = system_->latticeToAtomicGauge(auxk_slice->col(ic), k);
+            }
+            else
+            {
+                coefsk = auxk_slice->col(ic);
+            }
+
+            if (gauge == "atomic")
+            {
+                coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), q);
+            }
+            else
+            {
+                coefskq_c = eigveckqStack_.slice(ik).col(ic);
+            }
+
+            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--)
+            {
+
+                // Using the atomic gauge
+                if (gauge == "atomic")
+                {
+                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), q);
+                }
+                else
+                {
+                    coefskq = eigveckqStack_.slice(ik).col(iv);
+                }
+
+                if (gauge == "atomic")
+                {
+                    coefsk_v = system_->latticeToAtomicGauge(auxk_slice->col(iv), k);
+                }
+                else
+                {
+                    coefsk_v = auxk_slice->col(iv);
+                }
+
+                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
+
+                //term += IvcG * std::conj(IvcG2) / (eigvalkStack_.col(kqindex)(iv) - eigvalkStack_.col(ik)(ic));
+
+                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
+                term_aux += std::conj(IvcG) * IvcG2 / (eigvalkqStack_test.slice(iq).col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG) * IcvG2 / (eigvalkqStack_test.slice(iq).col(ik)(ic) - eigvalkStack_.col(ik)(iv));
+            }
+        }
+    }
+
+    return g_s * term_aux / (system->unitCellArea * totalCells);
 }
 
 /**
@@ -3102,6 +3212,17 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
 
         std::cout << "Nqpoints = " << Nqpoints << std::endl;
 
+        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+        int nGs = ReciprocalVectors.n_rows;
+
+        std::cout << "Printing all the G vectors:\n";
+        for (int i = 0; i < nGs; i++)
+        {
+            arma::rowvec G = ReciprocalVectors.row(i);
+
+            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+        }
+
         int basisdim = system->basisdim;
         int nk = system->nk;
 
@@ -3111,26 +3232,26 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
         std::cout << "Diagonalizing H(k+q) for every point q, for every point k... ";
 
         // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of q points
-        /*if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty()) {
+        // if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty()) {
 
-            this->eigvalkqStack_test = arma::cube(basisdim, nk, Nqpoints, arma::fill::zeros);
+        //     this->eigvalkqStack_test = arma::cube(basisdim, nk, Nqpoints, arma::fill::zeros);
 
-            std::vector<arma::cx_cube> vector_aux;
-            vector_aux.resize(Nqpoints);
-            this->eigveckqStack_test = vector_aux;
+        //     std::vector<arma::cx_cube> vector_aux;
+        //     vector_aux.resize(Nqpoints);
+        //     this->eigveckqStack_test = vector_aux;
 
-            for (int iq = 0; iq < Nqpoints; ++iq) {
-                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk, arma::fill::zeros);
-            }
+        //     for (int iq = 0; iq < Nqpoints; ++iq) {
+        //         this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk, arma::fill::zeros);
+        //     }
 
-        } else {
-            this->eigvalkqStack_test.reshape(basisdim, nk, Nqpoints);
-            this->eigveckqStack_test.resize(Nqpoints);
+        // } else {
+        //     this->eigvalkqStack_test.reshape(basisdim, nk, Nqpoints);
+        //     this->eigveckqStack_test.resize(Nqpoints);
 
-            for (int iq = 0; iq < Nqpoints; ++iq) {
-                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk, arma::fill::zeros);
-            }
-        }*/
+        //     for (int iq = 0; iq < Nqpoints; ++iq) {
+        //         this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk, arma::fill::zeros);
+        //     }
+        // }
 
         if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
             this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
@@ -3141,23 +3262,23 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
         }
 
         //#pragma omp parallel for
-        /*for (int iq = 0; iq < Nqpoints; ++iq) {
-            arma::rowvec q = q_points.row(iq);
+        // for (int iq = 0; iq < Nqpoints; ++iq) {
+        //     arma::rowvec q = q_points.row(iq);
 
-            for (int i = 0; i < nk; i++){
-                arma::rowvec kq = system->kpoints.row(i) + q;
-                system->solveBands(kq, auxEigVal, auxEigvec);
+        //     for (int i = 0; i < nk; i++){
+        //         arma::rowvec kq = system->kpoints.row(i) + q;
+        //         system->solveBands(kq, auxEigVal, auxEigvec);
 
-                auxEigvec = fixGlobalPhase(auxEigvec);
-                eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
-                eigveckqStack_test[iq].slice(i) = auxEigvec;
-            };
-        }*/
+        //         auxEigvec = fixGlobalPhase(auxEigvec);
+        //         eigvalkqStack_.col(i) = auxEigVal;
+        //         eigveckqStack_.slice(i) = auxEigvec;
+        //     };
+
+
+        // }
 
         std::cout << "Computing RPA polarizability matrix in the specified q points... \n" << std::flush;
 
-        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        int nGs = ReciprocalVectors.n_rows;
         int Ncells = this->ncell_;
 
         // In case the RPA polarizability/inverse dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
@@ -3180,14 +3301,6 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
         }
 
         arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
-
-        std::cout << "Printing all the G vectors:\n";
-        for (int i = 0; i < nGs; i++)
-        {
-            arma::rowvec G = ReciprocalVectors.row(i);
-
-            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
-        }
 
         std::cout << "iq = ";
 
