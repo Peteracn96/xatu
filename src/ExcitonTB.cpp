@@ -1619,10 +1619,10 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
         
                 // Using the atomic gauge
                 if(gauge == "atomic"){
-                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
                     coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
                 
-                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
                     coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
                 }
                 else{                            
@@ -1826,7 +1826,7 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
 
     //std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
    
-
+    std::cout << "Reached here 0" << std::endl;
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
         for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
@@ -1838,10 +1838,10 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
         
                // Using the atomic gauge
                 if(gauge == "atomic"){
-                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
                     coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
                 
-                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
                     coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
                 }
                 else{                            
@@ -3036,10 +3036,10 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
         
                // Using the atomic gauge
                 if(gauge == "atomic"){
-                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_test[iq].slice(ik).col(iv), system->kpoints.row(ik));
+                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_test[iq].slice(ik).col(iv), kq);
                     coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
                 
-                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_test[iq].slice(ik).col(ic), system->kpoints.row(ik));
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_test[iq].slice(ik).col(ic), kq);
                     coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
                 }
                 else{                            
@@ -3138,14 +3138,14 @@ arma::cx_mat ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowv
         V_GG(g,g) = coulomb_2D_FT(q + G);
     }
 
-    #pragma omp parallel for 
+    //#pragma omp parallel for 
     for (int i = 0; i < nGs*(nGs+1)/2; i++){
         int g  = indecesg.row(i)(0);
         int g2 = indecesg.row(i)(1);
 
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
-
+        std::cout << "i = " << i << std::endl;
         std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
 
         Chi0_GG(g,g2) = Chi;
