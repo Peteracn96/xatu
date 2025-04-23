@@ -3101,7 +3101,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
  * Method to compute the strictly 2D static RPA polarizability matrix at a specific q point from the list of q points. More useful for isotropic systems.
  * @return void
 */
-void ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec& q, const int iq){
+arma::cx_mat ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec& q, const int iq){
 
     int basisdim = system->basisdim;
     int nk = system->nk;
@@ -3131,7 +3131,7 @@ void ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec& q, c
             i++;
         }
     }
-std::cout <<"Here line 3134" << std::endl;
+
     for (int g = 0; g < nGs; ++g) {
         arma::rowvec G = ReciprocalVectors.row(g); 
         V_GG(g,g) = coulomb_2D_FT(q + G);
@@ -3150,15 +3150,45 @@ std::cout <<"Here line 3134" << std::endl;
         Chi0_GG(g,g2) = Chi;
         Chi0_GG(g2,g) = std::conj(Chi);
     }
-std::cout <<"Here line 3153" << std::endl;
+
     M = Identity - Chi0_GG*V_GG;
-std::cout <<"Here line 3155" << std::endl;
+
     auxvecsol = arma::solve(M, Identity);
-std::cout <<"Here line 3157" << std::endl;
-    //ChiRPA_GG = auxvecsol*Chi0_GG;
-    this->ChiRPAmatrix_.slice(iq) = auxvecsol*Chi0_GG;
-std::cout <<"Here line 3159" << std::endl;
-    //return ChiRPA_GG;
+
+    ChiRPA_GG = auxvecsol*Chi0_GG;
+    
+    return ChiRPA_GG;
+}
+
+/**
+ * Method to compute the strictly 2D static RPA inverse dielectric matrix at a specific q point from the list of q points. More useful for isotropic systems.
+ * @return void
+*/
+arma::cx_mat ExcitonTB::compute_2D_RPAInvDielectricMatrix_at_q(const arma::rowvec& q, const int iq){
+
+    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+    int nGs = this->nReciprocalVectors_;
+
+    if (this->ChiRPAmatrix_.slice(iq).is_empty() || this->ChiRPAmatrix_.slice(iq).is_zero()) {
+        std::cout << "RPA polarizability at this q point has not been computed." << std::endl;
+        std::cout << "Function 'compute_2D_RPAPolarizabilityMatrix_at_q()' has not been (properly) called. Exiting." << std::endl;
+        exit(0);
+    }
+
+     if ((this->ChiRPAmatrix_.slice(iq).n_rows != nGs) || (this->ChiRPAmatrix_.slice(iq).n_cols != nGs)) {
+        std::cout << "RPA polarizability dimensions (" << this->ChiRPAmatrix_.slice(iq).n_rows << " by " << this->ChiRPAmatrix_.slice(iq).n_cols << ") do not coincide with the number of G vectors (nGs =" << nGs << "). Exiting" << std::endl;
+        exit(0);
+    }
+
+    arma::cx_dmat V_GG(nGs,nGs,arma::fill::zeros);
+    arma::cx_dmat Identity(nGs,nGs,arma::fill::eye);
+
+    for (int g = 0; g < nGs; ++g) {
+        arma::rowvec G = ReciprocalVectors.row(g); 
+        V_GG(g,g) = coulomb_2D_FT(q + G);
+    }
+
+    return Identity + this->ChiRPAmatrix_.slice(iq)*V_GG;
 }
 
 /**
@@ -3285,23 +3315,15 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
                 eigvalkqStack_.col(i) = auxEigVal;
                 eigveckqStack_.slice(i) = auxEigvec;
             };
-std::cout <<"Here line 3320" << std::endl;
-            this->compute_2D_RPAPolarizabilityMatrix_at_q(q,iq);
+
+            this->ChiRPAmatrix_.slice(iq) = compute_2D_RPAPolarizabilityMatrix_at_q(q,iq);
         }
-std::cout <<"Here line 3323" << std::endl;
+
         arma::cx_mat Identity(nGs, nGs, arma::fill::eye);
 
         for (int iq = 0; iq < Nqpoints; iq++)
         {
-            arma::rowvec q = q_points.row(iq);
-            arma::cx_mat V_GG(nGs,nGs,arma::fill::zeros);
-            
-            for (int g = 0; g < nGs; ++g){
-                arma::rowvec G = ReciprocalVectors.row(g);
-                V_GG(g,g) = coulomb_2D_FT(q + G);
-            }
-
-            this->RPAInvepsilonmatrix_.slice(iq) = Identity + this->ChiRPAmatrix_.slice(iq)*V_GG;
+            this->RPAInvepsilonmatrix_.slice(iq) = compute_2D_RPAInvDielectricMatrix_at_q(q,iq);
         }
 
         std::cout << "Done.\n" << std::flush;
