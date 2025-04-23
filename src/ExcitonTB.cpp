@@ -4374,7 +4374,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->trunreciprocalLattice_.n_rows;
+        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         for(unsigned int i = 0; i < nqs; i++){
@@ -4463,7 +4463,7 @@ void ExcitonTB::writeRPAInverseDielectricMatrix(std::string filename_dielectric)
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->trunreciprocalLattice_.n_rows;
+        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->RPAInvepsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         for(unsigned int i = 0; i < nqs; i++){
@@ -4552,7 +4552,7 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->trunreciprocalLattice_.n_rows;
+        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->Chimatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
         std::cout << "ngs = " << ngs << std::endl;
         for(unsigned int i = 0; i < nqs; i++){
@@ -4641,7 +4641,7 @@ void ExcitonTB::writeRPAPolarizabilityMatrix(std::string filename_dielectric) co
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->trunreciprocalLattice_.n_rows;
+        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->ChiRPAmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
         std::cout << "ngs = " << ngs << std::endl;
         for(unsigned int i = 0; i < nqs; i++){
