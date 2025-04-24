@@ -1205,10 +1205,9 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1,
  * @param d Monolayer thickness.
  * @return Bloch coherence factor I evaluated at G for states |nk>, |n'k'>.
  */
-std::complex<double> ExcitonTB::thick_blochCoherenceFactor(const arma::cx_vec &coefs1, const arma::cx_vec &coefs2,
+std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec &coefs1, const arma::cx_vec &coefs2,
                                                      const arma::rowvec &k1, const arma::rowvec &k2,
-                                                     const arma::rowvec &G, const double d) const
-{
+                                                     const arma::rowvec &G, const double d) const {
 
     std::complex<double> imag(0, 1);
     arma::cx_vec coefs = arma::conj(coefs1) % coefs2;
@@ -1868,7 +1867,7 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
 }
 
 /**
- * Method to compute the (G,G') matrix element of the static polarizability at the specified arbitrary momentum vector q.
+ * Method to compute the (G,G') matrix element of the static dielectric matrix at the specified arbitrary momentum vector q.
  * @details The purely 2D polarizability is computed
  * @param G Reciprocal lattice vector G
  * @param G2 Reciprocal lattice vector G2
@@ -1884,6 +1883,84 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
     std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,q);
             
     return epsilon/(system->unitCellArea*totalCells);
+}
+
+/**
+ * Method to compute the (G,G') matrix element of the quasi-2D dielectric matrix at the specified arbitrary momentum vector q (divided by d).
+ * @details The dielectric matrix as function of (z,z') averaged over the thickness d of the material is computed
+ * @param G Reciprocal lattice vector G
+ * @param G2 Reciprocal lattice vector G2
+ * @param q Momentum vector q
+ * @param d 2D material thickness
+ * @return Polarizability
+ */
+std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const double d) {
+    
+    double potential = coulomb_2D_FT(G + q);
+
+    int nk = system->nk;
+
+    int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+    int lowerindexvbands = nvbands - nvbandsincluded;
+
+    arma::cx_vec coefskq, coefsk;
+    arma::cx_vec coefskq_c, coefsk_v;
+
+    std::complex<double> term_aux = 0.;
+    std::complex<double> g_s = 2.0; // Spin degeneracy
+
+    for (int ic = nvbands; ic <= upperindexcband; ic++)
+    {
+
+        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--)
+        {
+
+            for (int ik = 0; ik < nk; ik++)
+            {
+
+                arma::rowvec k = system->kpoints.row(ik);
+                arma::rowvec kq = system->kpoints.row(ik) + q;
+
+                // Using the atomic gauge
+                if (gauge == "atomic")
+                {
+                    // coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                    // coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                }
+                else
+                {
+                    // coefskq = eigveckqStack_.slice(ik).col(iv);
+                    // coefsk = eigveckStack_.slice(ik).col(ic);
+
+                    coefskq_c = eigveckqStack_.slice(ik).col(ic);
+                    coefsk_v = eigveckStack_.slice(ik).col(iv);
+                }
+
+                std::complex<double> IvcG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
+
+                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G, d);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
+
+                term_aux += (IvcG*std::conj(IvcG2) - IcvG*std::conj(IcvG2)) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
+            }
+        }
+    }
+
+    double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
+
+    std::complex<double> epsilon = kroneckerdelta - g_s*potential*term_aux/d;
+
+    return epsilon / (system->unitCellArea * totalCells);
 }
 
 /**
@@ -3561,14 +3638,18 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
 
         Chi = computesinglePolarizabilityMatrixElement(q, g, g2);
+        std::complex<double> Chi_aux = this->compute_2D_PolarizabilityMatrixElement(g, g2, q);
 
         double potential = coulombFT(this->Gs_(0), this->Gs_(0), q);
 
         double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
+
+        double d = arma::max(arma::abs(system->motif.col(2)));
             
         std::cout << "Polarizability at q = " << Chi << std::endl;
-        std::cout << "Or is the Polarizability at q = " << this->compute_2D_PolarizabilityMatrixElement(g,g2,q) << " ?" << std::endl;
-        std::cout << "Dielectric function at q = " << kroneckerdelta - potential*Chi << std::endl;
+        std::cout << "Or is the Polarizability at q = " << Chi_aux << " ?" << std::endl;
+        std::cout << "Dielectric function at q = " << kroneckerdelta - potential*Chi_aux << std::endl;
+        std::cout << "Dielectric function averaged over material's thickness at q = " << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
     }
     
     auto stop = high_resolution_clock::now();

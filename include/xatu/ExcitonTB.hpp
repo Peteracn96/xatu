@@ -178,7 +178,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
                                                   const arma::rowvec&) const;
-        std::complex<double> thick_blochCoherenceFactor(const arma::cx_vec &, const arma::cx_vec &,
+        std::complex<double> blochCoherenceFactor(const arma::cx_vec &, const arma::cx_vec &,
                                                   const arma::rowvec &, const arma::rowvec &,
                                                   const arma::rowvec &, const double) const;
 
@@ -206,8 +206,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         //double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
+        std::complex<double> compute_quasi2D_DielectricMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const double);
 
-    public:
+        public:
         // Static dielectric function, BSE initialization and energies
         void initializeHamiltonian();
         void initializeScreeningAttributes(const ScreeningConfiguration&);
