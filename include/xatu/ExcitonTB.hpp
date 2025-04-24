@@ -224,6 +224,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void compute_2D_PolarizabilityMatrix(std::string);
         void compute_2D_RPAInvDielectricMatrix(std::string);
         arma::cx_mat compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec&, const int);
+        arma::cx_mat compute_2D_RPAInvDielectricMatrix_at_q(const arma::rowvec&, const int);
         void invertDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);

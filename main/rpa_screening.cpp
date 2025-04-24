@@ -39,8 +39,8 @@ int main(){
 
     std::cout << "Number of reciprocal vectors used in the calculation: " << NGs << std::endl;
 
-    const int array_size = 11;
-    int nGs_array[array_size] = {1,8,9,13,19,30,37,39,43,55,61};
+    const int array_size = 10;
+    int nGs_array[array_size] = {7,9,13,19,30,37,39,43,55,61};
 
     for (int gs = 0; gs < array_size; ++gs) {
 
