@@ -1221,7 +1221,7 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec &coefs1,
         int species = system->motif.row(i)(3);
         arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2);
 
-        double extra_factor = 2 * (1 - exp(-arma::norm(k1 - k2 + G) * d / 2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2))) / arma::norm(k1 - k2 + G);
+        double extra_factor = 2*(1 - exp(-arma::norm(k1 - k2 + G) * d/2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2)))/arma::norm(k1 - k2 + G);
 
         index_max += system->orbitals(species);
         phases.subvec(index_min, index_max) *= extra_factor * exp(- imag * arma::dot(k1 - k2 + G, atomPosition));
@@ -1950,16 +1950,16 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
                 std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G, d);
                 std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
 
-                term_aux += (IvcG*std::conj(IvcG2) - IcvG*std::conj(IcvG2)) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
+                term_aux += (IvcG*std::conj(IvcG2) + IcvG*std::conj(IcvG2)) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
             }
         }
     }
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    std::complex<double> epsilon = kroneckerdelta - g_s*potential*term_aux/d;
+    std::complex<double> epsilon = kroneckerdelta - g_s*potential*term_aux/(system->unitCellArea*totalCells*d);
 
-    return epsilon / (system->unitCellArea * totalCells);
+    return epsilon;
 }
 
 /**
