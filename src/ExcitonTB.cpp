@@ -3633,7 +3633,7 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
 
-        double d = arma::max(arma::abs(system->motif.col(2)));
+        double d = 2*arma::max(arma::abs(system->motif.col(2)));
             
         std::cout << "Polarizability at q = " << Chi << std::endl;
         std::cout << "Or is the Polarizability at q = " << Chi_aux << " ?" << std::endl;
