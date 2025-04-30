@@ -401,6 +401,7 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, const arma::i
     this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
 };
 
+
 /**
  * Exciton constructor from a SystemConfiguration object. One specifies the number of valence and conduction
  * bands, as well as the other parameters.
@@ -429,6 +430,36 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
     this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
 };
 
+/**
+ * Exciton constructor from a SystemConfiguration object and a vector with the bands that form
+ * the exciton, as well as the other parameters.
+ * @param config SystemConfiguration object from config file.
+ * @param ncell Number of unit cells along each axis.
+ * @param bands Vector with the indices of the bands that form the exciton.
+ * @param parameters Vector with dielectric constants and screening length.
+ * @param Q Center-of-mass momentum.
+ */
+ExcitonTB::ExcitonTB(const SystemConfiguration &config, int ncell, int nbands, int nrmbands,
+                     const arma::rowvec &parameters, const arma::rowvec &Q, const double Gcutoff, const int nG) : ExcitonTB(config, ncell, {}, parameters, Q)
+{
+    if (2 * nbands > system->basisdim)
+    {
+        std::cout << "Error: Number of bands cannot be higher than actual material bands" << endl;
+        exit(1);
+    }
+
+    int fermiLevel = system->fermiLevel;
+    this->valenceBands_ = arma::regspace<arma::ivec>(fermiLevel - nbands - nrmbands + 1,
+                                                     fermiLevel - nrmbands);
+    this->conductionBands_ = arma::regspace<arma::ivec>(fermiLevel + 1 + nrmbands,
+                                                        fermiLevel + nbands + nrmbands);
+    this->bands_ = arma::join_cols(valenceBands, conductionBands) - fermiLevel;
+    this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
+    this->Gcutoff_ = Gcutoff;
+
+    this->nReciprocalVectors_ = nG;
+    this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(nG, this->Gcutoff_);
+};
 
 /**
  * Exciton constructor from SystemConfiguration and ExcitonConfiguration.
@@ -680,6 +711,32 @@ void ExcitonTB::setmotifVectors(int index1, int index2){
         throw std::invalid_argument("setmotifVectors(int,int): Both vectors must have a positive index");
     }
     setmotifVectors(arma::ivec({index1, index2}));
+}
+
+/**
+ * Sets the potential for the direct interaction matrix elements.
+ * @param potential Type of potential to be used.
+ * @return void 
+ */
+void ExcitonTB::setPotential(std::string potential){
+    if(potential != "keldysh" && potential != "coulomb" && potential != "rpa"){
+        throw std::invalid_argument("setPotential(): potential must be either keldysh, coulomb or rpa");
+    }
+    
+    this->potential_ = potential;
+}
+
+/**
+ * Sets the exchange potential for the exchange interaction matrix elements.
+ * @param potential Type of potential to be used.
+ * @return void 
+ */
+void ExcitonTB::setExchangePotential(std::string potential){
+    if(potential != "keldysh" && potential != "coulomb" && potential != "rpa"){
+        throw std::invalid_argument("setExchangePotential(): potential must be either keldysh, coulomb or rpa");
+    }
+
+    this->exchangePotential_ = potential;
 }
 
 /* ------------------------------ Getters ------------------------------ */
@@ -3833,9 +3890,15 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
         }
         else if (mode == "reciprocalspace"){
             recpotptr directPotential = selectReciprocalPotential(this->potential_);
+            std::cout << "problem here? 0\n"
+                      << std::flush;
             arma::rowvec k = system->kpoints.row(k_index);
             arma::rowvec k2 = system->kpoints.row(k2_index);
+            std::cout << "problem here? 1\n"
+                      << std::flush;
             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
+            std::cout << "problem here? 2\n"
+                      << std::flush;
             if(this->exchange){
                 recpotptr exchangePotential = selectReciprocalPotential(this->exchangePotential_);
                 X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, this->exchangePotential_, this->nReciprocalVectors);

@@ -128,6 +128,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         ExcitonTB(std::shared_ptr<SystemTB>, int ncell = 20, const arma::ivec& bands = {0, 1}, 
                  const arma::rowvec& parameters = {1, 5, 1}, const arma::rowvec& Q = {0., 0., 0.});
 
+        // Specify number of bands participating (int)
+        ExcitonTB(const SystemConfiguration &, int ncell = 20, int nbands = 1, int nrmbands = 0,
+                  const arma::rowvec &parameters = {1, 5, 1}, const arma::rowvec &Q = {0., 0., 0.}, const double Gcutoff = 4.5, const int nG = 25);
+
         ~ExcitonTB();
 
         // Setters
@@ -144,6 +148,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setVectors(arma::ivec);
         void setmotifVectors(int,int);
         void setmotifVectors(arma::ivec);
+        void setPotential(std::string);
+        void setExchangePotential(std::string);
 
         // Getters
         int getNGs() const;
