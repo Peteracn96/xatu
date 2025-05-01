@@ -3890,15 +3890,9 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
         }
         else if (mode == "reciprocalspace"){
             recpotptr directPotential = selectReciprocalPotential(this->potential_);
-            std::cout << "problem here? 0\n"
-                      << std::flush;
             arma::rowvec k = system->kpoints.row(k_index);
             arma::rowvec k2 = system->kpoints.row(k2_index);
-            std::cout << "problem here? 1\n"
-                      << std::flush;
             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
-            std::cout << "problem here? 2\n"
-                      << std::flush;
             if(this->exchange){
                 recpotptr exchangePotential = selectReciprocalPotential(this->exchangePotential_);
                 X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, this->exchangePotential_, this->nReciprocalVectors);
