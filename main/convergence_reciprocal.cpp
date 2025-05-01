@@ -1,3 +1,4 @@
+#include <iostream>
 #include <fstream>
 #include <armadillo>
 #include <complex>
@@ -34,11 +35,13 @@ int main(int argc, char* argv[]){
     arma::rowvec parameters = {1., 1., 10.};
     std::string modelfile = argv[1];    
     int nstates = 8;
+    int nG = 25;
+    double Gcutoff = 10.0;
 
     arma::vec ncell_array = arma::regspace(40, -10, 10);
 
     bool writeEigvals = true;
-    std::string filename = "eigval_convergence_hbn_real.out";
+    std::string filename = "eigval_convergence_hbn_reciprocal_nG25_noReg.out";
     FILE* textfile_en = fopen(filename.c_str(), "a");
 
     for(int i = 0; i < ncell_array.n_elem; i++){
@@ -56,10 +59,11 @@ int main(int argc, char* argv[]){
         cout << "System configuration file: " << modelfile << "\n" << endl;
 
         xatu::SystemConfiguration config(modelfile);
-        xatu::ExcitonTB bulkExciton(config, ncell, nbands, nrmbands, parameters, Q);
+        xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(config, ncell, nbands, nrmbands, parameters, Q, Gcutoff, nG);
 
         arma::cout << "Orbitals: " << bulkExciton.system->orbitals << arma::endl;
-        bulkExciton.setMode("realspace");
+        bulkExciton.setMode("reciprocalspace");
+        bulkExciton.setReciprocalVectors(nG);
         bulkExciton.setPotential("keldysh");
 
         cout << "Valence bands:\n" << bulkExciton.valenceBands << endl;

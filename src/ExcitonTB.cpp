@@ -439,8 +439,8 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
  * @param parameters Vector with dielectric constants and screening length.
  * @param Q Center-of-mass momentum.
  */
-ExcitonTB::ExcitonTB(const SystemConfiguration &config, int ncell, int nbands, int nrmbands,
-                     const arma::rowvec &parameters, const arma::rowvec &Q, const double Gcutoff, const int nG) : ExcitonTB(config, ncell, {}, parameters, Q)
+ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, int nrmbands,
+                     const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const int nG) : ExcitonTB(config, ncell, {}, parameters, Q)
 {
     if (2 * nbands > system->basisdim)
     {
@@ -970,7 +970,9 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
 
     double qnorm = arma::norm(q + G);
     if (qnorm < eps){
-        potential = 0;
+        // potential = 0;
+        double q0 = 0.1;
+        potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space
     }
     else{
         potential = 1/(qnorm*(1 + r0*qnorm));
