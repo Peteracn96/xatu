@@ -971,8 +971,9 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
     double qnorm = arma::norm(q + G);
     if (qnorm < eps){
         // potential = 0;
-        double q0 = 0.1;
-        potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space
+        double q0 = 0.05;
+        // potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space, BerkeleyGW
+        potential = (2/q0 + r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
     }
     else{
         potential = 1/(qnorm*(1 + r0*qnorm));
