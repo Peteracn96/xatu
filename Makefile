@@ -43,6 +43,12 @@ example: main/read_screening.cpp $(OBJECTS)
 write_screening: main/write_screening.cpp $(OBJECTS) 
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
+convergence_real: main/convergence_real.cpp $(OBJECTS) 
+	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
+
+convergence_reciprocal: main/convergence_reciprocal.cpp $(OBJECTS) 
+	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
+
 %: main/%.cpp $(OBJECTS)
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
