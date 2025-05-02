@@ -16,7 +16,7 @@ double r0 = 13.55;
 
 double my_coulomb(double r) {
     
-    double a = 0.0001;
+    double a = 1.5;
     double v_c_regularization = ec/(4E-10*PI*eps0*a);
     //double v_c_regularization = RK_small_r(a,r0);
 
@@ -227,14 +227,14 @@ int main(int argc, char* argv[]){
 
     // Temporary tests for development. This seems to be ok
 
-    // arma::rowvec R_i = LatticeVectors.row(1);
-    // arma::rowvec R_j = LatticeVectors.row(4);
-    // int t_i = 0;
-    // int t_j = 0;
+    arma::rowvec R_i = LatticeVectors.row(1);
+    arma::rowvec R_j = LatticeVectors.row(4);
+    int t_i = 0;
+    int t_j = 0;
 
-    // double Chi = mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i, t_j);
+    double Chi = mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i, t_j);
 
-    // std::cout << "Chi = " << Chi << std::endl;
+    std::cout << "Chi = " << Chi << std::endl;
 
     // t_i = 1;
     // t_j = 0;
@@ -351,7 +351,7 @@ int main(int argc, char* argv[]){
 
     // Now is the inversion of Dyson's equation
 
-    /*int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+    int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
     arma::mat V(n_positions, NAtoms, arma::fill::zeros);
     arma::mat W(n_positions, NAtoms, arma::fill::zeros); 
     arma::cube epsilon(n_positions,n_positions,NAtoms);
@@ -611,7 +611,7 @@ int main(int argc, char* argv[]){
             index_aux++;
         }
     }
-    std::cout << "}" << std::flush;*/
+    std::cout << "}" << std::flush;
 
     // Write screened potential in a file
 
@@ -637,7 +637,7 @@ int main(int argc, char* argv[]){
 
     /****************Now is the inversion of Dyson's equation including singularities*****************/
 
-    int npositions = nRvectors*NAtoms ;
+    /*int npositions = nRvectors*NAtoms ;
     arma::mat V_2(npositions, NAtoms, arma::fill::zeros);
     arma::mat W_2(npositions, NAtoms, arma::fill::zeros); 
     arma::mat epsilon_2(npositions,npositions,arma::fill::zeros);
@@ -662,7 +662,7 @@ int main(int argc, char* argv[]){
 
     // Auxiliary small vector
 
-    arma::rowvec v_aux = {0.01,0,0};
+    arma::rowvec v_aux = {0.0,0,0};
 
     // Computes the bare Coulomb potential matrix
 
@@ -684,7 +684,8 @@ int main(int argc, char* argv[]){
 
             double norm = arma::norm(R + t - t_j_vector);
 
-            V_2.col(t_j)(index) = my_coulomb(norm);
+            //V_2.col(t_j)(index) = my_coulomb(norm); // testing at the moment if the on-site energies work
+            V_2.col(t_j)(index) = mos2_exciton.coulomb(norm,t_j);
         }
     }
 
@@ -701,7 +702,7 @@ int main(int argc, char* argv[]){
         for (arma::uword index2 = 0; index2 < npositions; ++index2){
 
             //Lambda function to compute the sum
-            auto sum_func = [index2,&Rt_i,&v_aux,&R,&t_i,nRvectors,NAtoms,&combinations_2,&T,&LatticeVectors,&motif]() -> double {
+            auto sum_func = [index2,&Rt_i,&v_aux,&R,&t_i,nRvectors,NAtoms,&combinations_2,&T,&LatticeVectors,&motif,mos2_exciton]() -> double {
                 double sum = 0;
 
                 int Rprime_index = combinations_2.row(index2)(0);
@@ -724,7 +725,9 @@ int main(int argc, char* argv[]){
 
                         double norm = arma::norm(Rt_i - (R2 + t2));
 
-                        double v_c = my_coulomb(norm);
+                        // double v_c = my_coulomb(norm);
+
+                        double v_c = mos2_exciton.coulomb(norm,i2);
                         
                         sum += v_c*T(R2*NAtoms + i2,pos_prime_index);
                     }
@@ -732,20 +735,21 @@ int main(int argc, char* argv[]){
 
                 return sum;
             };
+
             double kronecker_delta = index == index2 ? 1.0:0.0;
             epsilon_2(index,index2) = kronecker_delta - sum_func();
             
-            if (index = 0 && index2 == 0){
-                epsilon_2(index,index2) = 0.01;
-            }
+            // if (index == 0 && index2 == 0){ // Don't know why I had this
+            //     epsilon_2(index,index2) = 0.01;
+            // }
 
-            if (index = 0 && index2 != 0){
-                epsilon_2(index,index2) = 0.0;
-            }
+            // if (index == 0 && index2 != 0){
+            //     epsilon_2(index,index2) = 0.0;
+            // }
 
-            if (index != 0 && index2 == 0){
-                epsilon_2(index,index2) = 0.0;
-            }
+            // if (index != 0 && index2 == 0){
+            //     epsilon_2(index,index2) = 0.0;
+            // }
         }
     }
 
@@ -758,7 +762,7 @@ int main(int argc, char* argv[]){
     // Inverts "epsilon"
     arma::mat Inv_epsilon = epsilon_2.i();
 
-    // epsilon_2.print("epsilon_2:");
+    epsilon_2.print("epsilon_2:");
 
     // Inv_epsilon.print("Inv_epsilon:");
 
@@ -824,7 +828,7 @@ int main(int argc, char* argv[]){
 
             index_aux++;
         }
-    }
+    }*/
 
     /*FILE* textfile_2 = fopen("test_sing_W_screening.dat", "w");
 

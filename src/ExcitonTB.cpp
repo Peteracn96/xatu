@@ -1806,7 +1806,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
 
         j_index += norbitals;
     }
-    double U00 = this->coulomb(0,0);
+
     arma::rowvec t_i = system->motif.row(i).subvec(0,2);
     arma::rowvec t_j = system->motif.row(j).subvec(0,2);
 
