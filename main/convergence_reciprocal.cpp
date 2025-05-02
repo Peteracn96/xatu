@@ -38,10 +38,10 @@ int main(int argc, char* argv[]){
     int nG = 25;
     double Gcutoff = 10.0;
 
-    arma::vec ncell_array = arma::regspace(40, -10, 10);
+    arma::vec ncell_array = arma::regspace(50, -10, 10);
 
     bool writeEigvals = true;
-    std::string filename = "eigval_convergence_hbn_reciprocal_nG25_noReg.out";
+    std::string filename = "eigval_convergence_hbn_reciprocal_nG25.out";
     FILE* textfile_en = fopen(filename.c_str(), "a");
 
     for(int i = 0; i < ncell_array.n_elem; i++){
