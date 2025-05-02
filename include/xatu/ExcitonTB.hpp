@@ -156,12 +156,13 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Getters
         int getNGs() const;
 
+        double coulomb(double, uint) const; // Temporarily public while testing
+
     private:
         // Potentials
         double keldysh(double) const;
         void STVH0(double, double*) const;
         double coulomb(double) const;
-        double coulomb(double, uint) const;
         double rpa(double) const; // In principle will accept more than a double
         const potptr selectPotential(std::string);
         recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
