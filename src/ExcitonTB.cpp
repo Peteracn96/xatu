@@ -52,7 +52,7 @@ void ExcitonTB::initializeExcitonAttributes(int ncell, const arma::ivec& bands,
     this->eps_s_      = parameters(1);
     this->r0_         = parameters(2);
     this->cutoff_     = ncell/2.5; // Default value, seems to preserve crystal point group
-
+    this->U00_list_   = system->motif.col(4);
     if(r0 == 0){
         throw std::invalid_argument("Error: r0 must be non-zero");
     }
@@ -321,8 +321,6 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
             int nlattice_sites = nRvectors*n_atoms;
 
             this->Polarizabilitymatrix_ = arma::mat(nlattice_sites,nlattice_sites,arma::fill::zeros);
-
-            int n_positions = nlattice_sites - 1;
 
             this->Wmatrix_ = arma::mat(nlattice_sites,n_atoms,arma::fill::zeros);
         }
@@ -739,6 +737,17 @@ void ExcitonTB::setExchangePotential(std::string potential){
     this->exchangePotential_ = potential;
 }
 
+/**
+ * Sets the truncated lattice with given number of cells and cutoff as input.
+ * @param ncell Number of cells
+ * @param cutoff Cutoff
+ * @return void 
+ */
+void ExcitonTB::setTrunLattice(int ncell, double cutoff){
+    double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff;
+    this->trunLattice_ = system->truncateSupercell(ncell, radius);
+};
+
 /* ------------------------------ Getters ------------------------------ */
 int ExcitonTB::getNGs() const {
 
@@ -830,6 +839,37 @@ double ExcitonTB::keldysh(double r) const {
 double ExcitonTB::coulomb(double r) const {
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
     r = abs(r);
+    if (r > cutoff){
+        return 0.0;
+    }
+    return (r != 0) ? ec/(4E-10*PI*eps0*r) : ec*1E10/(4*PI*eps0*regularization);    
+}
+
+/**
+ * Coulomb potential in real space, with support for on-site energies (at the moment input parameters).
+ * @param r Distance at which we evaluate the potential.
+ * @param i Index of the atom, in case we are computing the Coulomb potential on-site (r=0)
+ * @return Value of Coulomb potential, V(r).
+ */
+double ExcitonTB::coulomb(double r, uint i) const {
+    double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
+    r = abs(r);
+
+    if (r < 10E-4) {
+
+        if (i + 1 > system->natoms) {
+            std::cout << "Index out of bounds, must be <= natoms - 1. Exiting" << std::flush;
+            exit(0);
+        }
+
+        if (system->motif.col(4)(i) == 0)
+        {
+            std::cout << "Deu bosta. Aqui vai o valor lido: " << system->motif.col(4)(i) << std::endl;
+        }
+        
+        return system->motif.col(4)(i);
+    }
+
     if (r > cutoff){
         return 0.0;
     }
@@ -1766,7 +1806,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
 
         j_index += norbitals;
     }
-
+    double U00 = this->coulomb(0,0);
     arma::rowvec t_i = system->motif.row(i).subvec(0,2);
     arma::rowvec t_j = system->motif.row(j).subvec(0,2);
 

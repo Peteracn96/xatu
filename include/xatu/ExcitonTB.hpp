@@ -72,7 +72,8 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         arma::mat Polarizabilitymatrix_;
         arma::mat Wmatrix_;
-
+        arma::colvec U00_list_;
+        
     public:
         // Returns dielectric constant of embedding medium
         const double& eps_m = eps_m_;
@@ -150,7 +151,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setmotifVectors(arma::ivec);
         void setPotential(std::string);
         void setExchangePotential(std::string);
-
+        void setTrunLattice(int,double);
+        
         // Getters
         int getNGs() const;
 
@@ -159,6 +161,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         double keldysh(double) const;
         void STVH0(double, double*) const;
         double coulomb(double) const;
+        double coulomb(double, uint) const;
         double rpa(double) const; // In principle will accept more than a double
         const potptr selectPotential(std::string);
         recpotptr selectReciprocalPotential(std::string); //Don't know at this point how to make it work, as the RPA potential returns a complex and the others a double.
