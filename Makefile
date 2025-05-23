@@ -49,6 +49,9 @@ convergence_real: main/convergence_real.cpp $(OBJECTS)
 convergence_reciprocal: main/convergence_reciprocal.cpp $(OBJECTS) 
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
+screening_example: main/screening_example.cpp $(OBJECTS) 
+	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
+
 %: main/%.cpp $(OBJECTS)
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 

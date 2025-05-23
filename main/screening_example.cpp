@@ -16,7 +16,7 @@ double r0 = 13.55;
 
 double my_coulomb(double r) {
     
-    double a = 0.0001;
+    double a = 1.5;
     double v_c_regularization = ec/(4E-10*PI*eps0*a);
     //double v_c_regularization = RK_small_r(a,r0);
 
@@ -46,25 +46,33 @@ arma::mat sort_matrix(arma::mat& M){
     return sorted_M;
 }
 
-int main(){
+int main(int argc, char* argv[]){
 
     auto start = high_resolution_clock::now();
-    arma::rowvec q = {1.2, 0.3, 0};
 
-    int nstates = 8;
-    int decimals = 6;
+    std::cout << "Number of arguments: " << argc << std::endl;
 
-    xatu::CRYSTALConfiguration model_config("../examples/material_models/DFT/hBN_base_HSE06.outp",60);
+    if (argc < 2) {
+        std::cout << "You forgot to give the number of cells as input argument. Try again.\n" << std::flush;
+        exit(0);
+    }
 
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/hBN_test.txt");
+    // arma::rowvec q = {1.2, 0.3, 0};
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/hBN_DFT_screening.txt");
+    // int nstates = 8;
+    // int decimals = 6;
 
-    // xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+    // xatu::CRYSTALConfiguration model_config("../examples/material_models/DFT/hBN_base_HSE06.outp",60);
 
-    // xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    // xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/hBN_test.txt");
 
-    // xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
+    // xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/hBN_DFT_screening.txt");
+
+    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+
+    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+
+    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
@@ -100,7 +108,10 @@ int main(){
 
     // double radius = arma::norm(mos2_exciton.system->bravaisLattice.row(0)) * cutoff_;
     // arma::mat lattice_vectors = mos2_exciton.system->truncateSupercell(ncell, radius);
-    
+    int ncell = std::atoi(argv[1]);
+    double cutoff = ncell/2.5;
+
+    mos2_exciton.setTrunLattice(ncell,cutoff);
     arma::mat LatticeVectors = sort_matrix(mos2_exciton.trunLattice_);
     int nRvectors = LatticeVectors.n_rows;
 
@@ -216,14 +227,14 @@ int main(){
 
     // Temporary tests for development. This seems to be ok
 
-    // arma::rowvec R_i = LatticeVectors.row(1);
-    // arma::rowvec R_j = LatticeVectors.row(4);
-    // int t_i = 0;
-    // int t_j = 0;
+    arma::rowvec R_i = LatticeVectors.row(1);
+    arma::rowvec R_j = LatticeVectors.row(4);
+    int t_i = 0;
+    int t_j = 0;
 
-    // double Chi = mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i, t_j);
+    double Chi = mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i, t_j);
 
-    // std::cout << "Chi = " << Chi << std::endl;
+    std::cout << "Chi = " << Chi << std::endl;
 
     // t_i = 1;
     // t_j = 0;
@@ -236,7 +247,7 @@ int main(){
 
     std::cout << "Computing all the elements... " << std::endl;
 
-    /*#pragma omp parallel for
+    #pragma omp parallel for
     for (int i = 0; i < n_non_equivalent_combinations; i++)
     {
         int index = non_equivalent_combinations(i,3);
@@ -289,48 +300,48 @@ int main(){
             T.submat(R_i*NAtoms, R_j*NAtoms, R_i*NAtoms + NAtoms - 1, R_j*NAtoms + NAtoms - 1) = T_aux_mat;
             T.submat(R_j*NAtoms, R_i*NAtoms, R_j*NAtoms + NAtoms - 1, R_i*NAtoms + NAtoms - 1) = arma::trans(T_aux_mat);
         }
-    }*/
+    }
 
     // Builds the big T matrix by brute force
 
-    int N_all_combinations = nRvectors*NAtoms*nRvectors*NAtoms;
-    arma::imat all_combinations(N_all_combinations,4,arma::fill::zeros);
+    // int N_all_combinations = nRvectors*NAtoms*nRvectors*NAtoms;
+    // arma::imat all_combinations(N_all_combinations,4,arma::fill::zeros);
     
-    i_aux = 0;
-    for (arma::uword R_i = 0; R_i < nRvectors; ++R_i){
+    // i_aux = 0;
+    // for (arma::uword R_i = 0; R_i < nRvectors; ++R_i){
         
-        for (arma::uword R_j = 0; R_j < nRvectors; ++R_j){
+    //     for (arma::uword R_j = 0; R_j < nRvectors; ++R_j){
 
-            for (int t_i = 0; t_i < NAtoms; ++t_i){
+    //         for (int t_i = 0; t_i < NAtoms; ++t_i){
 
-                for (int t_j = 0; t_j < NAtoms; ++t_j){
+    //             for (int t_j = 0; t_j < NAtoms; ++t_j){
 
-                    all_combinations(i_aux,0) = R_i;
-                    all_combinations(i_aux,1) = t_i;
-                    all_combinations(i_aux,2) = R_j;
-                    all_combinations(i_aux,3) = t_j;
-                    ++i_aux;
-                }
-            }
-        }
-    }
+    //                 all_combinations(i_aux,0) = R_i;
+    //                 all_combinations(i_aux,1) = t_i;
+    //                 all_combinations(i_aux,2) = R_j;
+    //                 all_combinations(i_aux,3) = t_j;
+    //                 ++i_aux;
+    //             }
+    //         }
+    //     }
+    // }
     
-    #pragma omp parallel for
-    for (int i = 0; i < N_all_combinations; i++)
-    {
-        int R_i_index = all_combinations(i,0);
-        int t_i_index = all_combinations(i,1);
-        int R_j_index = all_combinations(i,2);
-        int t_j_index = all_combinations(i,3);
+    // #pragma omp parallel for
+    // for (int i = 0; i < N_all_combinations; i++)
+    // {
+    //     int R_i_index = all_combinations(i,0);
+    //     int t_i_index = all_combinations(i,1);
+    //     int R_j_index = all_combinations(i,2);
+    //     int t_j_index = all_combinations(i,3);
 
-        arma::rowvec R_i = LatticeVectors.row(R_i_index);
-        arma::rowvec R_j = LatticeVectors.row(R_j_index);
+    //     arma::rowvec R_i = LatticeVectors.row(R_i_index);
+    //     arma::rowvec R_j = LatticeVectors.row(R_j_index);
 
-        T(R_i_index*NAtoms + t_i_index, R_j_index*NAtoms + t_j_index) = -mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i_index, t_j_index);
+    //     T(R_i_index*NAtoms + t_i_index, R_j_index*NAtoms + t_j_index) = -mos2_exciton.realPolarizabilityMatrixElement(R_i, R_j, t_i_index, t_j_index);
 
-        //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
-        //std::cout << i << ", " << std::flush;
-    }
+    //     //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
+    //     //std::cout << i << ", " << std::flush;
+    // }
 
     arma::mat motif = mos2_exciton.system->motif;
     
@@ -340,7 +351,7 @@ int main(){
 
     // Now is the inversion of Dyson's equation
 
-    /*int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+    int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
     arma::mat V(n_positions, NAtoms, arma::fill::zeros);
     arma::mat W(n_positions, NAtoms, arma::fill::zeros); 
     arma::cube epsilon(n_positions,n_positions,NAtoms);
@@ -600,7 +611,7 @@ int main(){
             index_aux++;
         }
     }
-    std::cout << "}" << std::flush;*/
+    std::cout << "}" << std::flush;
 
     // Write screened potential in a file
 
@@ -626,7 +637,7 @@ int main(){
 
     /****************Now is the inversion of Dyson's equation including singularities*****************/
 
-    int npositions = nRvectors*NAtoms ;
+    /*int npositions = nRvectors*NAtoms ;
     arma::mat V_2(npositions, NAtoms, arma::fill::zeros);
     arma::mat W_2(npositions, NAtoms, arma::fill::zeros); 
     arma::mat epsilon_2(npositions,npositions,arma::fill::zeros);
@@ -651,7 +662,7 @@ int main(){
 
     // Auxiliary small vector
 
-    arma::rowvec v_aux = {0.01,0,0};
+    arma::rowvec v_aux = {0.0,0,0};
 
     // Computes the bare Coulomb potential matrix
 
@@ -673,7 +684,8 @@ int main(){
 
             double norm = arma::norm(R + t - t_j_vector);
 
-            V_2.col(t_j)(index) = my_coulomb(norm);
+            //V_2.col(t_j)(index) = my_coulomb(norm); // testing at the moment if the on-site energies work
+            V_2.col(t_j)(index) = mos2_exciton.coulomb(norm,t_j);
         }
     }
 
@@ -690,7 +702,7 @@ int main(){
         for (arma::uword index2 = 0; index2 < npositions; ++index2){
 
             //Lambda function to compute the sum
-            auto sum_func = [index2,&Rt_i,&v_aux,&R,&t_i,nRvectors,NAtoms,&combinations_2,&T,&LatticeVectors,&motif]() -> double {
+            auto sum_func = [index2,&Rt_i,&v_aux,&R,&t_i,nRvectors,NAtoms,&combinations_2,&T,&LatticeVectors,&motif,mos2_exciton]() -> double {
                 double sum = 0;
 
                 int Rprime_index = combinations_2.row(index2)(0);
@@ -713,7 +725,9 @@ int main(){
 
                         double norm = arma::norm(Rt_i - (R2 + t2));
 
-                        double v_c = my_coulomb(norm);
+                        // double v_c = my_coulomb(norm);
+
+                        double v_c = mos2_exciton.coulomb(norm,i2);
                         
                         sum += v_c*T(R2*NAtoms + i2,pos_prime_index);
                     }
@@ -721,20 +735,21 @@ int main(){
 
                 return sum;
             };
+
             double kronecker_delta = index == index2 ? 1.0:0.0;
             epsilon_2(index,index2) = kronecker_delta - sum_func();
             
-            if (index = 0 && index2 == 0){
-                epsilon_2(index,index2) = 0.01;
-            }
+            // if (index == 0 && index2 == 0){ // Don't know why I had this
+            //     epsilon_2(index,index2) = 0.01;
+            // }
 
-            if (index = 0 && index2 != 0){
-                epsilon_2(index,index2) = 0.0;
-            }
+            // if (index == 0 && index2 != 0){
+            //     epsilon_2(index,index2) = 0.0;
+            // }
 
-            if (index != 0 && index2 == 0){
-                epsilon_2(index,index2) = 0.0;
-            }
+            // if (index != 0 && index2 == 0){
+            //     epsilon_2(index,index2) = 0.0;
+            // }
         }
     }
 
@@ -747,7 +762,7 @@ int main(){
     // Inverts "epsilon"
     arma::mat Inv_epsilon = epsilon_2.i();
 
-    // epsilon_2.print("epsilon_2:");
+    epsilon_2.print("epsilon_2:");
 
     // Inv_epsilon.print("Inv_epsilon:");
 
@@ -813,7 +828,7 @@ int main(){
 
             index_aux++;
         }
-    }
+    }*/
 
     /*FILE* textfile_2 = fopen("test_sing_W_screening.dat", "w");
 

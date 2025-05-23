@@ -111,19 +111,20 @@ arma::mat SystemConfiguration::parseVectors(std::vector<std::string>& vectors){
  * @return Motif matrix. 
  */
 arma::mat SystemConfiguration::parseMotif(std::vector<std::string>& content){
-    arma::mat motif = arma::zeros(content.size(), 4);
+    arma::mat motif = arma::zeros(content.size(), 5);
     double x, y, z, species;
     int index = 0;
     std::vector<double> atom;
+    double U00;
 
     for (int i = 0; i < content.size(); i++){
         std::string line = content[i];
         std::istringstream iss(line);
-        if ((iss >> x >> y >> z >> species).fail()){
+        if ((iss >> x >> y >> z >> species >> U00).fail()){
             throw std::invalid_argument("Motif must be of shape (x,y,z,'species')");
         }
 
-        atom = { x, y, z, species };
+        atom = { x, y, z, species, U00 };
         motif.row(i) = arma::rowvec(atom);
     }
 

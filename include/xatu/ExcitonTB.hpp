@@ -72,7 +72,8 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         arma::mat Polarizabilitymatrix_;
         arma::mat Wmatrix_;
-
+        arma::colvec U00_list_;
+        
     public:
         // Returns dielectric constant of embedding medium
         const double& eps_m = eps_m_;
@@ -150,9 +151,12 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setmotifVectors(arma::ivec);
         void setPotential(std::string);
         void setExchangePotential(std::string);
-
+        void setTrunLattice(int,double);
+        
         // Getters
         int getNGs() const;
+
+        double coulomb(double, uint) const; // Temporarily public while testing
 
     private:
         // Potentials
