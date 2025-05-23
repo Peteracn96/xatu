@@ -35,7 +35,7 @@ int main(int argc, char* argv[]){
     std::string modelfile = argv[1];    
     int nstates = 8;
 
-    arma::vec ncell_array = arma::regspace(40, -10, 10);
+    arma::vec ncell_array = arma::regspace(90, -10, 10);
 
     bool writeEigvals = true;
     std::string filename = "eigval_convergence_hbn_real.out";
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]){
         std::cout << "Elapsed time: " << duration.count()/1000.0 << " s" << std::endl;
         start = stop;
 
-        fprintf(textfile_en, "%10.6f\n", duration.count()/1000.0);
+        // fprintf(textfile_en, "%10.6f\n", duration.count()/1000.0);
     }
 
     fclose(textfile_en);

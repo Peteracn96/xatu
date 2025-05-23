@@ -722,7 +722,7 @@ void ExcitonTB::setPotential(std::string potential){
     if(potential != "keldysh" && potential != "coulomb" && potential != "rpa"){
         throw std::invalid_argument("setPotential(): potential must be either keldysh, coulomb or rpa");
     }
-    
+    double test = STVH1(0.5); std::cout << "H_1(0.5) = " << test << std::endl;
     this->potential_ = potential;
 }
 
@@ -792,6 +792,38 @@ void ExcitonTB::STVH0(double X, double *SH0) const {
         }
 }
 
+/**
+ * Purpose: Compute Struve function H1(x).
+ * Source: https://dlmf.nist.gov/11.2#i
+ * @param X x --- Argument of H1(x)
+ * @param SH0 SH0 --- H0(x). The return value is written to the direction of the pointer.
+ */
+double ExcitonTB::STVH1(double X) const
+{
+    int N = 1000;
+
+    double result = 0.0;
+    double term_previous = 0.0;
+    double term = 1.0;
+
+    for (int n = 0; n <= N; ++n)
+    {
+        term = std::pow(-1,n)*std::pow(X/2.0, 2*n) / (std::tgamma(n + 1.5) * std::tgamma(n + 2.5));
+        result += term;
+
+        if (std::abs(term) < 1E-10)
+        {
+            break;
+        } else if (n == N)
+        {
+            N = N + 10;
+        }
+        
+
+    }
+
+    return std::pow(0.5*X, 2)*result;
+}
 
 /** 
  * Calculate value of interaction potential (Keldysh). Units are eV.
@@ -970,10 +1002,11 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
 
     double qnorm = arma::norm(q + G);
     if (qnorm < eps){
-        // potential = 0;
-        double q0 = 0.05;
+        potential = 0;
+        double percentage = 0.25;
+        double q0 = percentage*2/r0;
         // potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space, BerkeleyGW
-        potential = (2/q0 + r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
+        potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
     }
     else{
         potential = 1/(qnorm*(1 + r0*qnorm));

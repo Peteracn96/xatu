@@ -129,8 +129,8 @@ class ExcitonTB : public Exciton<SystemTB> {
                  const arma::rowvec& parameters = {1, 5, 1}, const arma::rowvec& Q = {0., 0., 0.});
 
         // Specify number of bands participating (int)
-        ExcitonTB(const SystemConfiguration &, int ncell = 20, int nbands = 1, int nrmbands = 0,
-                  const arma::rowvec &parameters = {1, 5, 1}, const arma::rowvec &Q = {0., 0., 0.}, const double Gcutoff = 4.5, const int nG = 25);
+        ExcitonTB(const SystemConfiguration&, int ncell, int nbands, int nrmbands,
+                  const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const int nG);
 
         ~ExcitonTB();
 
@@ -158,6 +158,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Potentials
         double keldysh(double) const;
         void STVH0(double, double*) const;
+        double STVH1(double) const;
         double coulomb(double) const;
         double rpa(double) const; // In principle will accept more than a double
         const potptr selectPotential(std::string);
