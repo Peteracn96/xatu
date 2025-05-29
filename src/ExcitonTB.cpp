@@ -3242,7 +3242,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
     arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
 
     // Generates all the combinations of (G,G') indices
-    int i = 0;
+    int i = 0 // Mistake made on purpose, to continue work on creating list of q points as member object of the class
     
     for (int g = 0; g < nGs; g++){
         for (int g2 = g; g2 < nGs; g2++){
@@ -3280,83 +3280,14 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
         std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
 
         Chi0_GG.row(g)(g2) = Chi;
-        this->Chimatrix_.slice(iq).row(g2)(g) = Chi;
+        Chi0_GG.row(g2)(g) = std::conj(Chi);
 
         double potentialg = coulomb_2D_FT(q + G);
         double potentialg2 = coulomb_2D_FT(q + G2);
         double kroneckerdelta = g == g2? 1 : 0;
 
-        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
-        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
-    }
-
-    for (int ic = nvbands; ic <= upperindexcband; ic++){
-    
-        for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
-
-            for (int ik = 0; ik < nk; ik++){
-
-                arma::rowvec k = system->kpoints.row(ik);
-                arma::rowvec kq = system->kpoints.row(ik) + q;
-        
-               // Using the atomic gauge
-                if(gauge == "atomic"){
-                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_test[iq].slice(ik).col(iv), kq);
-                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
-                
-                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_test[iq].slice(ik).col(ic), kq);
-                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
-                }
-                else{                            
-                    coefskq = eigveckqStack_test[iq].slice(ik).col(iv);
-                    coefsk = eigveckStack_.slice(ik).col(ic);
-
-                    coefskq_c = eigveckqStack_test[iq].slice(ik).col(ic);
-                    coefsk_v = eigveckStack_.slice(ik).col(iv);
-                }
-                arma::cx_mat mat_aux(nGs,nGs,arma::fill::zeros);
-
-                for (int Gi = 0; Gi < nGs; ++Gi) {
-
-                    arma::rowvec G = ReciprocalVectors.row(Gi);
-
-                    for (int Gj = Gi; Gj < nGs; ++Gj) {
-
-                        arma::rowvec G2 = ReciprocalVectors.row(Gj);
-
-                        std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
-                        std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
-                    
-                        std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
-                        std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
-
-                        std::complex<double> term = std::conj(IvcG)*IvcG2 / (eigvalkqStack_test.slice(iq).col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG)*IcvG2 / (eigvalkqStack_test.slice(iq).col(ik)(ic) - eigvalkStack_.col(ik)(iv));
-
-                        mat_aux(Gi,Gj) = g_s*term;
-                        mat_aux(Gj,Gi) = g_s*std::conj(term);
-                    } 
-                }
-
-                Chi0_GG  += mat_aux;
-            }
-        }
-    }
-
-    for (int Gi = 0; Gi < nGs; ++Gi) {
-
-        arma::rowvec G = ReciprocalVectors.row(Gi);
-
-        for (int Gj = Gi; Gj < nGs; ++Gj) {
-
-            arma::rowvec G2 = ReciprocalVectors.row(Gj);
-
-            double potentialg = coulomb_2D_FT(q + G);
-            double potentialg2 = coulomb_2D_FT(q + G2);
-            double kroneckerdelta = Gi == Gj? 1 : 0;
-
-            epsilon_GG(Gi,Gj) = kroneckerdelta - potentialg*Chi0_GG(Gi,Gj);
-            epsilon_GG(Gj,Gi) = kroneckerdelta - potentialg2*std::conj(Chi0_GG(Gi,Gj));
-        } 
+        epsilon_GG.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+        epsilon_GG.row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
     }
 
     this->Chimatrix_.slice(iq) = Chi0_GG;

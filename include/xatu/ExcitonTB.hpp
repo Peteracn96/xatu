@@ -62,7 +62,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::ivec ts_;
         int nGs;
         double Gcutoff_ = 0;
+        int Nqpoints = 1;
         
+        arma::mat qpoints_list_;
         arma::mat trunreciprocalLattice_;
         arma::cx_cube Chimatrix_;
         arma::cx_cube epsilonmatrix_;
