@@ -1043,7 +1043,7 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
     double qnorm = arma::norm(q + G);
     if (qnorm < eps){
         potential = 0;
-        double percentage = 0.25;
+        double percentage = 0.1;
         double q0 = percentage*2/r0;
         // potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space, BerkeleyGW
         potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
@@ -2902,7 +2902,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
 
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
-                this->Chimatrix_.slice(iq).row(g2)(g) = Chi;
+                this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
 
                 double potentialg = coulomb_2D_FT(q + G);
                 double potentialg2 = coulomb_2D_FT(q + G2);
@@ -3227,12 +3227,68 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
 
+    this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+    this->eigvalkqStack_ = arma::mat(basisdim, nk);
+    vec auxEigVal(basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);
+
     std::complex<double> term = 0.;
     std::complex<double> term_aux = 0.;
     std::complex<double> g_s = 2.0; // Spin degeneracy
 
     arma::cx_mat Chi0_GG(nGs, nGs, arma::fill::zeros);
     arma::cx_mat epsilon_GG(nGs, nGs, arma::fill::zeros);
+
+    arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
+
+    // Generates all the combinations of (G,G') indices
+    int i = 0;
+    
+    for (int g = 0; g < nGs; g++){
+        for (int g2 = g; g2 < nGs; g2++){
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
+
+    std::cout << "Printing all the G vectors:\n";
+    for (int i = 0; i < nGs; i++){     
+
+        arma::rowvec G = ReciprocalVectors.row(i);                
+
+        std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+    }
+
+    for (int i = 0; i < nk; i++){
+        arma::rowvec kq = system->kpoints.row(i) + q;
+        system->solveBands(kq, auxEigVal, auxEigvec);
+
+        auxEigvec = fixGlobalPhase(auxEigvec);
+        eigvalkqStack_.col(i) = auxEigVal;
+        eigveckqStack_.slice(i) = auxEigvec;
+    };
+
+    #pragma omp parallel for 
+    for (int i = 0; i < nGs*(nGs+1)/2; i++){
+        int g  = indecesqg.row(i)(1);
+        int g2 = indecesqg.row(i)(2);
+
+        arma::rowvec G = ReciprocalVectors.row(g);                
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+
+        Chi0_GG.row(g)(g2) = Chi;
+        this->Chimatrix_.slice(iq).row(g2)(g) = Chi;
+
+        double potentialg = coulomb_2D_FT(q + G);
+        double potentialg2 = coulomb_2D_FT(q + G2);
+        double kroneckerdelta = g == g2? 1 : 0;
+
+        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
+        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+    }
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
