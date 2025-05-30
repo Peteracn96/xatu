@@ -154,7 +154,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setPotential(std::string);
         void setExchangePotential(std::string);
         void setTrunLattice(int,double);
-        void setq_points_list(arma::mat&);
+        void setq_points_list(arma::mat);
 
         // Getters
         int getNGs() const;
