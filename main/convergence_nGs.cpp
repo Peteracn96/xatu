@@ -32,24 +32,22 @@ int main(int argc, char* argv[]){
     int nbands = 1;
     int nrmbands = 0;
     arma::rowvec Q = {0., 0., 0.};
+    arma::rowvec q = {0.2, 0., 0.};
     arma::rowvec parameters = {1., 1., 10.};
-    arma::rowvec q = {0.2, 0., 0}.;
+    arma::mat q_points_list = {{0.2, 0., 0.}};
     std::string modelfile = argv[1];
     std::string screeningfile = argv[2];    
     int nstates = 8;
     int Nk = 20;
     int nG = 25;
     double Gcutoff = 10.0;
-
-    arma::vec Nk = arma::regspace(90, -10, 10);
+    int ncell = 20;
     arma::vec Gcutoff_array = arma::regspace(0, 2., 10);
 
-    bool writeEigvals = true;
     std::string filename = "inv_epsilon_vs_nGs_hBN_DFT_HSE06.dat";
     FILE* textfile_en = fopen(filename.c_str(), "a");
 
     
-
     xatu::SystemConfiguration config(modelfile); std::cout << "System configuration file parsed." << std::endl;
     xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(config, ncell, nbands, nrmbands, parameters, Q, Gcutoff, nG); std::cout << "Exciton configuration initialized." << std::endl;
     xatu::ScreeningConfiguration screenconfig(screeningfile);
@@ -77,19 +75,19 @@ int main(int argc, char* argv[]){
     bulkExciton.brillouinZoneMesh(ncell);
     bulkExciton.initializeHamiltonian();
 
+    bulkExciton.setq_points_list(q_points_list);
+
     for(int i = 0; i < Gcutoff_array.n_elem; i++){
 
         auto start = high_resolution_clock::now();
 
+        double gc = Gcutoff_array(i);
+
         bulkExciton.setGcutoff(Gcutoff_array(i));
 
-    
+        bulkExciton.system->truncateReciprocalSupercell(nG, gc);
 
-        if(writeEigvals){
-            std::cout << "Writing eigvals to file: " << filename << std::endl;
-            fprintf(textfile_en, "%d\t", ncell);
-            results->writeEigenvalues(textfile_en, 8);
-        }
+        bulkExciton.compute_2D_DielectricMatrix_at_q(q,0);
 
         auto stop = high_resolution_clock::now();
         auto duration = duration_cast<milliseconds>(stop - start);
