@@ -43,9 +43,9 @@ int main(int argc, char* argv[]){
     int nG = 25;
     double Gcutoff = 10.0;
     int ncell = 20;
-    arma::vec Gcutoff_array = arma::regspace(3., 3., 54.);
+    arma::vec Gcutoff_array = arma::regspace(3., 3., 54);
 
-    std::string filename = "inv_epsilon_vs_nGs_hBN_DFT_HSE06.dat";
+    std::string filename = "inv_epsilon_vs_nGs_hBN_DFT_HSE06";
     // FILE* textfile_en = fopen(filename.c_str(), "a");
 
     // xatu::ExcitonConfiguration systemConfig;
@@ -142,11 +142,11 @@ int main(int argc, char* argv[]){
 
         std::cout << "nGs: " << bulkExciton.getNGs() << std::endl;
 
-        // bulkExciton.compute_2D_DielectricMatrix_at_q(q,0);
+        bulkExciton.compute_2D_DielectricMatrix_at_q(q,0);
 
-        // bulkExciton.invertDielectricMatrix();
+        bulkExciton.invertDielectricMatrix();
 
-        // bulkExciton.writeInverseDielectricMatrix(filename);
+        bulkExciton.writeInverseDielectricMatrix(filename + "_" + std::to_string(nGs_aux) + ".dat");
 
         auto stop = high_resolution_clock::now();
         auto duration = duration_cast<milliseconds>(stop - start);
