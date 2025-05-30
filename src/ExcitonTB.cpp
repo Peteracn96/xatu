@@ -330,7 +330,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         radius = this->Gcutoff_; //This is temporary to see if it works. It seems it works, however need to discuss this further with Toni
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
-        int ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
+        uint ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
         if(cfg.screeningInfo.function == "dielectric" || cfg.screeningInfo.function == "polarizability"){
             if (gs(0) >= ngs || gs(1) >= ngs){
@@ -1043,7 +1043,7 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
     double qnorm = arma::norm(q + G);
     if (qnorm < eps){
         potential = 0;
-        double percentage = 0.1;
+        double percentage = 0.05;
         double q0 = percentage*2/r0;
         // potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space, BerkeleyGW
         potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
@@ -2446,9 +2446,9 @@ void ExcitonTB::PolarizabilityMesh() {
 */
 int ExcitonTB::fecthReciprocalLatticeVector(arma::rowvec G){
 
-    int nGs = this->trunreciprocalLattice_.n_rows;
+    uint nGs = this->trunreciprocalLattice_.n_rows;
 
-	for (int i = 0; i < nGs; ++i){
+	for (uint i = 0; i < nGs; ++i){
         if (arma::norm(G - this->trunreciprocalLattice_.row(i)) < 1E-7){
             return i;
         }
@@ -2593,7 +2593,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         std::cout << "Computing dielectric matrix in the BZ mesh... \n" << std::flush;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        int nGs = ReciprocalVectors.n_rows;
+        uint nGs = ReciprocalVectors.n_rows;
         int Ncells = this->ncell_;
         int odd = Ncells%2;
         int nq = odd == 1? Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1 : (2*Ncells -1) + (Ncells-1)*(Ncells-2)/2 + Ncells/2 + 1; //Only half of the BZ
@@ -2668,7 +2668,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             }
         }
         
-        for (int i = 0; i < nGs; i++){     
+        for (uint i = 0; i < nGs; i++){     
 
             arma::rowvec G = ReciprocalVectors.row(i);                
 
@@ -2677,7 +2677,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
         if (odd == 0){
             #pragma omp parallel for // Computes first the dielectric matrix at the points q with no symmetric counterpart 
-            for (int i = 0; i < (2*Ncells - 1)*nGs*(nGs+1)/2; i++){
+            for (uint i = 0; i < (2*Ncells - 1)*nGs*(nGs+1)/2; i++){
 
                 int iq = indecesqg.row(i)(0);//system->findEquivalentPointBZ(system->kpoints.row(indecesqg.row(i)(0)),Ncells);
                 int g  = indecesqg.row(i)(1);
@@ -2736,7 +2736,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         
         if (odd == 1){
             #pragma omp parallel for
-            for (int i = 0; i < nq*nGs*(nGs+1)/2; i++){
+            for (uint i = 0; i < nq*nGs*(nGs+1)/2; i++){
 
                 int iq = indecesqg.row(i)(0);
                 int g  = indecesqg.row(i)(1);
@@ -2828,7 +2828,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         int basisdim = system->basisdim;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        int nGs = ReciprocalVectors.n_rows;
+        uint nGs = ReciprocalVectors.n_rows;
         int Ncells = this->ncell_;
 
         // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
@@ -2862,7 +2862,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         }
 
         std::cout << "Printing all the G vectors:\n";
-        for (int i = 0; i < nGs; i++){     
+        for (uint i = 0; i < nGs; i++){     
 
             arma::rowvec G = ReciprocalVectors.row(i);                
 
@@ -2892,7 +2892,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             };
 
             #pragma omp parallel for 
-            for (int i = 0; i < nGs*(nGs+1)/2; i++){
+            for (uint i = 0; i < nGs*(nGs+1)/2; i++){
                 int g  = indecesqg.row(i)(1);
                 int g2 = indecesqg.row(i)(2);
 
@@ -2980,7 +2980,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
         int basisdim = system->basisdim;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        int nGs = ReciprocalVectors.n_rows;
+        uint nGs = ReciprocalVectors.n_rows;
         int Ncells = this->ncell_;
 
 
@@ -3014,7 +3014,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
         }
 
         std::cout << "Printing all the G vectors:\n";
-        for (int i = 0; i < nGs; i++)
+        for (uint i = 0; i < nGs; i++)
         {
             arma::rowvec G = ReciprocalVectors.row(i);
 
@@ -3040,7 +3040,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
             };
 
             #pragma omp parallel for
-            for (int i = 0; i < nGs * (nGs + 1) / 2; i++)
+            for (uint i = 0; i < nGs * (nGs + 1) / 2; i++)
             {
                 int g = indecesg.row(i)(0);
                 int g2 = indecesg.row(i)(1);
@@ -3117,7 +3117,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_Opt(std::string kpointsfile){
         int basisdim = system->basisdim;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        int nGs = ReciprocalVectors.n_rows;
+        uint nGs = ReciprocalVectors.n_rows;
         int Ncells = this->ncell_;
 
         vec auxEigVal(basisdim);
@@ -3141,7 +3141,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_Opt(std::string kpointsfile){
         arma::imat indecesqg(Nqpoints*nGs*(nGs+1)/2,3,arma::fill::zeros);
 
         std::cout << "Printing all the G vectors:\n";
-        for (int i = 0; i < nGs; i++){     
+        for (uint i = 0; i < nGs; i++){     
 
             arma::rowvec G = ReciprocalVectors.row(i);                
 
@@ -3221,7 +3221,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
     int lowerindexvbands = nvbands - nvbandsincluded;
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    int nGs = ReciprocalVectors.n_rows;
+    uint nGs = ReciprocalVectors.n_rows;
     int Ncells = this->ncell_;
 
     arma::cx_vec coefskq, coefsk;
@@ -3253,7 +3253,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
     }
 
     std::cout << "Printing all the G vectors:\n";
-    for (int i = 0; i < nGs; i++){     
+    for (uint i = 0; i < nGs; i++){     
 
         arma::rowvec G = ReciprocalVectors.row(i);                
 
@@ -3270,9 +3270,9 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
     };
 
     #pragma omp parallel for 
-    for (int i = 0; i < nGs*(nGs+1)/2; i++){
-        int g  = indecesqg.row(i)(1);
-        int g2 = indecesqg.row(i)(2);
+    for (uint i = 0; i < nGs*(nGs+1)/2; i++){
+        int g  = indecesg.row(i)(1);
+        int g2 = indecesg.row(i)(2);
 
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
@@ -3304,7 +3304,7 @@ arma::cx_mat ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowv
     int nk = system->nk;
     
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    int nGs = this->nReciprocalVectors_; // ReciprocalVectors.n_rows;
+    uint nGs = this->nReciprocalVectors_; // ReciprocalVectors.n_rows;
     int Ncells = this->ncell_;
 
     arma::cx_dmat Chi0_GG(nGs,nGs,arma::fill::zeros);
@@ -3335,7 +3335,7 @@ arma::cx_mat ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowv
     }
 
     #pragma omp parallel for 
-    for (int i = 0; i < nGs*(nGs+1)/2; i++){
+    for (uint i = 0; i < nGs*(nGs+1)/2; i++){
         int g  = indecesg.row(i)(0);
         int g2 = indecesg.row(i)(1);
 
@@ -3364,7 +3364,7 @@ arma::cx_mat ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowv
 arma::cx_mat ExcitonTB::compute_2D_RPAInvDielectricMatrix_at_q(const arma::rowvec& q, const int iq){
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    int nGs = this->nReciprocalVectors_;
+    uint nGs = this->nReciprocalVectors_;
 
     if (this->ChiRPAmatrix_.slice(iq).is_empty() || this->ChiRPAmatrix_.slice(iq).is_zero()) {
         std::cout << "RPA polarizability at this q point has not been computed." << std::endl;
@@ -3440,7 +3440,7 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
         std::cout << "Nqpoints = " << Nqpoints << std::endl;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        int nGs = this->nReciprocalVectors_;
+        uint nGs = this->nReciprocalVectors_;
 
         if (nGs > ReciprocalVectors.n_rows) {
             std::cout << "Number of G vectors included (" << nGs << ") may not be higher than the number of G vectors generated (" << ReciprocalVectors.n_rows << "). Exiting." << std::endl;
@@ -3448,7 +3448,7 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
         }
 
         std::cout << "Printing all the G vectors included in the calculation of Chi^RPA:\n";
-        for (int i = 0; i < nGs; i++)
+        for (uint i = 0; i < nGs; i++)
         {
             arma::rowvec G = ReciprocalVectors.row(i);
 
@@ -3672,7 +3672,7 @@ void ExcitonTB::invertDielectricMatrix(){
 
     if (this->mode_ == "reciprocalspace"){
 
-        int nGs = this->trunreciprocalLattice_.n_rows;
+        uint nGs = this->trunreciprocalLattice_.n_rows;
         int Nktotal = this->epsilonmatrix_.n_slices; // The number of q points can be different from the BZ mesh size
 
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -3785,10 +3785,10 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     }
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    int nGs = ReciprocalVectors.n_rows;
+    uint nGs = ReciprocalVectors.n_rows;
     std::string to_continue = "_";
 
-    for (int i = 0; i < nGs; i++){     
+    for (uint i = 0; i < nGs; i++){     
 
         arma::rowvec G = ReciprocalVectors.row(i);                
 
@@ -3824,7 +3824,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     }
         
     #pragma omp parallel for
-    for (int i = 0; i < nGs*(nGs+1)/2; i++){
+    for (uint i = 0; i < nGs*(nGs+1)/2; i++){
 
         int g = indecesg.row(i)(0);
         int g2 = indecesg.row(i)(1);
@@ -4575,7 +4575,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
+        uint ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         for(unsigned int i = 0; i < nqs; i++){
@@ -4664,7 +4664,7 @@ void ExcitonTB::writeRPAInverseDielectricMatrix(std::string filename_dielectric)
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
+        uint ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->RPAInvepsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         for(unsigned int i = 0; i < nqs; i++){
@@ -4753,7 +4753,7 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
+        uint ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->Chimatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
         std::cout << "ngs = " << ngs << std::endl;
         for(unsigned int i = 0; i < nqs; i++){
@@ -4842,7 +4842,7 @@ void ExcitonTB::writeRPAPolarizabilityMatrix(std::string filename_dielectric) co
     }
 
     if (this->mode == "reciprocalspace"){
-        int ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
+        uint ngs = this->nReciprocalVectors_; // The number of G vectors can in general be different from the number of generated G vectors
         int nqs = this->ChiRPAmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
         std::cout << "ngs = " << ngs << std::endl;
         for(unsigned int i = 0; i < nqs; i++){
@@ -4889,10 +4889,10 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
     if (this->mode == "reciprocalspace"){
 
-        int ngs = this->trunreciprocalLattice_.n_rows;
+        uint ngs = this->trunreciprocalLattice_.n_rows;
         int nqs = system->nk;
         int line_counter = 0;
-        int column_counter = 0;
+        uint column_counter = 0;
         int k_counter = 0;
         std::string line;
 
