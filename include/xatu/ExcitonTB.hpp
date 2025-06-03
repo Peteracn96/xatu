@@ -273,6 +273,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void readInverseDielectricMatrix(std::string);
         // Write inverse of dielectric matrix in a file
         void writeInverseDielectricMatrix(std::string) const;
+        // Write dielectric matrix in a file
+        void writeDielectricMatrix(std::string) const;
         // Write inverse of dielectric matrix in a file
         void writeRPAInverseDielectricMatrix(std::string) const;
 
