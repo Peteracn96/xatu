@@ -1067,7 +1067,7 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
     double qnorm = arma::norm(q + G);
     if (qnorm < eps){
         potential = 0;
-        double percentage = 0.05;
+        double percentage = 0.1;
         double q0 = percentage*2/r0;
         // potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space, BerkeleyGW
         potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
@@ -2226,13 +2226,9 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
 
         arma::rowvec k = system->kpoints.row(ik);
         arma::rowvec kq = system->kpoints.row(ik) + q;
-        std::cout << "Aqui 0\n"
-                  << std::flush;
 
         arma::cx_mat *auxk_slice = &eigveckStack_.slice(ik);
         //arma::cx_mat *auxkq_slice = &eigveckqStack_test[iq].slice(ik);
-        std::cout << "Aqui 1\n"
-                  << std::flush;
 
         for (int ic = nvbands; ic <= upperindexcband; ic++)
         {
@@ -3187,7 +3183,6 @@ void ExcitonTB::compute_2D_DielectricMatrix_Opt(){
 
 /**
  * Method to compute the strictly 2D static polarizability matrix and dielectric matrix at a specific q point from the list of q points. More useful for isotropic systems.
- * @details Optimized version under testing
  * @return void
 */
 void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const int iq){
@@ -3210,6 +3205,11 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
 
     arma::mat q_points = this->qpoints_list_;
     uint Nq_points = q_points.n_rows;
+
+    if (iq >= Nq_points || iq < 0) {
+        std::cout << "The index iq provided is out of bounds. Exiting." << std::endl;
+        std::exit(1);
+    }
 
     if (q_points.is_empty() || Nq_points == 0) {
         std::cout << "Can't compute dielectric matrix at q, if list of q points is empty. Exiting." << std::endl;
@@ -3290,12 +3290,61 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
         double potentialg2 = coulomb_2D_FT(q + G2);
         double kroneckerdelta = g == g2? 1 : 0;
 
+        if (arma::norm(q) < 1e-6 && arma::norm(G) < 1e-6){ // At q=0, wing elements (0,G2) are/have to be treated with a regularization at another time, Head element (0,0) is set to 1
+            potentialg = 0;
+        }
+
         epsilon_GG.row(g)(g2) = kroneckerdelta - potentialg*Chi;
         epsilon_GG.row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
     }
 
     this->Chimatrix_.slice(iq) = Chi0_GG;
     this->epsilonmatrix_.slice(iq) = epsilon_GG;
+}
+
+/**
+ * Method to compute the strictly 2D inverse dielectric function matrix at a specific q point from the list of q points. More useful for isotropic systems.
+ * @return void
+ */
+void ExcitonTB::compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &q, const int iq)
+{
+    arma::mat q_points = this->qpoints_list_;
+    uint Nq_points = q_points.n_rows;
+
+    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+    uint nGs = ReciprocalVectors.n_rows;
+
+    if (q_points.is_empty() || Nq_points == 0)
+    {
+        std::cout << "Can't compute dielectric matrix at q, if list of q points is empty. Exiting." << std::endl;
+        std::exit(1);
+    }
+
+    if (arma::norm(q - q_points.row(iq)) > 1e-6)
+    {
+        std::cout << "The q point provided does not coincide with q vector with index iq in the list of q points. Exiting." << std::endl;
+        std::exit(1);
+    }
+
+    // In case the inverse dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
+
+    if (this->Invepsilonmatrix_.is_empty())
+    {
+        this->Invepsilonmatrix_ = arma::cx_cube(nGs, nGs, Nq_points, arma::fill::zeros);
+    }
+    else
+    {
+        this->Invepsilonmatrix_.reshape(nGs, nGs, Nq_points);
+    }
+
+    compute_2D_DielectricMatrix_at_q(q, iq);
+
+    arma::cx_dmat auxvecsol(nGs, nGs, arma::fill::zeros);
+    arma::cx_dmat Identity(nGs, nGs, arma::fill::eye);
+
+    auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq), Identity);
+
+    this->Invepsilonmatrix_.slice(iq) = auxvecsol;
 }
 
 /**
@@ -3865,11 +3914,121 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 }
 
 /**
+ * Method to compute the regularization of the dielectric matrix at q = 0
+ * @details Computes numerically the wing elements (0,G2) of the dielectric matrix at q=0
+ */
+void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
+{
+    uint basisdim = this->system->basisdim;
+    uint nk = system->nk;
+
+    uint Nqpoints = this->qpoints_list_.n_rows;
+    uint origin_index = 0;
+
+    double q0_norm = arma::norm(q0);
+    arma::rowvec null_vector = {0., 0., 0.};
+
+    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+    int nGs = ReciprocalVectors.n_rows;
+
+    bool null_vector_exists = false;
+
+    for (int iq = 0; iq < Nqpoints; iq++){
+        arma::rowvec q = this->qpoints_list_.row(iq);
+        if (arma::norm(q) > 1e-6){
+            continue;
+        } else {
+            null_vector_exists = true;
+            origin_index = iq;
+            break;
+        }
+    }
+
+    if (!null_vector_exists) {
+       std::cout << "The origin is not included in the list of q points, so the regularization can not (or does not need to) be computed). Terminating." << std::endl;
+       return;
+    }
+
+    // Calculates the inverse dielectric matrix at q = 0 infinitesimal, regularizing wing elements (0,G2)
+
+    vec auxEigVal(basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);
+
+    std::cout << "Diagonalizing H(k+q0) for every point k... " << std::flush;
+    for (uint i = 0; i < nk; i++)
+    {
+        arma::rowvec kq = system->kpoints.row(i) + q0;
+        system->solveBands(kq, auxEigVal, auxEigvec);
+        auxEigvec = fixGlobalPhase(auxEigvec);
+        this->eigvalkqStack_.col(i) = auxEigVal;
+        this->eigveckqStack_.slice(i) = auxEigvec;
+    }
+
+    double potential_q0 = coulomb_2D_FT(q0);
+
+    #pragma omp parallel for        // Figure out what I really have to do about this elements, do they need regularization?
+    for (int g2 = 1; g2 < nGs; ++g2)
+    {   
+        arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, G2, q0);
+        this->epsilonmatrix_.slice(origin_index).row(0)(g2) = 0. - potential_q0 * Chi; // Only epsilon matrix does actually need to be regularized
+    }
+
+    // Calculates the inverse dielectric matrix at q0 infinitesimal, to regularize W_00(0)
+
+    arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
+    arma::cx_mat auxvecsol(nGs, nGs, arma::fill::zeros);
+    arma::cx_mat auxvec(nGs, nGs, arma::fill::eye);
+
+    arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
+
+    int i = 0;
+    for (uint g = 0; g < nGs; g++)
+    {
+        for (uint g2 = g; g2 < nGs; g2++)
+        {
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
+
+    #pragma omp parallel for
+    for (uint i = 0; i < nGs*(nGs + 1)/2; i++)
+    {
+        int g = indecesg.row(i)(0);
+        int g2 = indecesg.row(i)(1);
+
+        arma::rowvec G = ReciprocalVectors.row(g);
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0);
+
+        double potentialg = coulombFT(g, g, q0);
+        double potentialg2 = coulombFT(g2, g2, q0);
+        double kroneckerdelta = g == g2 ? 1 : 0;
+
+        dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+    }
+
+    auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
+
+    std::complex<double> head_element = auxvecsol(0, 0);
+
+    double Re_head_element = std::real(head_element);
+    double slope = (Re_head_element - 1.)/q0_norm;
+
+    this->W00_at_0_ = (2 + ((Re_head_element - 1.)))*ec*1E10/(2*eps0*q0_norm*system->unitCellArea*totalCells);
+}
+
+/**
  * Method to initialize the BSE.
  * @details Calls the more general routine which allows
  * to specify a subset of the complete basis.
- */ 
-void ExcitonTB::BShamiltonian(){
+ */
+void ExcitonTB::BShamiltonian()
+{
     arma::imat basis = {};
     BShamiltonian(basis);
 }

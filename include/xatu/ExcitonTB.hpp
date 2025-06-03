@@ -63,7 +63,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         uint nGs;
         double Gcutoff_ = 0;
         int Nqpoints = 1;
-        
+        double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
+
         arma::mat qpoints_list_;
         arma::mat trunreciprocalLattice_;
         arma::cx_cube Chimatrix_;
@@ -75,7 +76,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat Polarizabilitymatrix_;
         arma::mat Wmatrix_;
         arma::colvec U00_list_;
-        
+        double W00_at_0_ = 0.0;
+        arma::rowvec q0_ = {0.05, 0.0, 0.0};
+
     public:
         // Returns dielectric constant of embedding medium
         const double& eps_m = eps_m_;
@@ -234,7 +237,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         void compute_2D_DielectricMatrix();
         void compute_2D_DielectricMatrix_Opt();
         void compute_2D_DielectricMatrix_at_q(const arma::rowvec&, const int);
+        void compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &, const int);
         void compute_2D_DielectricMatrix(std::string);
+        void compute_ScreenedPotential_regularization(const arma::rowvec &);
+        void compute_DielectricMatrix_regularization(const arma::rowvec &);
         void compute_2D_PolarizabilityMatrix(std::string);
         void compute_2D_RPAInvDielectricMatrix(std::string);
         arma::cx_mat compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec&, const int);
