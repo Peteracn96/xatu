@@ -3966,7 +3966,7 @@ void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
 
     double potential_q0 = coulomb_2D_FT(q0);
 
-    #pragma omp parallel for        // Figure out what I really have to do about this elements, do they need regularization?
+    #pragma omp parallel for        // Figure out what I really have to do about this elements, do they need regularization? If yes, how since elements (0,G) are anisotropic?
     for (int g2 = 1; g2 < nGs; ++g2)
     {   
         arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
