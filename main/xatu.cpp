@@ -175,7 +175,7 @@ int main(int argc, char* argv[]){
 
             return 0;
 
-        } else if (screeningConfig->screeningInfo.function =="inversedielectric") {
+        } else if (screeningConfig->screeningInfo.function == "inversedielectric") {
             std::cout << "Proceeding with computation of the inverse of a dielectric matrix...\n" << std::endl;
 
             bulkExciton.computesingleInverseDielectricMatrix(excitonConfig->excitonInfo.label);

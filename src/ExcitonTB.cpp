@@ -1021,7 +1021,7 @@ double ExcitonTB::coulomb_2D_FT(const arma::rowvec& k) const {
         potential = 1/knorm;
     }
     
-    potential = potential*ec*1E10/(2*eps0);
+    potential = potential*ec*1E10/(2*eps0*system->unitCellArea);
     
     return potential;
 }  
@@ -1100,7 +1100,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     }
     else{
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(g2, g2, q)/(system->unitCellArea*totalCells);
+        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(g2, g2, q)/((std::complex<double>)totalCells);
     }
 
     return potential;
@@ -1266,7 +1266,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
             Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
 
-            term += Ic*(this->coulombFT(g, g, k - k2)/(system->unitCellArea*totalCells))*conj(Iv);
+            term += Ic*(this->coulombFT(g, g, k - k2)/(totalCells))*conj(Iv);
         }
     } else if (potential == "keldysh"){
         for(int g = 0; g < nrcells; g++){
@@ -2004,7 +2004,7 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
         }
     }
 
-    return g_s*term_aux/(system->unitCellArea*totalCells);
+    return g_s*term_aux/((std::complex<double>)totalCells);
 }
 
 /**
@@ -2023,7 +2023,7 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
 
     std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,q);
             
-    return epsilon/(system->unitCellArea*totalCells);
+    return epsilon;
 }
 
 /**
@@ -2099,7 +2099,7 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    std::complex<double> epsilon = kroneckerdelta - g_s*potential*term_aux/(system->unitCellArea*totalCells*d);
+    std::complex<double> epsilon = kroneckerdelta - g_s*potential*term_aux/(totalCells*d);
 
     return epsilon;
 }
@@ -2186,7 +2186,7 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
         }
     }
 
-    return g_s*term_aux/(system->unitCellArea*totalCells);
+    return g_s*term_aux/((std::complex<double>)totalCells);
 }
 
 /**
@@ -2286,7 +2286,7 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
         }
     }
 
-    return g_s * term_aux / (system->unitCellArea * totalCells);
+    return g_s * term_aux / ((std::complex<double>)totalCells);
 }
 
 /**
@@ -2295,7 +2295,7 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
  * @param G Reciprocal lattice vector G
  * @param G2 Reciprocal lattice vector G2
  * @param iq Index of momentum vector q
- * @return Polarizability
+ * @return Polarizability 
 */
 std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const int iq) {
 
@@ -2305,7 +2305,7 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
 
     std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,iq);
             
-    return epsilon/(system->unitCellArea*totalCells);
+    return epsilon;
 }
 
 /**
@@ -3966,7 +3966,7 @@ void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
 
     double potential_q0 = coulomb_2D_FT(q0);
 
-    #pragma omp parallel for        // Figure out what I really have to do about this elements, do they need regularization? If yes, how since elements (0,G) are anisotropic?
+    #pragma omp parallel for        // Figure out what I really have to do about these elements, do they need regularization? If yes, how since elements (0,G) are anisotropic?
     for (int g2 = 1; g2 < nGs; ++g2)
     {   
         arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
