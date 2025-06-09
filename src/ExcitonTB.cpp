@@ -634,7 +634,14 @@ void ExcitonTB::setMode(std::string mode){
 void ExcitonTB::setReciprocalVectors(int nReciprocalVectors){
     if(nReciprocalVectors < 0){
         throw std::invalid_argument("setReciprocalVectors(): given number must be positive");
+    } else if ((uint)nReciprocalVectors > this->trunreciprocalLattice_.n_rows && !this->trunreciprocalLattice_.is_empty()) {
+        std::cout << "Number of G vectors for calculating the exciton can not be greater than the number of G vectors generated.\nIntroduce a smaller number for the argument, or increase the G cutoff. Terminating." << std::endl;
+        exit(0);
+    } else if (this->trunreciprocalLattice_.is_empty()) {
+        std::cout << "The reciprocal lattice G vectors for calculating the exciton were not generated. Terminating." << std::endl;
+        exit(0);
     }
+
     this->nReciprocalVectors_ = nReciprocalVectors;
 }
 
@@ -875,8 +882,8 @@ double ExcitonTB::keldysh(double r) const {
         STVH0(regularization/r0, &SH0);
         potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(regularization/r0));
     }
-    else if (r > cutoff){
-        potential_value = 0.0;
+    else if (r > cutoff){STVH0(R, &SH0);
+        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(R));//0.0;
     }
     else{
         STVH0(R, &SH0);
@@ -1067,10 +1074,9 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
     double qnorm = arma::norm(q + G);
     if (qnorm < eps){
         potential = 0;
-        double percentage = 0.3;
-        double q0 = percentage*arma::norm(arma::rowvec({0.145104, 0.251327})); //2/r0;
-        // potential = system->unitCellArea*log(1 + r0*q0)/r0; // Introduces regularization for Ryova-Keldysh potential in momentum space, BerkeleyGW
-        potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
+        // double percentage = 0.48;
+        // double q0 = percentage*arma::norm(arma::rowvec({0.024184, 0.0418879})); //2/r0;
+        // potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
     }
     else{
         potential = 1/(qnorm*(1 + r0*qnorm));
@@ -1196,7 +1202,7 @@ arma::cx_mat ExcitonTB::extendMotifFT(const arma::cx_mat& motifFT){
  * @param coefsK3 Third eigenstate vector.
  * @param coefsK4 Fourth eigenstate vector.
  * @param motifFT Motif Fourier transform.
- * @return Interaction term.
+ * @return Interaction term. 
  */
 std::complex<double> ExcitonTB::realSpaceInteractionTerm(const arma::cx_vec& coefsK1, 
                                      const arma::cx_vec& coefsK2,
@@ -1906,7 +1912,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
                     sum_alpha = std::conj(arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1)));
                     sum_beta = arma::sum(CoefArray.subvec(j_index, j_index + norbitals_beta - 1));
 
-                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));      
+                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2)))*4 / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));   // Factor of 4 missing from the spin dof, check if this improves results 
                 }
             }
         }
@@ -4132,6 +4138,77 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
        
     HBS_ = HBS + HBS.t();
     std::cout << "Done" << std::endl;
+};
+
+/**
+ * Method to compare interaction matrix elements computed with real space and reciprocal space potentials
+ * @return void
+ */
+void ExcitonTB::CompareInteractionMatrixElements(double Gcutoff, int nReciprocalVectors, std::string potential){
+
+    arma::imat basisStates = this->basisStates;
+
+    this->setGcutoff(Gcutoff);
+    this->setReciprocalVectors(nReciprocalVectors);
+
+    uint64_t basisDimBSE = basisStates.n_rows;
+    std::cout << "BSE dimension: " << basisDimBSE << std::endl;
+
+    // To be able to parallelize over the triangular matrix, we build
+    uint64_t loopLength = 10;//basisDimBSE*(basisDimBSE + 1)/2.;
+
+    std::cout << "Computing all the interaction matrix elements:" << std::endl;
+
+    // https://stackoverflow.com/questions/242711/algorithm-for-index-numbers-of-triangular-matrix-coefficients
+    for(uint64_t n = 0; n < loopLength; n++){
+
+        arma::cx_vec coefsK, coefsK2, coefsKQ, coefsK2Q;
+
+        uint64_t ii = loopLength - 1 - n;
+        uint64_t m  = floor((sqrt(8*ii + 1) - 1)/2);
+        uint64_t i = basisDimBSE - 1 - m;
+        uint64_t j = basisDimBSE - 1 - ii + m*(m+1)/2;
+    
+        uint32_t k_index = basisStates(i, 2);
+        int v = bandToIndex[basisStates(i, 0)];
+        int c = bandToIndex[basisStates(i, 1)];
+        uint32_t kQ_index = k_index;
+
+        uint32_t k2_index = basisStates(j, 2);
+        int v2 = bandToIndex[basisStates(j, 0)];
+        int c2 = bandToIndex[basisStates(j, 1)];
+        uint32_t k2Q_index = k2_index;
+
+        // Using the atomic gauge
+        if(gauge == "atomic"){
+            coefsK = system_->latticeToAtomicGauge(eigvecKStack.slice(k_index).col(v), system->kpoints.row(k_index));
+            coefsKQ = system_->latticeToAtomicGauge(eigvecKQStack.slice(kQ_index).col(c), system->kpoints.row(kQ_index));
+            coefsK2 = system_->latticeToAtomicGauge(eigvecKStack.slice(k2_index).col(v2), system->kpoints.row(k2_index));
+            coefsK2Q = system_->latticeToAtomicGauge(eigvecKQStack.slice(k2Q_index).col(c2), system->kpoints.row(k2Q_index));
+        }
+        else{
+            coefsK = eigvecKStack.slice(k_index).col(v);
+            coefsKQ = eigvecKQStack.slice(kQ_index).col(c);
+            coefsK2 = eigvecKStack.slice(k2_index).col(v2);
+            coefsK2Q = eigvecKQStack.slice(k2Q_index).col(c2);
+        }
+
+        std::complex<double> Dr, Dk = 0.0;
+
+        arma::rowvec k = system->kpoints.row(k_index);
+        arma::rowvec k2 = system->kpoints.row(k2_index);
+        
+        uint32_t effective_k_index = system_->findEquivalentPointBZ(k2 - k, ncell);
+        arma::cx_mat motifFT = ftMotifStack.slice(effective_k_index);
+        
+        Dr = realSpaceInteractionTerm(coefsKQ, coefsK2, coefsK2Q, coefsK, motifFT);     
+        Dk = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, potential, this->nReciprocalVectors);
+        
+        std::cout << "k  = " << system->kpoints.row(k_index) << "k2 = " << system->kpoints.row(k2_index) << "Dr(k,k2) = " << Dr << " | Dk(k,k2) = " << Dk << std::endl;
+        std::cout << "-------------------------------------------------------------------------------------------" << std::endl;
+    }
+       
+    std::cout << "All interaction matrix elements computed. Bye." << std::endl;
 };
 
 /**

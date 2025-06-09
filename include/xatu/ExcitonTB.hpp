@@ -249,7 +249,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
         std::unique_ptr<ResultTB> diagonalize(std::string method = "diag", int nstates = 8);
-        
+        void CompareInteractionMatrixElements(double, int, std::string);
         // Fermi golden rule       
         double pairDensityOfStates(double, double) const;
         void writePairDOS(FILE*, double delta, int n = 100);
