@@ -670,6 +670,7 @@ void ExcitonTB::setGcutoff(double Gcutoff){
 
     this->Gcutoff_ = Gcutoff;
     uint nGs = this->trunreciprocalLattice_.n_rows;
+    this->nGs = nGs;
 
     std::cout << "Printing all the G vectors:\n";
     for (uint i = 0; i < nGs; i++) 
@@ -882,8 +883,8 @@ double ExcitonTB::keldysh(double r) const {
         STVH0(regularization/r0, &SH0);
         potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(regularization/r0));
     }
-    else if (r > cutoff){STVH0(R, &SH0);
-        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(R));//0.0;
+    else if (r > cutoff){
+        potential_value = 0.0;
     }
     else{
         STVH0(R, &SH0);
@@ -1264,6 +1265,18 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = this->trunreciprocalLattice_;
     //int Gcutoff = system_->truncateReciprocalSupercell(nrcells, radius).n_rows;
+
+    arma::rowvec null_vector(3,arma::fill::zeros);
+
+    arma::rowvec k_dif = k2 - k;
+    arma::rowvec kQ_dif = k2Q - kQ;
+
+    int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
+    int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
+    arma::rowvec k_eff = system->kpoints.row(k_eff_index);
+    arma::rowvec kQ_eff = system->kpoints.row(kQ_eff_index);
+
+    arma::rowvec g = k_dif - k_eff;
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
         for(int g = 0; g < nrcells; g++){
@@ -4150,6 +4163,7 @@ void ExcitonTB::CompareInteractionMatrixElements(double Gcutoff, int nReciprocal
 
     this->setGcutoff(Gcutoff);
     this->setReciprocalVectors(nReciprocalVectors);
+    int nGs = this->trunreciprocalLattice_.n_rows;
 
     uint64_t basisDimBSE = basisStates.n_rows;
     std::cout << "BSE dimension: " << basisDimBSE << std::endl;
@@ -4200,13 +4214,48 @@ void ExcitonTB::CompareInteractionMatrixElements(double Gcutoff, int nReciprocal
         
         uint32_t effective_k_index = system_->findEquivalentPointBZ(k2 - k, ncell);
         arma::cx_mat motifFT = ftMotifStack.slice(effective_k_index);
-        
+        std::complex<double> imag(0, 1);
+        arma::rowvec k_eff = system->kpoints.row(effective_k_index);
+
         Dr = realSpaceInteractionTerm(coefsKQ, coefsK2, coefsK2Q, coefsK, motifFT);     
         Dk = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, potential, this->nReciprocalVectors);
         
+        double radius = arma::norm(system->bravaisLattice.row(0)) * cutoff_;
+        arma::mat cells = system_->truncateSupercell(ncell, radius);
+        potptr potential = selectPotential(this->potential_);
+        
+        std::complex<double> motifFT11 = motifFourierTransform(0, 0, k_eff, cells, potential)*((std::complex<double>)totalCells);
+        std::complex<double> motifFT12 = motifFourierTransform(0, 1, k_eff, cells, potential)*((std::complex<double>)totalCells);
+
         std::cout << "k  = " << system->kpoints.row(k_index) << "k2 = " << system->kpoints.row(k2_index) << "Dr(k,k2) = " << Dr << " | Dk(k,k2) = " << Dk << std::endl;
+        std::cout << "motifFT = \n";
+        motifFT.print();
+        std::cout << "\n";
+        std::cout << "v(k'-k)*exp(i(k2-k)(t1-t1)) = " << keldyshFT(0,0,k - k2)*exp(-imag*arma::dot(k-k2,system->motif.row(0).subvec(0, 2)-system->motif.row(0).subvec(0, 2))) << std::endl;
+        std::cout << "v(k'-k)*exp(i(k2-k)(t1-t2)) = " << keldyshFT(0,0,k - k2)*exp(-imag*arma::dot(k-k2,system->motif.row(0).subvec(0, 2)-system->motif.row(1).subvec(0, 2))) << std::endl << std::endl;
+        std::cout << "v(eff_k_index)*exp(i(k2-k)(t1-t1)) = " << keldyshFT(0,0,k_eff)*exp(-imag*arma::dot(k_eff,system->motif.row(0).subvec(0, 2)-system->motif.row(0).subvec(0, 2))) << std::endl;
+        std::cout << "v(eff_k_index)*exp(i(k2-k)(t1-t2)) = " << keldyshFT(0,0,k_eff)*exp(-imag*arma::dot(k_eff,system->motif.row(0).subvec(0, 2)-system->motif.row(1).subvec(0, 2))) << std::endl << std::endl;
+        
+        std::cout << "motifFT11 = " << motifFT11 << std::endl;
+        std::cout << "motifFT12 = " << motifFT12 << std::endl;
+        
+        //std::cout << "motifFT11 - singularity = " << motifFT11 - exp(imag*arma::dot(k_eff,system->motif.row(0).subvec(0, 2)-system->motif.row(0).subvec(0, 2))) << std::endl << std::endl;
+
+        std::complex<double> sumG11 = 0.0;
+        std::complex<double> sumG12 = 0.0;
+        arma::rowvec null_vector(3,arma::fill::zeros);
+        
+        for (int g = 0; g < nReciprocalVectors; ++g) {
+            arma::rowvec G = this->trunreciprocalLattice_.row(g);
+            sumG11 += keldyshFT(g,g,null_vector-k_eff)*exp(imag*arma::dot(null_vector-k_eff + G,system->motif.row(0).subvec(0, 2)-system->motif.row(0).subvec(0, 2)));
+            sumG12 += keldyshFT(g,g,null_vector-k_eff)*exp(imag*arma::dot(null_vector-k_eff + G,system->motif.row(0).subvec(0, 2)-system->motif.row(1).subvec(0, 2)));
+        }
+        std::cout << "sum over G 11 = " << sumG11 << std::endl;
+        std::cout << "sum over G 12 = " << sumG12 << std::endl;
         std::cout << "-------------------------------------------------------------------------------------------" << std::endl;
     }
+
+    
        
     std::cout << "All interaction matrix elements computed. Bye." << std::endl;
 };
