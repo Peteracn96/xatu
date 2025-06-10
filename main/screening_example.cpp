@@ -76,9 +76,10 @@ int main(int argc, char* argv[]){
 
     xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
 
+    mos2_exciton.setMode("realspace");
     mos2_exciton.brillouinZoneMesh(mos2_exciton.ncell);
     mos2_exciton.initializeHamiltonian();
-
+    
 
     mos2_exciton.setVectors(0,0);
     //mos2_exciton.computesingleDielectricFunction();
@@ -258,7 +259,7 @@ int main(int argc, char* argv[]){
         arma::rowvec R_dif = Rdifferences.row(R_dif_index).subvec(0,2);
         arma::rowvec R_origin(3,arma::fill::zeros);
 
-        T_aux(index*NAtoms + t_i_index,t_j_index) = -mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
+        T_aux(index*NAtoms + t_i_index,t_j_index) = mos2_exciton.realPolarizabilityMatrixElement(R_dif, R_origin, t_i_index, t_j_index);
 
         //std::cout << "i = " << i << ", R_dif = (" << R_dif(0) << "," << R_dif(1) << "), t_i = " << t_i_index << ", t_j = " << t_j_index  << std::endl;
         //std::cout << i << ", " << std::flush;
@@ -523,7 +524,7 @@ int main(int argc, char* argv[]){
     // Prints the epsilon matrices
     for (arma::uword t_j = 0; t_j < 1; ++t_j){
         
-        epsilon.slice(t_j).print(std::to_string(t_j) + ":");
+        // epsilon.slice(t_j).print(std::to_string(t_j) + ":");
     }
 
     // Solves for W
@@ -538,16 +539,17 @@ int main(int argc, char* argv[]){
 
     // Prints the inverse
 
-    epsilonInv.print("epsilon(0)^-1:");
+    // epsilonInv.print("epsilon(0)^-1:");
 
     arma::cx_vec eigval = arma::eig_gen(M);
 
     eigval.print("Eigenvalues of epsilon^-1(0)^T*epsilon^-1(0)");
 
     // Square root of all the eigenvalues
-    for (arma::uword i = 0; i < n_positions; ++i){
-        std::cout << "sqrt(eigval(" << i << ")) = " << std::sqrt( eigval(i)) << std::endl;
-    }
+    // for (arma::uword i = 0; i < n_positions; ++i){
+    //     std::cout << "sqrt(eigval(" << i << ")) = " << std::sqrt( eigval(i)) << std::endl;
+    // }
+
     // Solves for W
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
         W.col(t_j) = arma::inv(epsilon.slice(t_j))*V.col(t_j);
