@@ -3934,7 +3934,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
  * Method to compute the regularization of the dielectric matrix at q = 0
  * @details Computes numerically the wing elements (0,G2) of the dielectric matrix at q=0
  */
-void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0, bool is_system_isotropic)
+void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0, bool is_system_isotropic)
 {
     uint basisdim = this->system->basisdim;
     uint nk = system->nk;
