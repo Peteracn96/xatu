@@ -2934,6 +2934,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
                 this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
             }
+            std::cout << "Computation " << (iq + 1)/Nqpoints * 100 << "% completed." << std::flush;
         } 
 
         std::cout << "\n";

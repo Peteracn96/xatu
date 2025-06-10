@@ -154,6 +154,8 @@ int main(int argc, char* argv[]){
         start = stop;
 
         ++j;
+
+        std::cout << "Computation " << (i + 1)*100 / Gcutoff_array.n_elem << "%% complete." << std::endl;
     }
 
     return 0;
