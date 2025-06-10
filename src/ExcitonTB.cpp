@@ -3303,7 +3303,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
         Chi0_GG.row(g)(g2) = Chi;
         Chi0_GG.row(g2)(g) = std::conj(Chi);
 
-        double potentialg = coulomb_2D_FT(q + G);
+        double potentialg = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2)); // double potentialg = coulomb_2D_FT(q + G);
         double potentialg2 = coulomb_2D_FT(q + G2);
         double kroneckerdelta = g == g2? 1 : 0;
 
@@ -3312,7 +3312,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
         }
 
         epsilon_GG.row(g)(g2) = kroneckerdelta - potentialg*Chi;
-        epsilon_GG.row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+        epsilon_GG.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
     }
 
     this->Chimatrix_.slice(iq) = Chi0_GG;
