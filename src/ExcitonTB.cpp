@@ -3397,8 +3397,8 @@ arma::cx_mat ExcitonTB::compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowv
     }
 
     for (uint g = 0; g < nGs; ++g) {
-        arma::rowvec G = ReciprocalVectors.row(g); 
-        V_GG(g,g) = coulomb_2D_FT(q + G);
+        arma::rowvec G = ReciprocalVectors.row(g);
+        V_GG(g, g) = coulomb_2D_FT(q + G);
     }
 
     #pragma omp parallel for 
