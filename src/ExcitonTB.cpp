@@ -3935,7 +3935,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
  * Method to compute the regularization of the dielectric matrix at q = 0
  * @details Computes numerically the wing elements (0,G2) of the dielectric matrix at q=0
  */
-void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
+void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0, bool is_system_isotropic)
 {
     uint basisdim = this->system->basisdim;
     uint nk = system->nk;
@@ -3967,7 +3967,7 @@ void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
        return;
     }
 
-    // Calculates the inverse dielectric matrix at q = 0 infinitesimal, regularizing wing elements (0,G2)
+    // Calculates the inverse dielectric matrix at q = 0 infinitesimal
 
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
@@ -3981,16 +3981,7 @@ void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
         this->eigvalkqStack_.col(i) = auxEigVal;
         this->eigveckqStack_.slice(i) = auxEigvec;
     }
-
-    double potential_q0 = coulomb_2D_FT(q0);
-
-    #pragma omp parallel for        // Figure out what I really have to do about these elements, do they need regularization? If yes, how since elements (0,G) are anisotropic?
-    for (uint g2 = 1; g2 < nGs; ++g2)
-    {   
-        arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, G2, q0);
-        this->epsilonmatrix_.slice(origin_index).row(0)(g2) = 0. - potential_q0 * Chi; // Only epsilon matrix does actually need to be regularized
-    }
+    std::cout << "Done.\n" << std::flush;
 
     // Calculates the inverse dielectric matrix at q0 infinitesimal, to regularize W_00(0)
 
@@ -4022,12 +4013,12 @@ void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
 
         std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0);
 
-        double potentialg = coulombFT(g, g, q0);
-        double potentialg2 = coulombFT(g2, g2, q0);
+        double potentialg = std::sqrt(coulombFT(g, g, q0)) * std::sqrt(coulombFT(g2, g2, q0)); // coulombFT(g, g, q0);
+        // double potentialg2 = coulombFT(g2, g2, q0);
         double kroneckerdelta = g == g2 ? 1 : 0;
 
         dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
-        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
     }
 
     auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
@@ -4035,9 +4026,54 @@ void ExcitonTB::compute_DielectricMatrix_regularization(const arma::rowvec &q0)
     std::complex<double> head_element = auxvecsol(0, 0);
 
     double Re_head_element = std::real(head_element);
-    double slope = (Re_head_element - 1.)/q0_norm;
+    // double slope = (Re_head_element - 1.)/q0_norm;
 
-    this->W00_at_0_ = (2 + ((Re_head_element - 1.)))*ec*1E10/(2*eps0*q0_norm*system->unitCellArea*totalCells);
+    double Re_head_element_perp = Re_head_element;
+    // double slope_perp = slope;
+
+    if (!is_system_isotropic) { // If system is anisotropic, repeat the calculation for a vector perpendicular to q0 with same norm
+
+        arma::rowvec q0_perpendicular = {-q0(1), q0(0), 0};
+
+        std::cout << "Diagonalizing H(k+q0_perpendicular) for every point k... " << std::flush;
+        for (uint i = 0; i < nk; i++)
+        {
+            arma::rowvec kq = system->kpoints.row(i) + q0_perpendicular;
+            system->solveBands(kq, auxEigVal, auxEigvec);
+            auxEigvec = fixGlobalPhase(auxEigvec);
+            this->eigvalkqStack_.col(i) = auxEigVal;
+            this->eigveckqStack_.slice(i) = auxEigvec;
+        }
+        std::cout << "Done.\n" << std::flush;
+
+        #pragma omp parallel for
+        for (uint i = 0; i < nGs * (nGs + 1) / 2; i++)
+        {
+            int g = indecesg.row(i)(0);
+            int g2 = indecesg.row(i)(1);
+
+            arma::rowvec G = ReciprocalVectors.row(g);
+            arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+            std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular);
+
+            double potentialg = std::sqrt(coulombFT(g, g, q0_perpendicular)) * std::sqrt(coulombFT(g2, g2, q0_perpendicular)); // coulombFT(g, g, q0);
+            // double potentialg2 = coulombFT(g2, g2, q0);
+            double kroneckerdelta = g == g2 ? 1 : 0;
+
+            dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg * Chi;
+            dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg * std::conj(Chi);
+        }
+
+        auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
+
+        std::complex<double> head_element = auxvecsol(0, 0);
+
+        Re_head_element_perp = std::real(head_element);
+        // slope_perp = (Re_head_element_perp - 1.) / q0_norm;
+    }
+
+    this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
 }
 
 /**

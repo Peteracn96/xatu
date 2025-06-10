@@ -38,10 +38,10 @@ int main(int argc, char* argv[]){
     int nG = 25;
     double Gcutoff = 10.0;
 
-    arma::vec ncell_array = arma::regspace(90, -10, 10);
+    arma::vec ncell_array = arma::regspace(100, 10, 140);
 
     bool writeEigvals = true;
-    std::string filename = "eigval_convergence_hbn_reciprocal_nG25_with_reg_0_25.out";
+    std::string filename = "eigval_convergence_hbn_reciprocal_nG25_with_reg_0_1_pushed.out";
     FILE* textfile_en = fopen(filename.c_str(), "a");
 
     for(int i = 0; i < ncell_array.n_elem; i++){
@@ -58,8 +58,8 @@ int main(int argc, char* argv[]){
         cout << "#removed bands: " << nrmbands << endl;
         cout << "System configuration file: " << modelfile << "\n" << endl;
 
-        xatu::SystemConfiguration config(modelfile);
-        xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(config, ncell, nbands, nrmbands, parameters, Q, Gcutoff, nG);
+        xatu::SystemConfiguration config(modelfile); std::cout << "System configuration file parsed." << std::endl;
+        xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(config, ncell, nbands, nrmbands, parameters, Q, Gcutoff, nG); std::cout << "Exciton configuration initialized." << std::endl;
 
         arma::cout << "Orbitals: " << bulkExciton.system->orbitals << arma::endl;
         bulkExciton.setMode("reciprocalspace");

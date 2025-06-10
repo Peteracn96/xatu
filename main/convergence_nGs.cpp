@@ -45,7 +45,7 @@ int main(int argc, char* argv[]){
     int ncell = 20;
     arma::vec Gcutoff_array = arma::regspace(3., 3., 54);
 
-    std::string filename = "inv_epsilon_vs_nGs_hBN_DFT_HSE06";
+    std::string filename = "inv_epsilon_vs_nGs_hBN_DFT_HSE06_symmetrized";
     // FILE* textfile_en = fopen(filename.c_str(), "a");
 
     // xatu::ExcitonConfiguration systemConfig;
