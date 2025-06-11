@@ -44,7 +44,7 @@ namespace xatu {
  */
 void ExcitonTB::initializeExcitonAttributes(int ncell, const arma::ivec& bands, 
                                       const arma::rowvec& parameters, const arma::rowvec& Q){
-    this->ncell_      = ncell;
+    this->ncell_ = ncell;
     this->totalCells_ = pow(ncell, system_->ndim);
     this->Q_          = Q;
     this->bands_      = bands;
@@ -323,6 +323,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
             this->Polarizabilitymatrix_ = arma::mat(nlattice_sites,nlattice_sites,arma::fill::zeros);
 
             this->Wmatrix_ = arma::mat(nlattice_sites,n_atoms,arma::fill::zeros);
+
         }
 
     } else if (this->mode == "reciprocalspace"){
@@ -331,6 +332,30 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->nReciprocalVectors, radius);
 
         uint ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
+
+        std::cout << "Creating the coarser BZ mesh... " << std::flush;
+
+        int ndim = 2;
+        arma::mat kpoints(pow(ncell_aux, ndim), 3);
+        arma::mat combinations = system->generateCombinations(ncell_aux, ndim);
+        if (ncell_aux % 2 == 1)
+        {
+            combinations += 1. / 2;
+        }
+
+        for (int i = 0; i < nk_aux; i++)
+        {
+            arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+            for (int j = 0; j < ndim; j++)
+            {
+                kpoint += (2 * combinations.row(i)(j) - ncell_aux) / (2 * ncell_aux) * system->reciprocalLattice_.row(j);
+            }
+            kpoints.row(i) = kpoint;
+        }
+
+        this->kpoints_aux_ = kpoints;
+
+        std::cout << "Done. Number of k points in the coarser BZ mesh: " << nk_aux << std::endl;
 
         if(cfg.screeningInfo.function == "dielectric" || cfg.screeningInfo.function == "polarizability"){
             if (gs(0) >= ngs || gs(1) >= ngs){
@@ -777,8 +802,12 @@ void ExcitonTB::setTrunLattice(int ncell, double cutoff){
  */
 void ExcitonTB::setq_points_list(arma::mat q_points)
 {
+    if (this->qpoints_list_.is_empty()) {
+        this->qpoints_list_.set_size(q_points.n_rows, q_points.n_cols);
+    }
+    
     this->qpoints_list_ = q_points;
-};
+}
 
 /* ------------------------------ Getters ------------------------------ */
 int ExcitonTB::getNGs() const {
@@ -1102,12 +1131,18 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
 
     double qnorm = arma::norm(q);
-    if (qnorm < eps){
-        potential = 0;
+
+    if (qnorm < eps && g == 0 && g2 == 0){
+        potential = this->W00_at_0_;
     }
-    else{
+    else if ((qnorm < eps && g == 0 && g2 != 0) || (qnorm < eps && g != 0 && g2 == 0))
+    {
+        potential = 0.0;
+    }
+    else
+    {
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        potential = this->Invepsilonmatrix_.slice(iq).row(g)(g2)*coulombFT(g2, g2, q);
+        potential = std::sqrt(coulombFT(g, g, q)) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * std::sqrt(coulombFT(g2, g2, q));
     }
 
     return potential;
@@ -1942,9 +1977,9 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
  * @param q Momentum vector q
  * @return Polarizability
 */
-std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q) {
+inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q) {
 
-    int nk = system->nk;
+    int nk = this->nk_aux;
     int natoms = system->natoms;
     int basisdim = system->basisdim;
 
@@ -1963,7 +1998,7 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
     // arma::cx_vec coefskq_c, coefsk_v;
 
     std::complex<double> term = 0.;
-    std::complex<double> g_s = 2.0; // Spin degeneracy
+    std::complex<double> g_s = 1.0; // Spin degeneracy
 
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
@@ -1983,24 +2018,22 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
         // }
     }
 
-    //std::cout << "Diagonalizing H0 for all k+q points ... " << std::flush;
-
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
         for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
 
             for (int ik = 0; ik < nk; ik++){
 
-                arma::rowvec k = system->kpoints.row(ik);
-                arma::rowvec kq = system->kpoints.row(ik) + q;
+                arma::rowvec k = this->kpoints_aux.row(ik);
+                arma::rowvec kq = this->kpoints_aux.row(ik) + q;
         
                // Using the atomic gauge
                 if(gauge == "atomic"){
                     coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
-                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), this->kpoints_aux.row(ik));
                 
                     // coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
-                    // coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                    // coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), this->kpoints_aux.row(ik));
                 }
                 else{                            
                     coefskq = eigveckqStack_.slice(ik).col(iv);
@@ -2057,7 +2090,7 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
     
     double potential = coulomb_2D_FT(G + q);
 
-    int nk = system->nk;
+    int nk = this->nk_aux;
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
@@ -2083,17 +2116,17 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
             for (int ik = 0; ik < nk; ik++)
             {
 
-                arma::rowvec k = system->kpoints.row(ik);
-                arma::rowvec kq = system->kpoints.row(ik) + q;
+                arma::rowvec k = this->kpoints_aux.row(ik);
+                arma::rowvec kq = this->kpoints_aux.row(ik) + q;
 
                 // Using the atomic gauge
                 if (gauge == "atomic")
                 {
-                    // coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), system->kpoints.row(ik));
-                    // coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), system->kpoints.row(ik));
+                    // coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), this->kpoints_aux.row(ik));
+                    // coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), this->kpoints_aux.row(ik));
 
-                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), system->kpoints.row(ik));
-                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), system->kpoints.row(ik));
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), this->kpoints_aux.row(ik));
+                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), this->kpoints_aux.row(ik));
                 }
                 else
                 {
@@ -2219,7 +2252,7 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
 std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const int iq)
 {
 
-    int nk = system->nk;
+    int nk = this->nk_aux;
     int natoms = system->natoms;
     int basisdim = system->basisdim;
 
@@ -2241,8 +2274,8 @@ std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arm
     for (int ik = 0; ik < nk; ik++)
     {
 
-        arma::rowvec k = system->kpoints.row(ik);
-        arma::rowvec kq = system->kpoints.row(ik) + q;
+        arma::rowvec k = this->kpoints_aux.row(ik);
+        arma::rowvec kq = this->kpoints_aux.row(ik) + q;
 
         arma::cx_mat *auxk_slice = &eigveckStack_.slice(ik);
         //arma::cx_mat *auxkq_slice = &eigveckqStack_test[iq].slice(ik);
@@ -2613,47 +2646,102 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
     
     if (this->mode == "reciprocalspace"){
 
-        this->setq_points_list(system->kpoints); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
-        arma::mat q_points = this->qpoints_list_;
-        uint Nqpoints = q_points.n_rows;
-
-        uint nk = 20; // Custom number of k points in the BZ mesh, the necessary to make the polarizability matrix converge
-        this->brillouinZoneMesh(20); // Recreates an auxiliar BZ mesh with the custom number of k points
-            
-        uint basisdim = system->basisdim;
-        
-        std::cout << "Diagonalizing H(k+q) for every point q, for every point k... ";
-
-        vec auxEigVal(basisdim);
-        arma::cx_mat auxEigvec(basisdim, basisdim);
-
-        #pragma omp parallel for
-        for (uint iq = 0; iq < Nqpoints; ++iq)
-        {
-            arma::rowvec q = q_points.row(iq);
-
-            for (uint i = 0; i < nk; i++)
-            {
-                arma::rowvec kq = system->kpoints.row(i) + q;
-                system->solveBands(kq, auxEigVal, auxEigvec);
-
-                auxEigvec = fixGlobalPhase(auxEigvec);
-                eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
-                eigveckqStack_test[iq].slice(i) = auxEigvec;
-            };
-        }
-
-        this->brillouinZoneMesh(this->ncell); // Recovers the initial BZ mesh with the original number of k points for the exciton calculation
-
-        std::cout << "Computing dielectric matrix in the BZ mesh... \n" << std::flush;
-
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
         uint nGs = ReciprocalVectors.n_rows;
         uint Ncells = this->ncell_;
-        uint odd = Ncells%2;
-        uint nq = odd == 1? Ncells*(Ncells - odd)/2 + (Ncells - odd)/2 + 1 : (2*Ncells -1) + (Ncells-1)*(Ncells-2)/2 + Ncells/2 + 1; //Only half of the BZ
+        uint odd = Ncells % 2;
+        uint nq = odd == 1 ? Ncells * (Ncells - odd) / 2 + (Ncells - odd) / 2 + 1 : (2 * Ncells - 1) + (Ncells - 1) * (Ncells - 2) / 2 + Ncells / 2 + 1; // Only half of the BZ
+
+        std::cout << "Number of G vectors included in the calculation: " << nGs << std::endl;
+        for (uint i = 0; i < nGs; i++)
+        {
+
+            arma::rowvec G = ReciprocalVectors.row(i);
+            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+        }
+
+        this->setq_points_list(system->kpoints); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
+        uint Nqpoints = this->qpoints_list_.n_rows;
+        uint nk = Nqpoints;
+        arma::mat q_points(Nqpoints, 3, arma::fill::zeros);
+
+        uint ncell_aux = this->ncell_aux;
+        uint nk_aux = this->nk_aux;
         uint Nktotal = system->nk;
-        nq = Nktotal;
+
+        q_points = this->qpoints_list_; 
+        
+        uint basisdim = system->basisdim;
+        
+        std::cout << "Diagonalizing H(k+q) for every point q and q=0, for every point k... " << std::flush;
+
+        // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of q points
+        if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty())
+        {
+            this->eigvalkqStack_test = arma::cube(basisdim, nk_aux, Nqpoints, arma::fill::zeros);
+
+            std::vector<arma::cx_cube> vector_aux;
+            vector_aux.resize(Nqpoints);
+            this->eigveckqStack_test = vector_aux;
+
+            for (uint iq = 0; iq < Nqpoints; ++iq)
+            {
+                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
+            }
+        }
+        else
+        {
+            this->eigvalkqStack_test.set_size(basisdim, nk_aux, Nqpoints);
+            this->eigveckqStack_test.resize(Nqpoints);
+
+            for (uint iq = 0; iq < Nqpoints; ++iq)
+            {
+                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
+            }
+        }
+
+        // Reshape the Stack storing the bands and tight-binding coefficients
+        if (this->eigvalkStack_.n_cols != nk_aux || this->eigveckStack_.n_slices != nk_aux)
+        {
+            this->eigvalkStack_.set_size(basisdim, nk_aux);
+            this->eigveckStack_.set_size(basisdim, basisdim, nk_aux);
+        }
+
+        arma::vec auxEigVal(basisdim);
+        arma::cx_mat auxEigvec(basisdim, basisdim);
+
+        // Computing band structure in coarse BZ mesh (q = 0 might not be included) in the original BZ
+        
+        if (nk_aux != Nktotal)
+        {
+            for (uint i = 0; i < nk_aux; i++)
+            {   
+                arma::rowvec k = this->kpoints_aux_.row(i);
+                system->solveBands(k, auxEigVal, auxEigvec);
+
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                this->eigvalkStack_.col(i) = auxEigVal;
+                this->eigveckStack_.slice(i) = auxEigvec;
+            };
+        }
+
+        
+        for (uint iq = 0; iq < Nqpoints; ++iq)
+        {
+            arma::rowvec q = q_points.row(iq);
+            
+            for (uint i = 0; i < nk_aux; i++)
+            {
+                arma::rowvec kq = this->kpoints_aux.row(i) + q;
+                system->solveBands(kq, auxEigVal, auxEigvec);
+
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                this->eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
+                this->eigveckqStack_test[iq].slice(i) = auxEigvec;
+            };
+        }
+
+        std::cout << "Done. \nComputing dielectric matrix in the BZ mesh... \n" << std::flush;
 
         arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -2722,13 +2810,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                 }
             }
         }
-        
-        for (uint i = 0; i < nGs; i++){     
 
-            arma::rowvec G = ReciprocalVectors.row(i);                
-
-            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
-        }
+        std::cout << "Calculation of dielectric matrix at " << std::endl;
 
         if (odd == 0){
             /*#pragma omp parallel for // Computes first the dielectric matrix at the points q with no symmetric counterpart 
@@ -2789,12 +2872,14 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             }*/
 
             /**** Refactorization of code to make it more efficient *****/
+
             int i_aux = 0;
             for (uint ik = 0; ik < (2 * Ncells - 1); ik++)
             {
-                for (uint ig = 0; nGs * (nGs + 1) / 2; ig++)
+                #pragma omp parallel for
+                for (int ig = 0; ig < nGs * (nGs + 1) / 2; ig++)
                 {
-                    uint iq = indecesqg.row(i_aux)(0); // system->findEquivalentPointBZ(system->kpoints.row(indecesqg.row(i)(0)),Ncells);
+                    uint iq = indecesqg.row(i_aux)(0);
                     uint g = indecesqg.row(i_aux)(1);
                     uint g2 = indecesqg.row(i_aux)(2);
 
@@ -2816,17 +2901,25 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
                     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * Chi;
                     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg * std::conj(Chi);
-                    
+
                     i_aux++;
-                }      
+                }
+
+                int percentage = (ik + 1) * 100 / nq;
+
+                // if (percentage % 1 == 0)
+                // {
+                    std::cout << percentage << "%%, " << std::flush;
+                //}
             }
 
-            #pragma omp parallel for // Computes the dielectric matrix at the centersymmetric submesh of the BZ
+            // Computes the dielectric matrix at the centersymmetric submesh of the BZ
             for (uint ik = (2 * Ncells - 1); ik < nq; ik++)
             {
-                for (uint ig = 0; nGs * (nGs + 1) / 2; ig++)
+                #pragma omp parallel for
+                for (int ig = 0; ig < nGs * (nGs + 1) / 2; ig++)
                 {
-                    uint iq = indecesqg.row(i_aux)(0); // system->findEquivalentPointBZ(system->kpoints.row(indecesqg.row(i)(0)),Ncells);
+                    uint iq = indecesqg.row(i_aux)(0);
                     uint g = indecesqg.row(i_aux)(1);
                     uint g2 = indecesqg.row(i_aux)(2);
 
@@ -2864,6 +2957,13 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
                     i_aux++;
                 }
+
+                int percentage = (ik + 1) * 100 / nq;
+
+                // if (percentage % 1 == 0)
+                // {
+                    std::cout << percentage << "%%, " << std::flush;
+                //}
             }
         }
         
@@ -2905,9 +3005,10 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             int i_aux = 0;
             for (uint ik = 0; ik < nq ; ik++)
             {
-                for (uint ig = 0; nGs * (nGs + 1) / 2; ig++)
+                #pragma omp parallel for
+                for (int ig = 0; ig < nGs * (nGs + 1) / 2; ig++)
                 {
-                    uint iq = indecesqg.row(i_aux)(0); // system->findEquivalentPointBZ(system->kpoints.row(indecesqg.row(i)(0)),Ncells);
+                    uint iq = indecesqg.row(i_aux)(0);
                     uint g = indecesqg.row(i_aux)(1);
                     uint g2 = indecesqg.row(i_aux)(2);
 
@@ -2942,7 +3043,37 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
                     i_aux++;
                 }
+
+                int percentage = (ik + 1) * 100 / nq;
+
+                // if (percentage % 5 == 0)
+                // {
+                    std::cout << percentage << "%%, " << std::flush;
+                //}
             }
+        }
+
+        std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
+
+        this->compute_ScreenedPotential_regularization({0.2, 0, 0}, true);
+
+        std::cout << "Done. \n Recovering initial band structure in the original BZ..." << std::endl;
+
+        // Recovering initial band structure        
+        if (Nktotal != nk) {
+
+            this->eigvalkStack_.set_size(basisdim, Nktotal);
+            this->eigveckStack_.set_size(basisdim, Nktotal, Nktotal);
+
+            for (uint i = 0; i < Nktotal; i++)
+            {
+                arma::rowvec k = system->kpoints.row(i);
+                system->solveBands(k, auxEigVal, auxEigvec);
+
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                eigvalkStack_.col(i) = auxEigVal;
+                eigveckStack_.slice(i) = auxEigvec;
+            };
         }
     }
 
@@ -2950,7 +3081,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
 
-    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
+    std::cout << "Done. \nCalculation of dielectric matrix done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
 }
 
 /**
@@ -3002,7 +3133,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 
         std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
 
-        uint nk = system->nk;
+        uint nk = this->nk_aux;
         uint basisdim = system->basisdim;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
@@ -3060,7 +3191,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             std::cout << iq << ", " << std::flush;
 
             for (uint i = 0; i < nk; i++){
-                arma::rowvec kq = system->kpoints.row(i) + q;
+                arma::rowvec kq = this->kpoints_aux.row(i) + q;
                 system->solveBands(kq, auxEigVal, auxEigvec);
 
                 auxEigvec = fixGlobalPhase(auxEigvec);
@@ -3154,7 +3285,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
 
         std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
 
-        uint nk = system->nk;
+        uint nk = this->nk_aux;
         uint basisdim = system->basisdim;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
@@ -3207,7 +3338,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
 
             for (uint i = 0; i < nk; i++)
             {
-                arma::rowvec kq = system->kpoints.row(i) + q;
+                arma::rowvec kq = this->kpoints_aux.row(i) + q;
                 system->solveBands(kq, auxEigVal, auxEigvec);
 
                 auxEigvec = fixGlobalPhase(auxEigvec);
@@ -3266,7 +3397,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_Opt(){
 
         std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
 
-        uint nk = system->nk;
+        uint nk = this->nk_aux;
         uint basisdim = system->basisdim;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
@@ -3329,7 +3460,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_Opt(){
             arma::rowvec q = q_points.row(iq);
 
             for (uint i = 0; i < nk; i++){
-                arma::rowvec kq = system->kpoints.row(i) + q;
+                arma::rowvec kq = this->kpoints_aux.row(i) + q;
                 system->solveBands(kq, auxEigVal, auxEigvec);
 
                 auxEigvec = fixGlobalPhase(auxEigvec);
@@ -3359,7 +3490,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_Opt(){
 */
 void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const int iq){
 
-    uint nk = system->nk;
+    uint nk = this->nk_aux;
     int basisdim = system->basisdim;
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
@@ -3433,7 +3564,7 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
         std::cout << "Diagonalizing H(k+q) for every point k... " << Nq_points << " points.\n" << std::flush;
         for (uint i = 0; i < nk; i++)
         {
-            arma::rowvec kq = system->kpoints.row(i) + q;
+            arma::rowvec kq = this->kpoints_aux.row(i) + q;
             system->solveBands(kq, auxEigVal, auxEigvec);
             auxEigvec = fixGlobalPhase(auxEigvec);
             this->eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
@@ -3678,7 +3809,7 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
         }
 
         uint basisdim = system->basisdim;
-        uint nk = system->nk;
+        uint nk = this->nk_aux;
 
         vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
@@ -3727,7 +3858,7 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
             arma::rowvec q = q_points.row(iq);
 
             for (uint i = 0; i < nk; i++){
-                arma::rowvec kq = system->kpoints.row(i) + q;
+                arma::rowvec kq = this->kpoints_aux.row(i) + q;
                 system->solveBands(kq, auxEigVal, auxEigvec);
 
                 auxEigvec = fixGlobalPhase(auxEigvec);
@@ -4029,7 +4160,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
     arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
 
-    int iq = system_->findEquivalentPointBZ(this->q_, this->ncell);//system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell);
+    int iq = system_->findEquivalentPointBZ(this->q_, this->ncell);//system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell); // this has to be changed after when I find the time
     std::cout << "Computing inverse of dielectric matrix at momentum: q(" << iq << ") = " << system->kpoints.row(iq) << std::endl;  
     arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
     arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -4087,12 +4218,12 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
 /**
  * Method to compute the regularization of the dielectric matrix at q = 0
- * @details Computes numerically the wing elements (0,G2) of the dielectric matrix at q=0
+ * @details Computes numerically the head element of the dielectric matrix at q=0
  */
 void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0, bool is_system_isotropic)
 {
     uint basisdim = this->system->basisdim;
-    uint nk = system->nk;
+    uint nk = this->nk_aux;
 
     uint Nqpoints = this->qpoints_list_.n_rows;
     uint origin_index = 0;
@@ -4129,7 +4260,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
     std::cout << "Diagonalizing H(k+q0) for every point k... " << std::flush;
     for (uint i = 0; i < nk; i++)
     {
-        arma::rowvec kq = system->kpoints.row(i) + q0;
+        arma::rowvec kq = this->kpoints_aux.row(i) + q0;
         system->solveBands(kq, auxEigVal, auxEigvec);
         auxEigvec = fixGlobalPhase(auxEigvec);
         this->eigvalkqStack_.col(i) = auxEigVal;
@@ -4180,7 +4311,8 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
     std::complex<double> head_element = auxvecsol(0, 0);
 
     double Re_head_element = std::real(head_element);
-    // double slope = (Re_head_element - 1.)/q0_norm;
+    double slope = (Re_head_element - 1.)/q0_norm;
+    this->slope_ = slope;
 
     double Re_head_element_perp = Re_head_element;
     // double slope_perp = slope;
@@ -4192,7 +4324,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
         std::cout << "Diagonalizing H(k+q0_perpendicular) for every point k... " << std::flush;
         for (uint i = 0; i < nk; i++)
         {
-            arma::rowvec kq = system->kpoints.row(i) + q0_perpendicular;
+            arma::rowvec kq = this->kpoints_aux.row(i) + q0_perpendicular;
             system->solveBands(kq, auxEigVal, auxEigvec);
             auxEigvec = fixGlobalPhase(auxEigvec);
             this->eigvalkqStack_.col(i) = auxEigVal;
@@ -4224,7 +4356,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
         std::complex<double> head_element = auxvecsol(0, 0);
 
         Re_head_element_perp = std::real(head_element);
-        // slope_perp = (Re_head_element_perp - 1.) / q0_norm;
+        this->slope_perp_ = (Re_head_element_perp - 1.) / q0_norm;
     }
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);

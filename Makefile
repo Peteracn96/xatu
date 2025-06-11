@@ -1,7 +1,7 @@
 # Compiler & compiler flags
 CC = g++
 FC = gfortran
-CFLAGS = -O2 -Wall -lm
+CFLAGS = -O2 -Wall -lm -DARMA_NO_DEBUG
 FFLAGS = -O2 -Wall -Wno-tabs -lm
 
 # Include folders
@@ -53,6 +53,9 @@ convergence_ngs: main/convergence_nGs.cpp $(OBJECTS)
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
 screening_example: main/screening_example.cpp $(OBJECTS) 
+	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
+
+rpa_screening: main/rpa_screening.cpp $(OBJECTS) 
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
 %: main/%.cpp $(OBJECTS)

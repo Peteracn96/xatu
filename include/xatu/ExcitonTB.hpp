@@ -62,9 +62,13 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::ivec ts_;
         uint nGs;
         double Gcutoff_ = 0;
-        int Nqpoints = 1;
+        int Nqpoints = 1;   // Number of q points to compute the dielectric function at
         double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
+        double slope_perp_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0 along the direction perpendicular for slope_
+        uint ncell_aux_ = 20; // Number of unit cells used to compute the dielectric function
+        uint nk_aux_ = ncell_aux_*ncell_aux_; // Number of k points used to compute the dielectric function
 
+        arma::mat kpoints_aux_; // Auxiliar coarser BZ mesh to compute the dielectric function
         arma::mat qpoints_list_;
         arma::mat trunreciprocalLattice_;
         arma::cx_cube Chimatrix_;
@@ -100,10 +104,18 @@ class ExcitonTB : public Exciton<SystemTB> {
         const arma::mat& Polarizabilitymatrix = Polarizabilitymatrix_;
         // Returns matrix of the screened potential
         const arma::mat& Wmatrix = Wmatrix_;
+        // Returns auxiliar coarser BZ mesh to compute the dielectric function
+        arma::mat& kpoints_aux = kpoints_aux_;
 
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;
         const arma::ivec& Gs = Gs_;
+
+        // Return number of number of cells in each direction used to compute the dielectric function
+        const uint& ncell_aux = ncell_aux_;
+        // Return number of number of k points used to compute the dielectric function
+        const uint& nk_aux = nk_aux_;
+        
         arma::mat trunLattice_;
     // ----------------------------------- Methods -----------------------------------
     // Constructor & Destructor
@@ -217,7 +229,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
-        std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
+        inline std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec &, const arma::rowvec &, const arma::rowvec &, const int);
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
