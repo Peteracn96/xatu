@@ -127,7 +127,7 @@ int main(int argc, char* argv[]){
     if (screeningArg.isSet()){
         bulkExciton.initializeScreeningAttributes(*screeningConfig,excitonConfig->excitonInfo.mode);
     }
-    
+
     bulkExciton.verifypotential();
 
     cout << std::left << std::setw(30) << "System configuration file: " << std::setw(10) << systemfile << endl;
@@ -185,20 +185,25 @@ int main(int argc, char* argv[]){
         } else if (screeningConfig->screeningInfo.function == "exciton"){
             
             std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
-            
+
+            if (bulkExciton.mode == "reciprocalspace")
+            {
+                bulkExciton.writeBZtofile();
+            }
+
             bulkExciton.compute_2D_DielectricMatrix();
 
             bulkExciton.invertDielectricMatrix();
             
-            std::string filename_dielectric = excitonConfig->excitonInfo.label + "_screening.dat";
+            std::string filename_dielectric = excitonConfig->excitonInfo.label;
+
+            bulkExciton.writeDielectricMatrix("../" + filename_dielectric + "_epsilon.dat");
+
+            bulkExciton.writeInverseDielectricMatrix("../" + filename_dielectric + "_invepsilon.dat");
+
+            bulkExciton.writePolarizabilityMatrix("../" + excitonConfig->excitonInfo.label + "_polarizability_matrix.dat");
+
             
-            bulkExciton.writeInverseDielectricMatrix(filename_dielectric);
-
-            bulkExciton.writePolarizabilityMatrix("../polarizability_matrix.dat");
-
-            if (bulkExciton.mode == "reciprocalspace"){
-                bulkExciton.writeBZtofile();
-            }
 
             std::cout << "\nComputation of the exciton with screening under testing.\n" << std::endl;
 

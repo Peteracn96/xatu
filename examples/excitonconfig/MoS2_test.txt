@@ -1,16 +1,16 @@
 # label
-MoS2_test_speed
+MoS2_test_asymmetric_epsilon_refactored_odd
 # ncells
-20
+11
 # bands
-2
+1
 # Dielectric
 1 4 13.55
 # totalmomentum
 0.0 0.0 0.0
 # gcutoff
-4
+5
 # reciprocal
-10
+19
 # potential
 rpa
