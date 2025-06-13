@@ -66,11 +66,16 @@ class ExcitonTB : public Exciton<SystemTB> {
         double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
         double slope_perp_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0 along the direction perpendicular for slope_
         uint ncell_aux_ = 11; // Number of unit cells used to compute the dielectric function
-        uint nk_aux_ = ncell_aux_*ncell_aux_; // Number of k points used to compute the dielectric function
-
+        uint nk_aux_ = 121; // Number of k points used to compute the dielectric function
+        uint g_s_ = 1; // Spin degeneracy
         arma::mat kpoints_aux_; // Auxiliar coarser BZ mesh to compute the dielectric function
         arma::mat qpoints_list_;
         arma::mat trunreciprocalLattice_;
+
+        // Internals for dielectric fucntion
+        arma::mat eigvalkStack_, eigvalkqStack_;
+        arma::cx_cube eigveckStack_, eigveckqStack_;
+
         arma::cx_cube Chimatrix_;
         arma::cx_cube epsilonmatrix_;
         arma::cx_cube Invepsilonmatrix_;
@@ -107,13 +112,16 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Returns auxiliar coarser BZ mesh to compute the dielectric function
         arma::mat& kpoints_aux = kpoints_aux_;
 
+        // Returns spin degeneracy
+        uint& g_s = g_s_;
+
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;
         const arma::ivec& Gs = Gs_;
 
-        // Return number of number of cells in each direction used to compute the dielectric function
+        // Return number of cells in each direction used to compute the dielectric function
         const uint& ncell_aux = ncell_aux_;
-        // Return number of number of k points used to compute the dielectric function
+        // Return number of k points used to compute the dielectric function
         const uint& nk_aux = nk_aux_;
         
         arma::mat trunLattice_;

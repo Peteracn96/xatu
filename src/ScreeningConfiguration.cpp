@@ -19,7 +19,7 @@ ScreeningConfiguration::ScreeningConfiguration(){
  * @param filename Name of file with the exciton configuration.
  */
 ScreeningConfiguration::ScreeningConfiguration(std::string filename) : ConfigurationBase(filename){
-    this->expectedArguments = {"function","valence.bands","conduction.bands"};
+    this->expectedArguments = {"function","valence.bands","conduction.bands","ncell_aux","spin"};
     parseContent();
     checkArguments();
     checkContentCoherence();
@@ -69,6 +69,18 @@ void ScreeningConfiguration::parseContent(){
             screeningInfo.ts(0) = ts[0];
             screeningInfo.ts(1) = ts[1];
         }
+        else if(arg == "spin"){
+            std::string spin_string = parseWord(content[0]);
+            if (spin_string == "false") {
+                screeningInfo.spin = false;
+            } else if (spin_string == "true") {
+                screeningInfo.spin = true;
+            } else {
+                std::cout << "Option for spin not recognized, kipping block..." << std::endl;
+            }
+        } else if(arg=="ncell_aux"){
+            screeningInfo.ncell_aux = parseScalar<int>(content[0]);
+        }
         else{    
             std::cout << "Unexpected argument: " << arg << ", skipping block..." << std::endl;
         }
@@ -94,6 +106,9 @@ void ScreeningConfiguration::checkContentCoherence(){
     }
     if(screeningInfo.Gs(0) < 0 || screeningInfo.Gs(1) < 0){
         throw std::invalid_argument("The indeces of the vectors must be zero or a positive integer.");
+    }
+    if(screeningInfo.ncell_aux < 1){
+        throw std::invalid_argument("The number of points in the coarser BZ mesh in each direction, ncell_aux, has to be positive.");
     }
 };
 

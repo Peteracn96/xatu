@@ -35,6 +35,10 @@ class ScreeningConfiguration : public ConfigurationBase{
         std::string function = "dielectric";
         // Bool that is true/false when the dielectric function is/is not used
         bool isscreeningset = "false";
+        // Bool that is true/false if the model is spinful/spinless
+        bool spin = "true";
+        // Number of k points in each direction for the auxiliary coarser BZ mesh
+        int ncell_aux = 17;
     };
 
     public:
