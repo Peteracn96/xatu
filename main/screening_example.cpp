@@ -333,7 +333,7 @@ int main(int argc, char* argv[]){
 
     // Now is the inversion of Dyson's equation
 
-    /*int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+    int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
     arma::mat V(n_positions, NAtoms, arma::fill::zeros);
     arma::mat W(n_positions, NAtoms, arma::fill::zeros); 
     arma::cube epsilon(n_positions,n_positions,NAtoms);
@@ -410,12 +410,13 @@ int main(int argc, char* argv[]){
         for (arma::uword index = 0; index < n_positions; ++index){
 
             arma::rowvec R = LatticeVectors.row(combinations.slice(t_j).row(index)(0));
-            arma::rowvec t_i = motif.row(combinations.slice(t_j).row(index)(1)).subvec(0,2);
+            uint t_i_index = combinations.slice(t_j).row(index)(1);
+            arma::rowvec t_i = motif.row(t_i_index).subvec(0,2);
 
             for (arma::uword index2 = 0; index2 < n_positions; ++index2){
 
                 //Lambda function to compute the sum
-                auto sum_func = [index2,&R,t_j,&t_i,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif,&mos2_exciton]() -> double {
+                auto sum_func = [index2,&R,t_j,&t_i,t_i_index,nRvectors,NAtoms,&combinations,&T,&LatticeVectors,&motif,&mos2_exciton]() -> double {
                     double sum = 0;
 
                     int Rprime_index = combinations.slice(t_j).row(index2)(0);
@@ -439,7 +440,7 @@ int main(int argc, char* argv[]){
                             
                             //if (norm > 1E-7){
                                 //sum += my_coulomb(norm)*mos2_exciton.realPolarizabilityMatrixElement(R2_vector, Rprime_vector, i2, tprime_index);
-                                sum += mos2_exciton.coulomb(norm,tprime_index,i2)*T(R2*NAtoms + i2,pos_prime_index);//my_coulomb(norm)*T(R2*NAtoms + i2,pos_prime_index);
+                                sum += mos2_exciton.coulomb(norm,t_i_index,i2)*T(R2*NAtoms + i2,pos_prime_index);//my_coulomb(norm)*T(R2*NAtoms + i2,pos_prime_index);
                             //}
                         }
                     }
@@ -527,7 +528,7 @@ int main(int argc, char* argv[]){
 
     arma::cx_vec eigval = arma::eig_gen(M);
 
-    eigval.print("Eigenvalues of epsilon^-1(0)^T*epsilon^-1(0)");
+    //eigval.print("Eigenvalues of epsilon^-1(0)^T*epsilon^-1(0)");
 
     // Square root of all the eigenvalues
     // for (arma::uword i = 0; i < n_positions; ++i){
@@ -597,7 +598,7 @@ int main(int argc, char* argv[]){
             index_aux++;
         }
     }
-    std::cout << "}" << std::flush;*/
+    std::cout << "}" << std::flush;
 
     // Write screened potential in a file
 
@@ -623,7 +624,7 @@ int main(int argc, char* argv[]){
 
     /****************Now is the inversion of Dyson's equation including singularities*****************/
 
-    int npositions = nRvectors*NAtoms ;
+    /*int npositions = nRvectors*NAtoms ;
     arma::mat V_2(npositions, NAtoms, arma::fill::zeros);
     arma::mat W_2(npositions, NAtoms, arma::fill::zeros); 
     arma::mat epsilon_2(npositions,npositions,arma::fill::zeros);
@@ -819,7 +820,7 @@ int main(int argc, char* argv[]){
 
             index_aux++;
         }
-    }
+    }*/
 
     /*FILE* textfile_2 = fopen("test_sing_W_screening.dat", "w");
 
