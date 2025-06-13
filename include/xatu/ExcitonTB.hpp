@@ -182,7 +182,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Getters
         int getNGs() const;
 
-        double coulomb(double, uint) const; // Temporarily public while testing
+        double coulomb(double, uint, uint) const; // Temporarily public while testing
 
     private:
         // Potentials

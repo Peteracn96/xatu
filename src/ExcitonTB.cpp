@@ -957,7 +957,7 @@ double ExcitonTB::coulomb(double r) const {
  * @param i Index of the atom, in case we are computing the Coulomb potential on-site (r=0)
  * @return Value of Coulomb potential, V(r).
  */
-double ExcitonTB::coulomb(double r, uint i) const {
+double ExcitonTB::coulomb(double r, uint i, uint j) const {
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
     r = abs(r);
 
@@ -976,9 +976,9 @@ double ExcitonTB::coulomb(double r, uint i) const {
         return system->motif.col(4)(i);
     }
 
-    if (r > cutoff){
-        return 0.0;
-    }
+    // if (r > cutoff){
+    //     return 0.0;
+    // }
     return (r != 0) ? ec/(4E-10*PI*eps0*r) : ec*1E10/(4*PI*eps0*regularization);    
 }
 
@@ -1895,6 +1895,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
     std::complex<double> I(0, 1);
 
     int nk = this->nk_aux;
+    int g_s = this->g_s;
 
     int nvbands = valencebands.size();
     int ncbands = conductionbands.size();
@@ -1927,7 +1928,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
     int norbitals_alpha = system->orbitals(system->motif.row(i)(3));
     int norbitals_beta = system->orbitals(system->motif.row(j)(3));
 
-    std::complex<double> Nsquared = nk;//(std::complex<double>)totalCells*(std::complex<double>)totalCells;
+    std::complex<double> Nsquared = nk*nk;//(std::complex<double>)totalCells*(std::complex<double>)totalCells;
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
@@ -1947,7 +1948,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
                 
                 for (int ik2 = 0; ik2 < nk; ik2++){
 
-                    arma::rowvec k2 = system->kpoints.row(ik2);
+                    arma::rowvec k2 = this->kpoints_aux.row(ik2);
 
                     // Using the atomic gauge
                     if(gauge == "atomic"){
@@ -1964,13 +1965,13 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
                     sum_alpha = std::conj(arma::sum(CoefArray.subvec(i_index, i_index + norbitals_alpha - 1)));
                     sum_beta = arma::sum(CoefArray.subvec(j_index, j_index + norbitals_beta - 1));
 
-                    term += 2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));   // Factor of 4 missing from the spin dof, check if this improves results, not correct actually if SOC is present
+                    term += -2*real(sum_alpha*sum_beta*exp(I*arma::dot(k - k2, R - R2))) / (eigvalkStack_.col(ik2)(ic) - eigvalkStack_.col(ik)(iv));   // Factor of 4 missing from the spin dof, check if this improves results, not correct actually if SOC is present
                 }
             }
         }
     }
 
-    return real(term)/real(Nsquared);
+    return g_s*real(term)/real(Nsquared);
 }
 
 /**

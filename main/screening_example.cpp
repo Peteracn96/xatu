@@ -52,10 +52,14 @@ int main(int argc, char* argv[]){
 
     std::cout << "Number of arguments: " << argc << std::endl;
 
-    if (argc < 2) {
-        std::cout << "You forgot to give the number of cells as input argument. Try again.\n" << std::flush;
-        exit(0);
-    }
+    // Parse console stdin
+
+    if (argc != 4){
+		throw std::invalid_argument("Error: One input file is expected");
+	}
+    else if (argc < 4){
+        throw std::invalid_argument("Error: At least one input file is required (system config., exciton config & screening config)");
+    };
 
     // arma::rowvec q = {1.2, 0.3, 0};
 
@@ -68,48 +72,25 @@ int main(int argc, char* argv[]){
 
     // xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/hBN_DFT_screening.txt");
 
-    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+    std::string modelfile = argv[1];   
+    std::string excitonfile = argv[2]; 
+    std::string screeningfile = argv[3]; 
+    int nstates = 8;
 
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    xatu::SystemConfiguration model_config(modelfile);
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
+    xatu::ExcitonConfiguration exciton_config(excitonfile);
 
-    xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
+    xatu::ScreeningConfiguration screening_config(screeningfile);
+
+    xatu::ExcitonTB mos2_exciton(model_config,exciton_config,screening_config);
 
     mos2_exciton.setMode("realspace");
     mos2_exciton.brillouinZoneMesh(mos2_exciton.ncell);
     mos2_exciton.initializeHamiltonian();
-    
 
-    mos2_exciton.setVectors(0,0);
-    //mos2_exciton.computesingleDielectricFunction();
-
-    std::cout << std::left << std::setw(30) << "Dielectric constant of embedding medium: " << mos2_exciton.eps_m << std::endl;
-    std::cout << std::left << std::setw(30) << "Dielectric constant of substrate: " << mos2_exciton.eps_s << std::endl;
-
-    //FILE* energies_file = fopen("mos2_exciton_nGs.txt", "w");
-
-    int NGs = mos2_exciton.getNGs();
-
-    int nGsarray[] = {7,13,19,31,37,43};
-
-    // for (int ngs : nGsarray){
-    //     mos2_exciton.setReciprocalVectors(ngs);
-    //     mos2_exciton.BShamiltonian();
-
-    //     auto results = mos2_exciton.diagonalize("diag", nstates);
-
-    //     fprintf(energies_file, "%d\t ", ngs);
-
-    //     for(int i = 0; i < nstates; i++){
-    //         fprintf(energies_file, "%f\t ", results->eigval(i));
-    //     }
-    //     fprintf(energies_file, "\n");
-    // }
-
-    // double radius = arma::norm(mos2_exciton.system->bravaisLattice.row(0)) * cutoff_;
-    // arma::mat lattice_vectors = mos2_exciton.system->truncateSupercell(ncell, radius);
-    int ncell = std::atoi(argv[1]);
+   
+    int ncell = mos2_exciton.ncell;
     double cutoff = ncell/2.5;
 
     mos2_exciton.setTrunLattice(ncell,cutoff);
@@ -352,7 +333,7 @@ int main(int argc, char* argv[]){
 
     // Now is the inversion of Dyson's equation
 
-    int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
+    /*int n_positions = nRvectors*NAtoms - 1; // Minus one position, as we throw away the terms of the form V(t_j,t_j)/W(t_j,t_j) 
     arma::mat V(n_positions, NAtoms, arma::fill::zeros);
     arma::mat W(n_positions, NAtoms, arma::fill::zeros); 
     arma::cube epsilon(n_positions,n_positions,NAtoms);
@@ -416,7 +397,7 @@ int main(int argc, char* argv[]){
 
             arma::rowvec R = LatticeVectors.row(R_i);
             arma::rowvec t = motif.row(t_i).subvec(0,2);
-            V.col(t_j)(index) = my_coulomb(arma::norm(R + t - t_j_vector));
+            V.col(t_j)(index) = mos2_exciton.coulomb(arma::norm(R + t - t_j_vector),t_i,t_j);// my_coulomb(arma::norm(R + t - t_j_vector));
         }
     }
 
@@ -452,10 +433,13 @@ int main(int argc, char* argv[]){
                             arma::rowvec t2 = motif.row(i2).subvec(0,2);
 
                             double norm = arma::norm(R + t_i - (R2_vector + t2));
+
+                            // if (norm < 1E-7)
+                                // std::cout << "norm can be zero here" << std::endl;
                             
                             //if (norm > 1E-7){
                                 //sum += my_coulomb(norm)*mos2_exciton.realPolarizabilityMatrixElement(R2_vector, Rprime_vector, i2, tprime_index);
-                                sum += my_coulomb(norm)*T(R2*NAtoms + i2,pos_prime_index);
+                                sum += mos2_exciton.coulomb(norm,tprime_index,i2)*T(R2*NAtoms + i2,pos_prime_index);//my_coulomb(norm)*T(R2*NAtoms + i2,pos_prime_index);
                             //}
                         }
                     }
@@ -613,7 +597,7 @@ int main(int argc, char* argv[]){
             index_aux++;
         }
     }
-    std::cout << "}" << std::flush;
+    std::cout << "}" << std::flush;*/
 
     // Write screened potential in a file
 
@@ -639,7 +623,7 @@ int main(int argc, char* argv[]){
 
     /****************Now is the inversion of Dyson's equation including singularities*****************/
 
-    /*int npositions = nRvectors*NAtoms ;
+    int npositions = nRvectors*NAtoms ;
     arma::mat V_2(npositions, NAtoms, arma::fill::zeros);
     arma::mat W_2(npositions, NAtoms, arma::fill::zeros); 
     arma::mat epsilon_2(npositions,npositions,arma::fill::zeros);
@@ -687,7 +671,7 @@ int main(int argc, char* argv[]){
             double norm = arma::norm(R + t - t_j_vector);
 
             //V_2.col(t_j)(index) = my_coulomb(norm); // testing at the moment if the on-site energies work
-            V_2.col(t_j)(index) = mos2_exciton.coulomb(norm,t_j);
+            V_2.col(t_j)(index) = mos2_exciton.coulomb(norm,t_i,t_j);
         }
     }
 
@@ -729,7 +713,7 @@ int main(int argc, char* argv[]){
 
                         // double v_c = my_coulomb(norm);
 
-                        double v_c = mos2_exciton.coulomb(norm,i2);
+                        double v_c = mos2_exciton.coulomb(norm,tprime_index,i2);
                         
                         sum += v_c*T(R2*NAtoms + i2,pos_prime_index);
                     }
@@ -764,7 +748,12 @@ int main(int argc, char* argv[]){
     // Inverts "epsilon"
     arma::mat Inv_epsilon = epsilon_2.i();
 
-    epsilon_2.print("epsilon_2:");
+    epsilon_2.row(0).print();
+    epsilon_2.row(1).print();
+    epsilon_2.row(2).print();
+    std::cout << "epsilon(0,0) = " << epsilon_2(0,0) << std::endl;
+    std::cout << "epsilon(1,1) = " << epsilon_2(1,1) << std::endl;
+    std::cout << "epsilon(2,2) = " << epsilon_2(2,2) << std::endl;
 
     // Inv_epsilon.print("Inv_epsilon:");
 
@@ -786,7 +775,7 @@ int main(int argc, char* argv[]){
     // }
 
     // Prints the V and W columns side by side
-    NAtoms = 1;
+    NAtoms = 3;
     std::cout << std::endl;
 
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
@@ -830,7 +819,7 @@ int main(int argc, char* argv[]){
 
             index_aux++;
         }
-    }*/
+    }
 
     /*FILE* textfile_2 = fopen("test_sing_W_screening.dat", "w");
 
