@@ -1856,8 +1856,8 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
                 std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
                 term_aux += (std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic))) - (std::conj(IcvG)*IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv)));
             }
-            
-            polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(term_aux)/(nk) << " " << imag(term_aux)/(nk) << "\n";
+
+            polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(g_s) * real(term_aux) / (nk) << " " << real(g_s) * imag(term_aux) / (nk) << "\n";
         }
     }
 
