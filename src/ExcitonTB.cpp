@@ -702,6 +702,9 @@ void ExcitonTB::setGcutoff(double Gcutoff){
         throw std::invalid_argument("setGcutoff(): G cutoff for the screening must be positive");
     }
 
+    uint nGs_aux = this->trunreciprocalLattice_.n_rows;
+    arma::mat reciprocalLattice_old = this->trunreciprocalLattice_;
+
     if (Gcutoff != this->Gcutoff_) {
         this->trunreciprocalLattice_ = this->system->truncateReciprocalSupercell(this->nReciprocalVectors_, Gcutoff); // Reset the truncated reciprocal lattice if Gcutoff changes
     }
@@ -709,6 +712,10 @@ void ExcitonTB::setGcutoff(double Gcutoff){
     this->Gcutoff_ = Gcutoff;
     uint nGs = this->trunreciprocalLattice_.n_rows;
     this->nGs = nGs;
+
+    if (nGs_aux < nGs) {
+        this->trunreciprocalLattice_.submat(0, 0, nGs_aux - 1, 2) = reciprocalLattice_old; // When increasing the G cutoff, conserves the order of the G vectors
+    }
 
     std::cout << "Printing all the G vectors:\n";
     for (uint i = 0; i < nGs; i++) 
