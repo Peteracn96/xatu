@@ -20,41 +20,41 @@ double my_coulomb(double r) {
     //return 1/r;
 }
 
-int main(){
+int main(int argc, char* argv[]){
 
-    //auto start = high_resolution_clock::now();
-    
-    /* xatu::SystemConfiguration model_config("../examples/material_models/wannier_models/MoS2_spin_wannier_07032024_tb.model");
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    // Parse console stdin
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_Wannier_screening.txt");
-    
-    xatu::ExcitonTB hBN_exciton(model_config, exciton_config,screening_config);
-    
-    */
+    if (argc != 5){
+		throw std::invalid_argument("Error: Two input files are expected");
+	}
+    else if (argc < 5){
+        throw std::invalid_argument("Error: At least two input file are required (system config, exciton config, screening config and q points file).");
+    };
+
+    std::string modelfile = argv[1];
+    std::string excitonfile = argv[2];
+    std::string screeningfile = argv[3];
+    std::string q_points_file = argv[4];
     
     std::unique_ptr<xatu::SystemConfiguration> systemConfig;
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    systemConfig.reset(new xatu::CRYSTALConfiguration("../examples/material_models/DFT/hBN_base_HSE06.outp", 169));
-    screeningConfig.reset(new xatu::ScreeningConfiguration("../examples/screeningconfig/hBN_DFT_screening.txt"));
-    excitonConfig.reset(new xatu::ExcitonConfiguration("../examples/excitonconfig/hBN_test.txt"));
+    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    //systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
+    excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
 
-    xatu::ExcitonTB hBN_exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
-    hBN_exciton.setMode(excitonConfig->excitonInfo.mode);
-    hBN_exciton.system->setAU(true);
+    xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
+    exciton.setMode(excitonConfig->excitonInfo.mode);
+    exciton.system->setAU(true); // Comment if input model is not CRYSTAL
 
 
-    hBN_exciton.brillouinZoneMesh(hBN_exciton.ncell);
-    hBN_exciton.initializeHamiltonian();
+    exciton.brillouinZoneMesh(exciton.ncell);
+    exciton.initializeHamiltonian();
 
-    hBN_exciton.writeBZtofile();
-
-    int NGs = hBN_exciton.nReciprocalVectors;
-
-    std::cout << "Number of reciprocal vectors used in the calculation: " << NGs << std::endl;
+    exciton.writeBZtofile();
 
     // const int array_size = 11;
     // int nGs_array[array_size] = {1,8,9,13,19,30,37,39,43,55,61};
@@ -63,35 +63,27 @@ int main(){
 
 	//     int nGs = nGs_array[gs];
 
-	//     hBN_exciton.setReciprocalVectors(nGs);
+	//     exciton.setReciprocalVectors(nGs);
 
     //     // Testing the code for RPA calculation
-    //     hBN_exciton.compute_2D_RPAInvDielectricMatrix("MoS2_TB_q_points_test.dat");
+    //     exciton.compute_2D_RPAInvDielectricMatrix("MoS2_TB_q_points_test.dat");
 
-    //     hBN_exciton.writeRPAPolarizabilityMatrix("MoS2_RPA_polarizability_" + std::to_string(nGs) + ".dat");
+    //     exciton.writeRPAPolarizabilityMatrix("MoS2_RPA_polarizability_" + std::to_string(nGs) + ".dat");
 
-    //     hBN_exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening_" + std::to_string(nGs) + ".dat");
+    //     exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening_" + std::to_string(nGs) + ".dat");
     // }
 
-    //hBN_exciton.compute_2D_DielectricMatrix_Opt("MoS2_TB_q_points_test.dat"); not optimal at the end
+    //exciton.compute_2D_DielectricMatrix_Opt("MoS2_TB_q_points_test.dat"); not optimal at the end
 
-    std::string q_points_file = "hBN_DFT_HSE06_q_point.dat";
-    hBN_exciton.compute_2D_DielectricMatrix(q_points_file);
+    exciton.compute_2D_DielectricMatrix(q_points_file);
 
-    hBN_exciton.invertDielectricMatrix();
+    exciton.invertDielectricMatrix();
 
-    hBN_exciton.writePolarizabilityMatrix("../hBN_DFT_HSE06_q_polarizability.dat");
+    // exciton.writePolarizabilityMatrix("../" + q_points_file + "_polarizability.dat");
 
-    hBN_exciton.writeInverseDielectricMatrix("../hBN_DFT_HSE06_q_inv_epsilon.dat");
+    exciton.writeInverseDielectricMatrix("../" + q_points_file + "_inv_epsilon.dat");
 
-    hBN_exciton.writeDielectricMatrix("../hBN_DFT_HSE06_q_epsilon.dat");
-
-    // Testing the code for RPA calculation
-    // hBN_exciton.compute_2D_RPAInvDielectricMatrix("MoS2_TB_q_points_test.dat");
-
-    // hBN_exciton.writeRPAPolarizabilityMatrix("MoS2_RPA_polarizability.dat");
-
-    // hBN_exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening.dat");
+    // exciton.writeDielectricMatrix("../" + q_points_file + "_epsilon.dat");
 
     return 0;
 }

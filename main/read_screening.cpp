@@ -20,33 +20,50 @@ double my_coulomb(double r) {
     //return 1/r;
 }
 
-int main(){
+int main(int argc, char* argv[]){
 
-    //auto start = high_resolution_clock::now();
+    // Parse console stdin
+
+    if (argc != 5){
+		throw std::invalid_argument("Error: Two input files are expected");
+	}
+    else if (argc < 5){
+        throw std::invalid_argument("Error: At least two input file are required (system config, exciton config and screening config).");
+    };
+
+    std::string modelfile = argv[1];
+    std::string excitonfile = argv[2];
+    std::string screeningfile = argv[3];
+    std::string inv_epsilon_file = argv[4];
 
     int nstates = 8;
     int decimals = 6;
 
-    xatu::SystemConfiguration model_config("../examples/material_models/MoS2.model");
+    std::unique_ptr<xatu::SystemConfiguration> systemConfig;
+    std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
+    std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    xatu::ExcitonConfiguration exciton_config("../examples/excitonconfig/MoS2_test.txt");
+    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    //systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
+    excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
-    xatu::ScreeningConfiguration screening_config("../examples/screeningconfig/MoS2_TB_screening.txt");
 
-    xatu::ExcitonTB mos2_exciton(model_config, exciton_config,screening_config);
+    xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
+    exciton.setMode(excitonConfig->excitonInfo.mode);
 
-    mos2_exciton.brillouinZoneMesh(mos2_exciton.ncell);
-    mos2_exciton.initializeHamiltonian();
+    exciton.brillouinZoneMesh(exciton.ncell);
+    exciton.initializeHamiltonian();
 
-    int NGs = mos2_exciton.nReciprocalVectors;
+    int NGs = exciton.nReciprocalVectors;
 
     std::cout << "Number of reciprocal vectors used in the calculation: " << NGs << std::endl;
 
-    mos2_exciton.readInverseDielectricMatrix("MoS2_TB_screening_43Gs.dat");
+    exciton.readInverseDielectricMatrix(inv_epsilon_file);
 
-    mos2_exciton.BShamiltonian();
+    exciton.BShamiltonian();
 
-    auto results = mos2_exciton.diagonalize("diag", nstates);
+    auto results = exciton.diagonalize("diag", nstates);
 
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
     std::cout << "|                                    Results                                |" << std::endl;
@@ -58,7 +75,7 @@ int main(){
     std::cout << "|                                    Output                                 |" << std::endl;
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
 
-    std::string output = exciton_config.excitonInfo.label;
+    std::string output = excitonConfig->excitonInfo.label;
 
     // --------------------------- Output ---------------------------
     bool writeEigvals = true;
@@ -67,7 +84,7 @@ int main(){
         FILE* textfile_en = fopen(filename_en.c_str(), "w");
 
         std::cout << "Writing eigvals to file: " << filename_en << std::endl;
-        fprintf(textfile_en, "%d\n", exciton_config.excitonInfo.ncell);
+        fprintf(textfile_en, "%d\n", excitonConfig->excitonInfo.ncell);
         results->writeEigenvalues(textfile_en, nstates);
 
         fclose(textfile_en);
@@ -91,7 +108,7 @@ int main(){
 
         std::cout << "Writing k w.f. to file: " << filename_kwf << std::endl;
         for(int stateindex = 0; stateindex < nstates; stateindex++){
-            if (exciton_config.excitonInfo.submeshFactor != 1){
+            if (excitonConfig->excitonInfo.submeshFactor != 1){
                 results->writeReciprocalAmplitude(stateindex, textfile_kwf);
             }
             else{
