@@ -85,8 +85,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat Polarizabilitymatrix_;
         arma::mat Wmatrix_;
         arma::colvec U00_list_;
+        double percentage_ = 0.5; // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
         double W00_at_0_ = 0.0;
         arma::rowvec q0_ = {0.05, 0.0, 0.0};
+        bool isotropic_ = true; // Is system isotropic
 
     public:
         // Returns dielectric constant of embedding medium
@@ -111,6 +113,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         const arma::mat& Wmatrix = Wmatrix_;
         // Returns auxiliar coarser BZ mesh to compute the dielectric function
         arma::mat& kpoints_aux = kpoints_aux_;
+        // Returns percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
+        double& percentage = percentage_;
+        // Returns whether system is isotropic
+        bool& isotropic = isotropic_;
 
         // Returns spin degeneracy
         uint& g_s = g_s_;

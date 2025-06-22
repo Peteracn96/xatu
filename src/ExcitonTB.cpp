@@ -238,6 +238,9 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::ivec ts             = cfg.screeningInfo.ts;
     uint ncell_aux            = cfg.screeningInfo.ncell_aux;
     bool model_has_spin       = cfg.screeningInfo.spin;
+    double percentage         = cfg.screeningInfo.percentage; 
+    bool isotropic            = cfg.screeningInfo.isotropic;
+
     this->ts_ = ts;
 
     this->isscreeningset = true;
@@ -2817,21 +2820,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
             uint iq_test = 0;
             arma::rowvec q_test = q_points.row(iq_test);
-            uint g_test = 10;
-            uint g2_test = 18;
-
-            arma::rowvec G_test = ReciprocalVectors.row(g_test);
-            arma::rowvec G2_test = ReciprocalVectors.row(g2_test);
-
-            this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq_test);
-            this->eigveckqStack_ = this->eigveckqStack_test[iq_test];
-
-            std::complex<double> Chi_testA = compute_2D_PolarizabilityMatrixElement(G_test, G2_test, iq_test);
-            std::complex<double> Chi_testB = compute_2D_PolarizabilityMatrixElement(G_test, G2_test, q_test);
-
-            std::cout << "q_test = " << q_test << std::endl;
-            std::cout << "Chi of test A = " << Chi_testA << std::endl;
-            std::cout << "Chi of test B = " << Chi_testB << std::endl;
 
             int percentage = 0;
             
@@ -2866,12 +2854,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
                 }
 
-                percentage++;
+                percentage += 100/(double)Nqpoints;
 
-                // if (percentage % 1 == 0)
-                // {
-                std::cout << percentage << "%%, " << std::flush;
-                //}
+                if (percentage % 1 == 0)
+                {
+                    std::cout << percentage << "%%, " << std::flush;
+                }
             }
 
             // Computes the dielectric matrix at the centersymmetric submesh of the BZ
@@ -2973,12 +2961,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2);
                 }
 
-                percentage++;
+                percentage += 100/(double)Nqpoints;
 
-                // if (percentage % 1 == 0)
-                // {
+                if (percentage % 1 == 0)
+                {
                     std::cout << percentage << "%%, " << std::flush;
-                //}
+                }
             }
         }
         
@@ -3067,35 +3055,21 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
                 int percentage = (ik + 1) * 100 / nq;
 
-                // if (percentage % 5 == 0)
-                // {
+                if (percentage % 1 == 0)
+                {
                     std::cout << percentage << "%%, " << std::flush;
-                //}
+                }
             }
         }
 
         std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
 
-        this->compute_ScreenedPotential_regularization({0.2, 0, 0}, true);
+        // Takes the k vector closest to the origin
+        arma::mat k_mat_aux = system->kpoints;
+        sortVectors(k_mat_aux);
+        arma::rowvec k0 = this->percentage*k_mat_aux.row(1); 
 
-        std::cout << "Done. \nRecovering initial band structure in the coarser BZ..." << std::endl;
-
-        // Recovering initial band structure        
-        if (Nktotal != nk) {
-
-            this->eigvalkStack_.set_size(basisdim, Nktotal);
-            this->eigveckStack_.set_size(basisdim, Nktotal, Nktotal);
-
-            for (uint i = 0; i < Nktotal; i++)
-            {
-                arma::rowvec k = system->kpoints.row(i);
-                system->solveBands(k, auxEigVal, auxEigvec);
-
-                auxEigvec = fixGlobalPhase(auxEigvec);
-                eigvalkStack_.col(i) = auxEigVal;
-                eigveckStack_.slice(i) = auxEigvec;
-            };
-        }
+        this->compute_ScreenedPotential_regularization(k0, this->isotropic);
     }
 
 
@@ -3247,8 +3221,16 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             }
             double percentage = ((double)iq + 1.0) / (double)Nqpoints * 100;
             std::cout << percentage << "%, " << std::flush;
-        } 
+        }
 
+        std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
+
+        // Takes the k vector closest to the origin
+        arma::mat k_mat_aux = system->kpoints;
+        sortVectors(k_mat_aux);
+        arma::rowvec k0 = this->percentage*k_mat_aux.row(1); 
+
+        this->compute_ScreenedPotential_regularization(k0, this->isotropic);
     }
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
@@ -5238,8 +5220,8 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     }
 
     if (this->mode == "reciprocalspace"){
-        uint ngs = this->epsilonmatrix_.slice(0).n_rows;         // The number of G vectors can in general be different from the number of generated G vectors
-        uint nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
+        uint ngs = this->Invepsilonmatrix_.slice(0).n_rows;         // The number of G vectors can in general be different from the number of generated G vectors
+        uint nqs = this->Invepsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         for(uint i = 0; i < nqs; i++){
             for (uint g = 0; g < ngs; g++){
@@ -5250,6 +5232,8 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
                 fprintf(textfile, "\n");
             }
         }
+
+        fprintf(textfile, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf", this->q0_(0), this->q0_(1), this->q0_(2), this->slope_, this->slope_perp_);
     }
     
     fclose(textfile);
@@ -5689,7 +5673,9 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
         file.clear(); // clear the error state
 
-        int read_nqs = line_counter/ngs;
+        int total_lines = line_counter;
+
+        int read_nqs = (line_counter-1)/ngs; // Last line stores info for W_00(0) regularization
 
         if (nqs != read_nqs) {
             std::cout << "The number of k points read from file  (" + std::to_string(nqs) + ")  and from the configuration file (" + std::to_string(read_nqs) + ") do not coincide! Terminating." << std::endl;
@@ -5725,12 +5711,32 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
             //std::cout << "\n";
             ++line_counter;
-            if ( line_counter%ngs == 0){
+            if (line_counter%ngs == 0){
                 k_counter++;
+            } 
+            
+            if (line_counter == total_lines) {
+                column_counter = 0;
+                while(ss >> aux) {   
+                    if (column_counter == 0) {
+                        this->q0_(0) = aux;
+                    } else if (column_counter == 1) {
+                        this->q0_(1) = aux;
+                    } else if (column_counter == 2) {
+                        this->q0_(2) = aux;
+                    } else if (column_counter == 3) {
+                        this->slope_ = aux;
+                    } else if (column_counter == 4) {
+                        this->slope_perp_= aux;
+                    }
+                    column_counter++;
+                }
             }
         }
-    }
 
+        double q0_norm = arma::norm(this->q0_);
+        this->W00_at_0_ = (2 + 0.5*(this->slope_ + this->slope_perp_)*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
+    }
 
     file.close();
 }

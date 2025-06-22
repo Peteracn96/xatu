@@ -76,10 +76,22 @@ void ScreeningConfiguration::parseContent(){
             } else if (spin_string == "true") {
                 screeningInfo.spin = true;
             } else {
-                std::cout << "Option for spin not recognized, kipping block..." << std::endl;
+                std::cout << "Option for spin not recognized, skipping block..." << std::endl;
             }
-        } else if(arg=="ncell_aux"){
+        } else if(arg == "ncell_aux"){
             screeningInfo.ncell_aux = parseScalar<int>(content[0]);
+        } else if(arg == "percentage"){
+            screeningInfo.percentage = parseScalar<double>(content[0]);
+        } else if(arg == "isotropic"){
+            std::string isotropic_string = parseWord(content[0]);
+            
+            if (isotropic_string == "false") {
+                screeningInfo.isotropic = false;
+            } else if (isotropic_string == "true") {
+                screeningInfo.isotropic = true;
+            } else {
+                std::cout << "Option for isotropic not recognized, skipping block..." << std::endl;
+            }
         }
         else{    
             std::cout << "Unexpected argument: " << arg << ", skipping block..." << std::endl;
