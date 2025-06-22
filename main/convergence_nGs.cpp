@@ -35,9 +35,11 @@ int main(int argc, char* argv[]){
     arma::rowvec q = {0.2, 0., 0.};
     arma::rowvec parameters = {1., 1., 10.};
     arma::mat q_points_list = {{0.2, 0., 0.}};
+    
     std::string modelfile = argv[1];
-    std::string screeningfile = argv[3];
     std::string excitonfile = argv[2];
+    std::string screeningfile = argv[3];
+    
     int nstates = 8;
     int Nk = 20;
     int nG = 25;
