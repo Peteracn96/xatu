@@ -45,7 +45,6 @@ int main(int argc, char* argv[]){
     int ncell = 20;
     arma::vec Gcutoff_array = arma::regspace(3., 3., 54);
 
-    std::string filename = "inv_epsilon_vs_nGs_hBN_DFT_HSE06_symmetrized";
     // FILE* textfile_en = fopen(filename.c_str(), "a");
 
     // xatu::ExcitonConfiguration systemConfig;
@@ -54,7 +53,8 @@ int main(int argc, char* argv[]){
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 169));
+    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    //systemConfig.reset(new xatu::SystemConfiguration(modelfile));
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
     excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
@@ -68,6 +68,7 @@ int main(int argc, char* argv[]){
 
     std::cout << "Exciton configuration initialized." << std::endl;
 
+    std::string filename =excitonConfig->excitonInfo.label +  "inv_epsilon_vs_nGs_symmetrized";
 
     cout << "+---------------------------------------------------------------------------+" << endl;
     cout << "|                                  Parameters                               |" << endl;
