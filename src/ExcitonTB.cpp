@@ -1670,7 +1670,8 @@ void ExcitonTB::initializeHamiltonian(){
 
     this->excitonbasisdim_ = system->nk*valenceBands.n_elem*conductionBands.n_elem;
     this->totalCells_ = pow(ncell*system->factor, system->ndim);
-
+    system->bravaisLattice.print("Bravais Lattice vectors:");
+    system->motif.print("Motif vectors:");
     std::cout << "Initializing basis for BSE... " << std::flush;
     initializeBasis();
     generateBandDictionary();
@@ -2821,7 +2822,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             uint iq_test = 0;
             arma::rowvec q_test = q_points.row(iq_test);
 
-            int percentage = 0;
+            double percentage = 0;
+            double percentage_aux = 0;
             
             for (uint ik = 0; ik < (2 * Ncells - 1); ik++)
             {
@@ -2854,11 +2856,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
                 }
 
-                percentage += 100/(double)Nqpoints;
+                percentage = ((double)ik + 1)*100./(double)Nqpoints;
 
-                if (percentage % 1 == 0)
+                if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
                 {
-                    std::cout << percentage << "%%, " << std::flush;
+                    std::cout << (int) percentage << "%%, " << std::flush;
+                    percentage_aux = percentage;
                 }
             }
 
@@ -2904,8 +2907,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
     
             // Computes the dielectric matrix at the centersymmetric submesh of the BZ
             uint iq_i = (2 * Ncells - 1);
-            uint ik_f = (Ncells -1)*(Ncells-2)/2 + Ncells/2;
-            
+            uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
             for (uint ik = 0; ik < ik_f; ik++)
             {
                 uint iq = indecesqg.row(iq_i*nGs*(nGs + 1)/2 + ik*nGs*(nGs + 1)/2)(0); // indecesqg.row(i_aux)(0);
@@ -2961,11 +2963,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2);
                 }
 
-                percentage += 100/(double)Nqpoints;
+                percentage = percentage + ((double)ik + 1)*100./(double)Nqpoints;
 
-                if (percentage % 1 == 0)
+                if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
                 {
-                    std::cout << percentage << "%%, " << std::flush;
+                    std::cout << (int) percentage << "%%, " << std::flush;
+                    percentage_aux = percentage;
                 }
             }
         }
@@ -3005,7 +3008,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             }*/
 
             /**** Refactorization of code to make it more efficient *****/
-            
+            double percentage = 0;
+            double percentage_aux = 0;
             for (uint ik = 0; ik < nq; ik++)
             {
                 uint iq = indecesqg.row(ik*nGs*(nGs + 1)/2)(0); 
@@ -3053,11 +3057,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
                 }
 
-                int percentage = (ik + 1) * 100 / nq;
+                percentage = ((double)ik + 1) * 100 / nq;
 
-                if (percentage % 1 == 0)
+                if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
                 {
-                    std::cout << percentage << "%%, " << std::flush;
+                    std::cout << (int) percentage << "%%, " << std::flush;
+                    percentage_aux = percentage;
                 }
             }
         }
@@ -4295,7 +4300,6 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
         this->eigvalkqStack_.reshape(basisdim, nk);
     }
 
-    std::cout << "Diagonalizing H(k+q0) for every point k... " << std::flush;
     for (uint i = 0; i < nk; i++)
     {
         arma::rowvec kq = this->kpoints_aux.row(i) + q0;
