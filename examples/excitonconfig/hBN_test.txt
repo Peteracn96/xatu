@@ -1,11 +1,12 @@
 # label
-! Name to be used when writing
-hBN_N30
+hBN_DFT_Chi
 # ncells
-25
+20
 # bands
-4
+1
 # Dielectric
 1 1 10
-# reciprocal
-2
+# potential
+keldysh
+# mode
+realspace

@@ -1,14 +1,14 @@
-# mode
-reciprocalspace
-# valence bands
+# valence.bands
 6
-# conduction bands
-50
-# removedbands
-0
-# reciprocal vectors
-0 0
+# conduction.bands
+63
+# vectors
+1 2
 # momentum
-0.0  0.   0
+0.2  0.   0
 # function
-none
+dielectric
+# ncell_aux
+15
+# spin
+false
