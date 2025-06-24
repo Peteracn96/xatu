@@ -70,7 +70,7 @@ int main(int argc, char* argv[]){
 
     std::cout << "Exciton configuration initialized." << std::endl;
 
-    std::string filename =excitonConfig->excitonInfo.label +  "inv_epsilon_vs_nGs_symmetrized";
+    std::string filename = excitonConfig->excitonInfo.label +  "inv_epsilon_vs_nGs_symmetrized";
 
     cout << "+---------------------------------------------------------------------------+" << endl;
     cout << "|                                  Parameters                               |" << endl;
