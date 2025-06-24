@@ -3214,15 +3214,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                 this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
 
-                double potentialg = coulomb_2D_FT(q + G);
+                double potentialg = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2)); // double potentialg = coulomb_2D_FT(q + G);
                 double potentialg2 = coulomb_2D_FT(q + G2);
                 double kroneckerdelta = g == g2? 1 : 0;
 
-                // this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - std::sqrt(potentialg)*std::sqrt(potentialg2)*Chi;
-                // this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - std::sqrt(potentialg)*std::sqrt(potentialg2)*std::conj(Chi);
-
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
-                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
             }
             double percentage = ((double)iq + 1.0) / (double)Nqpoints * 100;
             std::cout << percentage << "%, " << std::flush;
@@ -4221,12 +4218,12 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
         std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, iq);
         
-        double potentialg = coulombFT(g, g, system->kpoints.row(iq));
+        double potentialg = std::sqrt(coulombFT(g, g, system->kpoints.row(iq)))*std::sqrt(coulombFT(g2, g2, system->kpoints.row(iq))); // double potentialg = coulombFT(g, g, system->kpoints.row(iq));
         double potentialg2 = coulombFT(g2, g2, system->kpoints.row(iq));
         double kroneckerdelta = g == g2? 1 : 0;
         
         dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
-        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg2*std::conj(Chi);
+        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
     }
 
     auxvecsol = arma::solve(dielectric_matrix,auxvec);
