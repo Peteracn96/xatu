@@ -25,7 +25,7 @@ int main(int argc, char* argv[]){
     // Parse console stdin
 
     if (argc != 5){
-		throw std::invalid_argument("Error: Two input files are expected");
+		throw std::invalid_argument("Error: 4 input files are expected");
 	}
     else if (argc < 5){
         throw std::invalid_argument("Error: At least two input file are required (system config, exciton config, screening config and q points file).");
@@ -40,15 +40,15 @@ int main(int argc, char* argv[]){
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
-    //systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    //systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    systemConfig.reset(new xatu::SystemConfiguration(modelfile));
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
     excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
     exciton.setMode(excitonConfig->excitonInfo.mode);
-    exciton.system->setAU(true); // Comment if input model is not CRYSTAL
+    // exciton.system->setAU(true); // Comment if input model is not CRYSTAL
 
 
     exciton.brillouinZoneMesh(exciton.ncell);
