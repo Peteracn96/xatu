@@ -4229,7 +4229,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
         for (uint i = 0; i < nk; i++)
         {
-            arma::rowvec kq = this->kpoints_aux.row(i) + q;
+            arma::rowvec kq = this->kpoints_aux.row(i) + q_aux;
             system->solveBands(kq, auxEigVal, auxEigvec);
             auxEigvec = fixGlobalPhase(auxEigvec);
             this->eigvalkqStack_.col(i) = auxEigVal;
@@ -4246,10 +4246,10 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, iq);
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q_aux);
         
-        double potentialg = std::sqrt(coulombFT(g, g, system->kpoints.row(iq)))*std::sqrt(coulombFT(g2, g2, system->kpoints.row(iq))); // double potentialg = coulombFT(g, g, system->kpoints.row(iq));
-        double potentialg2 = coulombFT(g2, g2, system->kpoints.row(iq));
+        double potentialg = std::sqrt(coulombFT(g, g, q_aux))*std::sqrt(coulombFT(g2, g2, q_aux)); // double potentialg = coulombFT(g, g, system->kpoints.row(iq));
+        double potentialg2 = coulombFT(g2, g2, q_aux);
         double kroneckerdelta = g == g2? 1 : 0;
         
         dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
