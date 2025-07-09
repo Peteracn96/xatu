@@ -4181,8 +4181,8 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         std::cout << "potential = " << std::setprecision(17) << potential << std::endl;
 
-        std::cout << "Dielectric function at q = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
-        std::cout << "Dielectric function at q aux= " << std::setprecision(30) << std::real(epsilon_aux) << " + i" << std::imag(epsilon_aux) << std::endl;
+        std::cout << "Dielectric function at (q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
+        std::cout << "Dielectric function aux at (q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon_aux) << " + i" << std::imag(epsilon_aux) << std::endl;
 
 
         std::cout << "Dielectric function averaged over material's thickness d = " << d << ", at q is " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
