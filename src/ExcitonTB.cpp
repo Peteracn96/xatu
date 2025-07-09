@@ -278,6 +278,8 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         this->g_s = 2;
     }
 
+    std::cout << "Spin degeneracy is g_s = " << this->g_s << std::endl;
+
     std::vector<arma::s64> valence, conduction;
     int basisdim = system->basisdim;
 
@@ -1071,7 +1073,7 @@ recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This fu
 double ExcitonTB::coulomb_2D_FT(const arma::rowvec& k) const {
 
     double potential = 0;
-    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
+    double eps = 1E-12; //arma::norm(system->reciprocalLattice.row(0))*1E-3/totalCells;
 
     double knorm = arma::norm(k);
     if (knorm < eps){
@@ -1670,8 +1672,8 @@ void ExcitonTB::initializeHamiltonian(){
 
     this->excitonbasisdim_ = system->nk*valenceBands.n_elem*conductionBands.n_elem;
     this->totalCells_ = pow(ncell*system->factor, system->ndim);
-    system->bravaisLattice.print("Bravais Lattice vectors:");
-    system->motif.print("Motif vectors:");
+    // system->bravaisLattice.print("Bravais Lattice vectors:");
+    // system->motif.print("Motif vectors:");
     std::cout << "Initializing basis for BSE... " << std::flush;
     initializeBasis();
     generateBandDictionary();
@@ -1826,12 +1828,15 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
 
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
+    std::complex<double> term = 0.;
     std::complex<double> term_aux = 0.;
+    std::complex<double> term_aux_2 = 0.;
 
     std::cout << "Done \n";
     
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
+
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
@@ -1858,14 +1863,15 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
                     coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
-                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
+                std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
 
-                // term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+                term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
             
-                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
-                term_aux += (std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic))) - (std::conj(IcvG)*IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv)));
+                std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
+       
+                term_aux += (IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic))) - (IcvG*std::conj(IcvG2) / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv)));
             }
 
             polarfile << nvbands - iv << " " << ic - nvbands + 1 << " " << real(g_s) * real(term_aux) / (nk) << " " << real(g_s) * imag(term_aux) / (nk) << "\n";
@@ -2010,9 +2016,11 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
     //int basisdim = nvbands + ncbands;
 
     arma::cx_vec coefskq, coefsk;
-    // arma::cx_vec coefskq_c, coefsk_v;
+    arma::cx_vec coefskq_c, coefsk_v;
 
     std::complex<double> term = 0.;
+    std::complex<double> term_aux = 0.;
+    std::complex<double> term_aux_2 = 0.;
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
@@ -2037,28 +2045,39 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
                     coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
                     coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), k);
                 
-                    // coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
-                    // coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), k);
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
+                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), k);
                 }
                 else{                            
                     coefskq = eigveckqStack_.slice(ik).col(iv);
                     coefsk = eigveckStack_.slice(ik).col(ic);
 
-                    // coefskq_c = eigveckqStack_.slice(ik).col(ic);
-                    // coefsk_v = eigveckStack_.slice(ik).col(iv);
+                    coefskq_c = eigveckqStack_.slice(ik).col(ic);
+                    coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
-                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
+                std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
 
             
-                // std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
-                // std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
-                // term += std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG)*IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
-                term += std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+                std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
+
+                term += std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)); // std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG)*IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
+
+                
+                term_aux += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+                term_aux_2 += IcvG*std::conj(IcvG2)  / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
             }
         }
     }
+    
+    std:cout << std::endl;
+
+    std::cout << "term_aux = " << term_aux << "\n";
+    std::cout << "term_aux_2 = " << term_aux_2 << "\n";
+
+    std::cout << "Are the terms equal? " << std::abs(term_aux + term_aux_2 - 2.0*term)  << "\n";
 
     return g_s*2.0*term/((std::complex<double>)nk); // Factor of 2 from TRS
 }
@@ -2106,10 +2125,11 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
     int upperindexcband = nvbands + ncbandsincluded - 1;
     int lowerindexvbands = nvbands - nvbandsincluded;
 
-    arma::cx_vec coefskq, coefsk;
-    arma::cx_vec coefskq_c, coefsk_v;
+    arma::cx_vec coefskq_v, coefsk_v;
+    arma::cx_vec coefskq_c, coefsk_c;
 
     std::complex<double> term_aux = 0.;
+    std::complex<double> term_aux_2 = 0.;
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     for (int ic = nvbands; ic <= upperindexcband; ic++)
@@ -2130,32 +2150,42 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
                     // coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), this->kpoints_aux.row(ik));
                     // coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), this->kpoints_aux.row(ik));
 
-                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), this->kpoints_aux.row(ik));
-                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), this->kpoints_aux.row(ik));
+                    coefskq_v = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
+                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
+
+                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), k);
+                    coefsk_c = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), k);
                 }
                 else
                 {
-                    // coefskq = eigveckqStack_.slice(ik).col(iv);
-                    // coefsk = eigveckStack_.slice(ik).col(ic);
+                    coefskq_v = eigveckqStack_.slice(ik).col(iv);
+                    coefsk_v = eigveckStack_.slice(ik).col(iv);
 
                     coefskq_c = eigveckqStack_.slice(ik).col(ic);
-                    coefsk_v = eigveckStack_.slice(ik).col(iv);
+                    coefsk_c = eigveckStack_.slice(ik).col(ic);
                 }
 
                 std::complex<double> IvcG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
                 std::complex<double> IvcG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
+                
+                std::complex<double> IcvG = blochCoherenceFactor(coefsk_c, coefskq_v, kq, k, G, d);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_c, coefskq_v, kq, k, G2);
 
-                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G, d);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
 
-                term_aux += (IvcG*std::conj(IvcG2) + IcvG*std::conj(IcvG2)) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
+                term_aux += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+                
+                term_aux_2 += IcvG*std::conj(IcvG2)  / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
             }
         }
     }
+    std::cout << std::endl;
+    std::cout << "1st term = " << term_aux << "\n";
+    std::cout << "2nd term = " << term_aux_2 << "\n";
+
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    std::complex<double> epsilon = kroneckerdelta - g_s*potential*term_aux/(totalCells*d);
+    std::complex<double> epsilon = kroneckerdelta - g_s*potential*(term_aux + term_aux_2)/(totalCells*d);
 
     return epsilon;
 }
@@ -4138,11 +4168,24 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
 
         double d = 2*arma::max(arma::abs(system->motif.col(2)));
+
+        std::complex<long double> epsilon =  kroneckerdelta - potential*Chi;
+        std::complex<long double> epsilon_aux = kroneckerdelta - potential*Chi_aux;
+
+        if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
+            d = 3.3; // If the material is hBN, set thickness to 3.3 Angstroms
+        }
             
-        std::cout << "Polarizability at q = " << Chi << std::endl;
-        std::cout << "Or is the Polarizability at q = " << Chi_aux << " ?" << std::endl;
-        std::cout << "Dielectric function at q = " << kroneckerdelta - potential*Chi_aux << std::endl;
-        std::cout << "Dielectric function averaged over material's thickness at q = " << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
+        std::cout << "Polarizability at q = " << std::setprecision(17) << Chi << std::endl;
+        std::cout << "Or is the Polarizability at q = " << std::setprecision(17) << Chi_aux << " ?\n" << std::endl;
+
+        std::cout << "potential = " << std::setprecision(17) << potential << std::endl;
+
+        std::cout << "Dielectric function at q = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
+        std::cout << "Dielectric function at q aux= " << std::setprecision(30) << std::real(epsilon_aux) << " + i" << std::imag(epsilon_aux) << std::endl;
+
+
+        std::cout << "Dielectric function averaged over material's thickness d = " << d << ", at q is " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
     }
     
     auto stop = high_resolution_clock::now();
@@ -4181,7 +4224,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
     //continueprompt("The number of reciprocal vectors included is: " + std::to_string(nGs) + ". Do you wish to procceed?[y/n]\n");
 
-    std::string filename_dielectric = "invepsilon.dat";
+    std::string filename_dielectric = label + "_invepsilon.dat";
     FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
 
     if (textfile_dielectric == NULL){
@@ -4246,10 +4289,9 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, iq);
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
         
-        double potentialg = std::sqrt(coulombFT(g, g, system->kpoints.row(iq)))*std::sqrt(coulombFT(g2, g2, system->kpoints.row(iq))); // double potentialg = coulombFT(g, g, system->kpoints.row(iq));
-        double potentialg2 = coulombFT(g2, g2, system->kpoints.row(iq));
+        double potentialg = std::sqrt(coulombFT(g, g, q_aux))*std::sqrt(coulombFT(g2, g2, q_aux)); // double potentialg = coulombFT(g, g, system->kpoints.row(iq));
         double kroneckerdelta = g == g2? 1 : 0;
         
         dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
@@ -4264,6 +4306,8 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         }
         fprintf(textfile_dielectric, "\n");
     }
+
+    fclose(textfile_dielectric);
 
     // for (unsigned int g = 0; g < nGs; g++){
     //     for (unsigned int g2 = g; g2 < nGs; g2++){
