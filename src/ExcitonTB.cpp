@@ -1420,7 +1420,7 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1,
         arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2); 
 
         index_max += system->orbitals(species);
-        phases.subvec(index_min, index_max) *= exp(imag*arma::dot(k1 - k2 + G, atomPosition));
+        phases.subvec(index_min, index_max) *= exp(-imag*arma::dot(k1 - k2 + G, atomPosition));
 
         index_min = index_max + 1;
     }
@@ -1457,10 +1457,10 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec &coefs1,
         int species = system->motif.row(i)(3);
         arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2);
 
-        double extra_factor = 2*(1 - exp(-arma::norm(k1 - k2 + G) * d/2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2)))/arma::norm(k1 - k2 + G);
+        double extra_factor = 1.0/d;// 2*(1 - exp(-arma::norm(k1 - k2 + G) * d/2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2)))/arma::norm(k1 - k2 + G);
 
         index_max += system->orbitals(species);
-        phases.subvec(index_min, index_max) *= extra_factor * exp(- imag * arma::dot(k1 - k2 + G, atomPosition));
+        phases.subvec(index_min, index_max) *= extra_factor * exp(-imag * arma::dot(k1 - k2 + G, atomPosition));
 
         index_min = index_max + 1;
     }
@@ -2059,11 +2059,10 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
                 std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G);
                 std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
 
-            
                 std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G);
                 std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
 
-                term += std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)); // std::conj(IvcG)*IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG)*IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
+                term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
 
                 
                 term_aux += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
@@ -2071,13 +2070,6 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
             }
         }
     }
-    
-    std:cout << std::endl;
-
-    std::cout << "term_aux = " << term_aux << "\n";
-    std::cout << "term_aux_2 = " << term_aux_2 << "\n";
-
-    std::cout << "Are the terms equal? " << std::abs(term_aux + term_aux_2 - 2.0*term)  << "\n";
 
     return g_s*2.0*term/((std::complex<double>)nk); // Factor of 2 from TRS
 }
@@ -2112,7 +2104,7 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
  */
 std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const double d) {
     
-    double potential = coulomb_2D_FT(G + q);
+    double potential = std::sqrt(coulomb_2D_FT(q + G))*std::sqrt(coulomb_2D_FT(q + G2));
 
     int nk = this->nk_aux;
 
@@ -2125,8 +2117,8 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
     int upperindexcband = nvbands + ncbandsincluded - 1;
     int lowerindexvbands = nvbands - nvbandsincluded;
 
-    arma::cx_vec coefskq_v, coefsk_v;
-    arma::cx_vec coefskq_c, coefsk_c;
+    arma::cx_vec coefskq, coefsk;
+    arma::cx_vec coefskq_c, coefsk_v;
 
     std::complex<double> term_aux = 0.;
     std::complex<double> term_aux_2 = 0.;
@@ -2147,29 +2139,26 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
                 // Using the atomic gauge
                 if (gauge == "atomic")
                 {
-                    // coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), this->kpoints_aux.row(ik));
-                    // coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), this->kpoints_aux.row(ik));
-
-                    coefskq_v = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
+                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), k);
+                
                     coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
-
                     coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), k);
-                    coefsk_c = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), k);
                 }
                 else
                 {
-                    coefskq_v = eigveckqStack_.slice(ik).col(iv);
-                    coefsk_v = eigveckStack_.slice(ik).col(iv);
+                    coefskq = eigveckqStack_.slice(ik).col(iv);
+                    coefsk = eigveckStack_.slice(ik).col(ic);
 
                     coefskq_c = eigveckqStack_.slice(ik).col(ic);
-                    coefsk_c = eigveckStack_.slice(ik).col(ic);
+                    coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
-                std::complex<double> IvcG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
+                std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G, d);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
                 
-                std::complex<double> IcvG = blochCoherenceFactor(coefsk_c, coefskq_v, kq, k, G, d);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_c, coefskq_v, kq, k, G2);
+                std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
 
 
                 term_aux += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
@@ -2185,7 +2174,7 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    std::complex<double> epsilon = kroneckerdelta - g_s*potential*(term_aux + term_aux_2)/(totalCells*d);
+    std::complex<double> epsilon = kroneckerdelta - g_s*potential*(term_aux + term_aux_2)/((std::complex<double>)nk);
 
     return epsilon;
 }
@@ -4181,11 +4170,11 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         std::cout << "potential = " << std::setprecision(17) << potential << std::endl;
 
-        std::cout << "Dielectric function at (q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
+        std::cout << "\nDielectric function at (q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
         std::cout << "Dielectric function aux at (q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon_aux) << " + i" << std::imag(epsilon_aux) << std::endl;
 
 
-        std::cout << "Dielectric function averaged over material's thickness d = " << d << ", at q is " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
+        std::cout << "\nDielectric function averaged over material's thickness d = " << d << ", at q is " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
     }
     
     auto stop = high_resolution_clock::now();
