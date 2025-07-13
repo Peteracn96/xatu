@@ -1457,7 +1457,7 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec &coefs1,
         int species = system->motif.row(i)(3);
         arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2);
 
-        double extra_factor = 1.0/d;// 2*(1 - exp(-arma::norm(k1 - k2 + G) * d/2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2)))/arma::norm(k1 - k2 + G);
+        double extra_factor = 2*(1 - exp(-arma::norm(k1 - k2 + G) * d/2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2)))/arma::norm(k1 - k2 + G);
 
         index_max += system->orbitals(species);
         phases.subvec(index_min, index_max) *= extra_factor * exp(-imag * arma::dot(k1 - k2 + G, atomPosition));
