@@ -2212,24 +2212,24 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
     for (int ik = 0; ik < nk; ik++){
 
         arma::rowvec k = this->kpoints_aux.row(ik);
-        arma::rowvec kq = this->kpoints_aux.row(ik) + this->kpoints_aux.row(iq);
+        arma::rowvec kq = this->kpoints_aux.row(ik) + system->kpoints.row(iq);
 
-        int kqindex = system_->findEquivalentPointBZ(kq, ncell);
+        // int kqindex = system_->findEquivalentPointBZ(kq, ncell);
 
         const arma::cx_dmat *auxk_slice = &eigveckStack_.slice(ik);
-        const arma::cx_dmat *auxkq_slice = &eigveckStack_.slice(kqindex);
+        const arma::cx_dmat *auxkq_slice = &eigveckqStack_.slice(ik);
 
         for (int ic = nvbands; ic <= upperindexcband; ic++){
 
             // Using the atomic gauge
             if (gauge == "atomic"){
-                coefsk = system_->latticeToAtomicGauge(auxk_slice->col(ic), system->kpoints.row(ik));
+                coefsk = system_->latticeToAtomicGauge(auxk_slice->col(ic), k);
             } else {
                 coefsk = auxk_slice->col(ic);
             }
 
             if (gauge == "atomic") {
-                coefskq_c = system_->latticeToAtomicGauge(auxkq_slice->col(ic), system->kpoints.row(kqindex));
+                coefskq_c = system_->latticeToAtomicGauge(auxkq_slice->col(ic), kq);
             } else {
                 coefskq_c = auxkq_slice->col(ic);
             }
@@ -2238,13 +2238,13 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
 
                 // Using the atomic gauge
                 if (gauge == "atomic"){
-                    coefskq = system_->latticeToAtomicGauge(auxkq_slice->col(iv), system->kpoints.row(kqindex));
+                    coefskq = system_->latticeToAtomicGauge(auxkq_slice->col(iv), kq);
                 } else {
                     coefskq = auxkq_slice->col(iv);
                 }
 
                 if (gauge == "atomic") {
-                    coefsk_v = system_->latticeToAtomicGauge(auxk_slice->col(iv), system->kpoints.row(ik));
+                    coefsk_v = system_->latticeToAtomicGauge(auxk_slice->col(iv), k);
                 } else {
                     coefsk_v = auxk_slice->col(iv);
                 }
@@ -2252,11 +2252,11 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
                 std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
                 std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
 
-                term += IvcG * std::conj(IvcG2) / (eigvalkStack_.col(kqindex)(iv) - eigvalkStack_.col(ik)(ic));
+                term += IvcG * std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
 
                 std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
                 std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
-                term_aux += std::conj(IvcG) * IvcG2 / (eigvalkStack_.col(kqindex)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG) * IcvG2 / (eigvalkStack_.col(kqindex)(ic) - eigvalkStack_.col(ik)(iv));
+                term_aux += std::conj(IvcG) * IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG) * IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
             }
         }
     }
@@ -2474,6 +2474,7 @@ void ExcitonTB::PolarizabilityMesh() {
         }
 
         uint nq = system->nk;
+        uint nk_aux = this->nk_aux;
         int basisdim = system->basisdim;
 
         arma::cx_vec Chi(nq, arma::fill::zeros);
@@ -2484,20 +2485,25 @@ void ExcitonTB::PolarizabilityMesh() {
         arma::rowvec g = reciprocalVectors.row(this->Gs(0)); // Sets G
         arma::rowvec g2 = reciprocalVectors.row(this->Gs(1)); // Sets G'
 
+        if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
+            this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk_aux);
+            this->eigvalkqStack_ = arma::mat(basisdim, nk_aux);
+        }
+
         #pragma omp parallel for
         for (uint iq = 0; iq < nq; iq++){
 
-        //     vec auxEigVal(basisdim);
-        //     arma::cx_mat auxEigvec(basisdim, basisdim);
+            vec auxEigVal(basisdim);
+            arma::cx_mat auxEigvec(basisdim, basisdim);
 
-        //     for (uint i = 0; i < nq; i++)
-        //     {
-        //         arma::rowvec kq = system->kpoints.row(i) + q;
-        //         system->solveBands(kq, auxEigVal, auxEigvec);
-        //         auxEigvec = fixGlobalPhase(auxEigvec);
-        //         eigvalkqStack_.col(i) = auxEigVal;
-        //         eigveckqStack_.slice(i) = auxEigvec;
-        //     };
+            for (uint i = 0; i < nk_aux; i++)
+            {
+                arma::rowvec kq = this->kpoints_aux.row(i) + q;
+                system->solveBands(kq, auxEigVal, auxEigvec);
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                this->eigvalkqStack_.col(i) = auxEigVal;
+                this->eigveckqStack_.slice(i) = auxEigvec;
+            };
 
             arma::rowvec q = system->kpoints.row(iq);
             Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, iq);
