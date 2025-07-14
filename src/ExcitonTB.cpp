@@ -722,8 +722,8 @@ void ExcitonTB::setGcutoff(double Gcutoff){
         this->trunreciprocalLattice_.submat(0, 0, nGs_aux - 1, 2) = reciprocalLattice_old; // When increasing the G cutoff, conserves the order of the G vectors
     }
 
-    std::cout << "Printing all the G vectors:\n";
-    for (uint i = 0; i < nGs; i++) 
+    std::cout << "Printing last G vectors:\n";
+    for (uint i = nGs-6; i < nGs; i++) 
     {
         arma::rowvec G = this->trunreciprocalLattice_.row(i);
 
@@ -3178,6 +3178,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         }
 
         arma::cx_cube epsilonmatrix(Nqpoints,nGs,nGs,arma::fill::zeros);
+        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
         arma::imat indecesqg(Nqpoints*nGs*(nGs+1)/2,3,arma::fill::zeros);
 
@@ -3196,8 +3197,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             }
         //}
 
-        std::cout << "Printing all the G vectors:\n";
-        for (uint i = 0; i < nGs; i++){     
+        std::cout << "Printing all the last " + std::to_string(5+0*nGs) + " of the total of " << std::to_string(nGs) << + " G vectors:\n";
+        for (uint i = nGs-5; i < nGs; i++){     
 
             arma::rowvec G = ReciprocalVectors.row(i);                
 
@@ -3210,6 +3211,13 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         arma::cx_mat auxEigvec(basisdim, basisdim);
 
         std::cout << "Computation at\n" << std::flush;
+
+        // These lines are temporary
+        // if (this->Invepsilonmatrix_.is_empty()) {
+        //     this->Invepsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
+        // } else {
+        //     this->Invepsilonmatrix_.reshape(nGs,nGs,Nqpoints);
+        // }
 
         for (uint iq = 0; iq < Nqpoints; iq++){  
 
@@ -3246,13 +3254,40 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
                 this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
             }
+
+            // These lines are temporary
+            // std::cout << "Inverting matrix and printing it to file..." << std::endl;
+
+            // std::string aux_file_name = "q_point_" + std::to_string(iq) + "_" + kpointsfile;
+
+            // FILE* textfile = fopen(aux_file_name.c_str(), "w");
+
+            // if (textfile == NULL){
+            //     std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
+            //     exit(1);
+            // }
+
+            // this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
+            // int nGs_cut = 100;
+            // //for(uint i = 0; i < Nqp; i++){
+            //     for (uint g = 0; g < nGs_cut; g++){
+            //         for (uint g2 = 0; g2 < nGs_cut; g2++){
+            //             std::complex<double> aux = this->Invepsilonmatrix_.slice(iq).at(g,g2);
+            //             fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
+            //         }
+            //         fprintf(textfile, "\n");
+            //     }
+            // //}
+
+            // fclose(textfile);
+
             double percentage = ((double)iq + 1.0) / (double)Nqpoints * 100;
             std::cout << percentage << "%, " << std::flush;
         }
-
+        // Comment is temporary
         std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
 
-        // Takes the k vector closest to the origin
+        Takes the k vector closest to the origin
         arma::mat k_mat_aux = system->kpoints;
         sortVectors(k_mat_aux);
         arma::rowvec k0 = this->percentage*k_mat_aux.row(1); 
