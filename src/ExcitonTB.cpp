@@ -1988,7 +1988,7 @@ double ExcitonTB::realPolarizabilityMatrixElement(const arma::rowvec& R, const a
         }
     }
 
-    return g_s*real(term)/real(Nsquared);
+    return g_s*real(term)/real(Nsquared); // Should it be simply g_s or g_s squared?
 }
 
 /**
