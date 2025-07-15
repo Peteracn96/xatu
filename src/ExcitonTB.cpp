@@ -3287,7 +3287,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         // Comment is temporary
         std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
 
-        Takes the k vector closest to the origin
+        // Takes the k vector closest to the origin
         arma::mat k_mat_aux = system->kpoints;
         sortVectors(k_mat_aux);
         arma::rowvec k0 = this->percentage*k_mat_aux.row(1); 
