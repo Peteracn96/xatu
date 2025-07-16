@@ -3959,7 +3959,7 @@ void ExcitonTB::compute_2D_RPAInvDielectricMatrix(std::string kpointsfile)
 }
 
 /**
- * Method to invert the static polarizability matrix in the BZ mesh.
+ * Method to invert the static dielectric matrix in the list of q points.
  * @return void
 */
 void ExcitonTB::invertDielectricMatrix(){
@@ -4096,20 +4096,25 @@ void ExcitonTB::invertDielectricMatrix(){
     if (this->mode_ == "reciprocalspace"){
 
         uint nGs = this->trunreciprocalLattice_.n_rows;
-        uint Nktotal = this->epsilonmatrix_.n_slices; // The number of q points can be different from the BZ mesh size
+        uint Nqtotal = this->epsilonmatrix_.n_slices; // The number of q points can be different from the BZ mesh size
+
+        if (Nqtotal < 1) {
+            std::cout << "Dielectric matrix must have been computed at least at one point." << std::endl;
+            exit(0);
+        }
 
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
         std::cout << "\nInverting the dielectric matrix... " << std::flush;
 
         if (this->Invepsilonmatrix_.is_empty()) {
-            this->Invepsilonmatrix_ = arma::cx_cube(nGs,nGs,Nktotal,arma::fill::zeros);
+            this->Invepsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqtotal,arma::fill::zeros);
         } else {
-            this->Invepsilonmatrix_.reshape(nGs,nGs,Nktotal);
+            this->Invepsilonmatrix_.reshape(nGs,nGs,Nqtotal);
         }
 
         #pragma omp parallel for
-        for (uint iq = 0; iq < Nktotal; iq++){
+        for (uint iq = 0; iq < Nqtotal; iq++){
             this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
         }
     }
@@ -5257,7 +5262,7 @@ void ExcitonTB::writeBZtofile() const {
 /* Method to print information of the inverse of the dielectric matrix into a file.
  * @return void 
  */
-void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) const {
+void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) {
 
     FILE* textfile = fopen(filename_dielectric.c_str(), "w");
 
@@ -5326,9 +5331,30 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) co
     }
 
     if (this->mode == "reciprocalspace"){
-        uint ngs = this->Invepsilonmatrix_.slice(0).n_rows;         // The number of G vectors can in general be different from the number of generated G vectors
-        uint nqs = this->Invepsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
+        uint ngs = this->epsilonmatrix_.slice(0).n_rows;         // The number of G vectors can in general be different from the number of generated G vectors
+        uint nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
+
+        if (ngs == 0 || nqs == 0){
+            std::cout << "Dielectric matrix was not computed. Exiting." << std::endl;
+            exit(0);
+        }
+
+        if (this->Invepsilonmatrix_.is_empty()) {
+
+            std::cout << "\nInverse dielectric matrix was not computed." << std::endl;
+
+            try{
+                this->Invepsilonmatrix_ = arma::cx_cube(ngs,ngs,nqs,arma::fill::zeros);
+
+                this->invertDielectricMatrix();
+
+            } catch(const std::exception& e){
+                std::cerr << e.what() << std::endl;
+            }
+        }
+
+        
         for(uint i = 0; i < nqs; i++){
             for (uint g = 0; g < ngs; g++){
                 for (uint g2 = 0; g2 < ngs; g2++){
