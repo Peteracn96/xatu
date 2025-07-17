@@ -111,6 +111,9 @@ void ExcitonConfiguration::parseContent(){
             excitonInfo.Gcutoff = parseScalar<double>(content[0]);
             excitonInfo.Gcutoff_found = true;
         }
+        else if(arg == "percentage"){
+            excitonInfo.percentage = parseScalar<double>(content[0]);
+        }
         else{    
             std::cout << "Unexpected argument: " << arg << ", skipping block..." << std::endl;
         }

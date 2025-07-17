@@ -204,6 +204,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         double coulombFT(int, int, const arma::rowvec) const;
         double coulomb_2D_FT(const arma::rowvec&) const;
         double keldyshFT(int, int, arma::rowvec) const;
+        double keldyshFT(arma::rowvec) const;
         std::complex<double> rpaFT(int g, int g2, arma::rowvec) const;
         std::complex<double> motifFourierTransform(int, int, const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat motifFTMatrix(const arma::rowvec&, const arma::mat&, potptr);
@@ -217,7 +218,7 @@ class ExcitonTB : public Exciton<SystemTB> {
                                                        const arma::cx_vec&, const arma::cx_vec&,
                                                        const arma::rowvec&, const arma::rowvec&,
                                                        const arma::rowvec&, const arma::rowvec&, 
-                                                       std::string, int nrcells = 15)  const ;
+                                                       std::string, int nrcells = 15);
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
                                                   const arma::rowvec&) const;
@@ -265,7 +266,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void compute_2D_DielectricMatrix_at_q(const arma::rowvec&, const int);
         void compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &, const int);
         void compute_2D_DielectricMatrix(std::string);
-        void compute_ScreenedPotential_regularization(const arma::rowvec &, bool);
+        void compute_ScreenedPotential_regularization(bool);
         void compute_2D_PolarizabilityMatrix(std::string);
         void compute_2D_RPAInvDielectricMatrix(std::string);
         arma::cx_mat compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec&, const int);

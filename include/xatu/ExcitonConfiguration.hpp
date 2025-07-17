@@ -52,6 +52,8 @@ class ExcitonConfiguration : public ConfigurationBase{
         std::string exchangePotential = "keldysh";
         // Regularization distance
         double regularization = 0.0;
+        // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
+        double percentage = 0.5;
     };
 
     public:

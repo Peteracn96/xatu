@@ -80,8 +80,8 @@ void ScreeningConfiguration::parseContent(){
             }
         } else if(arg == "ncell_aux"){
             screeningInfo.ncell_aux = parseScalar<int>(content[0]);
-        } else if(arg == "percentage"){
-            screeningInfo.percentage = parseScalar<double>(content[0]);
+        // } else if(arg == "percentage"){
+        //     screeningInfo.percentage = parseScalar<double>(content[0]);
         } else if(arg == "isotropic"){
             std::string isotropic_string = parseWord(content[0]);
             

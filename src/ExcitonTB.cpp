@@ -71,6 +71,7 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     arma::ivec bands = cfg.excitonInfo.bands;
     arma::rowvec parameters = {cfg.excitonInfo.eps(0), cfg.excitonInfo.eps(1), cfg.excitonInfo.eps(2)};
     arma::rowvec Q   = cfg.excitonInfo.Q;
+    double percentage = cfg.excitonInfo.percentage;
 
     if (2*nbands > system->basisdim){
         std::cout << "Error: Number of bands cannot be higher than actual material bands" << std::endl;
@@ -107,6 +108,8 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     }
     this->potential_ = cfg.excitonInfo.potential;
     this->exchangePotential_ = cfg.excitonInfo.exchangePotential;
+
+    this->percentage_ = percentage;
 
     if (cfg.excitonInfo.Gcutoff_found){
         this->Gcutoff_ = cfg.excitonInfo.Gcutoff;
@@ -238,7 +241,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::ivec ts             = cfg.screeningInfo.ts;
     uint ncell_aux            = cfg.screeningInfo.ncell_aux;
     bool model_has_spin       = cfg.screeningInfo.spin;
-    double percentage         = cfg.screeningInfo.percentage; 
+    // double percentage         = cfg.screeningInfo.percentage; 
     bool isotropic            = cfg.screeningInfo.isotropic;
 
     this->ts_ = ts;
@@ -973,7 +976,7 @@ double ExcitonTB::coulomb(double r, uint i, uint j) const {
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
     r = abs(r);
 
-    if (r < 10E-4) {
+    if (r < 10E-5 && i == j) {
 
         if ((int)i + 1 > system->natoms) {
             std::cout << "Index out of bounds, must be <= natoms - 1. Exiting" << std::flush;
@@ -991,7 +994,7 @@ double ExcitonTB::coulomb(double r, uint i, uint j) const {
     // if (r > cutoff){
     //     return 0.0;
     // }
-    return (r != 0) ? ec/(4E-10*PI*eps0*r) : ec*1E10/(4*PI*eps0*regularization);    
+    return (r != 0.0) ? ec/(4E-10*PI*eps0*r) : ec*1E10/(4*PI*eps0*regularization);    
 }
 
 /**
@@ -1142,6 +1145,40 @@ double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
 }
 
 /**
+ * Evaluates the Fourier transform of the Keldysh potential, which is an analytical expression.
+ * @param q kpoint where we evaluate the FT.
+ * @return Fourier transform of the potential at q, FT[V](q).
+ */
+double ExcitonTB::keldyshFT(arma::rowvec q) const {
+
+    double potential = 0;
+    double eps_bar = (eps_m + eps_s)/2;
+    double eps = 10E-12;
+
+    double qnorm = arma::norm(q);
+
+    if (qnorm < eps){
+        potential = 0;
+        double percentage = this->percentage; // 0.48;
+
+        if (percentage == 0.0) {
+            return 0;
+        }
+
+        double q0 = percentage*arma::norm(arma::rowvec({0.024184, 0.0418879})); //2/r0;
+        potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
+    }
+    else{
+        potential = 1/(qnorm*(1 + r0*qnorm));
+    }
+    
+    potential = potential*ec*1E10/(2*eps0*eps_bar*system->unitCellArea);
+
+    return potential;
+}
+
+
+/**
  * Evaluates the RPA potential in reciprocal space.
  * @param q kpoint where we evaluate the FT.
  * @return W_(G,G')(q) matrix element of the screened potential
@@ -1153,7 +1190,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     }
 
     std::complex<double> potential = 0;
-    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
+    double eps = 1E-12; // arma::norm(system->reciprocalLattice.row(0))/totalCells;
 
     double qnorm = arma::norm(q);
 
@@ -1318,7 +1355,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                                      const arma::rowvec& kQ, 
                                      const arma::rowvec& k2Q,
                                      std::string potential,
-                                     int nrcells) const {
+                                     int nrcells) {
     
     std::complex<double> Ic, Iv;
     std::complex<double> term = 0;
@@ -1328,8 +1365,8 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     arma::rowvec null_vector(3,arma::fill::zeros);
 
-    arma::rowvec k_dif = k2 - k;
-    arma::rowvec kQ_dif = k2Q - kQ;
+    arma::rowvec k_dif = k - k2;
+    arma::rowvec kQ_dif = kQ - k2Q;
 
     int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
     int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
@@ -1337,36 +1374,38 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     arma::rowvec kQ_eff = system->kpoints.row(kQ_eff_index);
 
     arma::rowvec g = k_dif - k_eff;
+    uint g_index = this->fecthReciprocalLatticeVector(g);
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
-        for(int g = 0; g < nrcells; g++){
-            auto G = reciprocalVectors.row(g);
+        for(int ig = 0; ig < nrcells; ig++){
+            auto G = reciprocalVectors.row(ig);
 
             Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
 
-            term += Ic*this->coulombFT(g, g, k - k2)*conj(Iv);
+            term += Ic*this->coulombFT(ig, ig, k - k2)*conj(Iv);
         }
     } else if (potential == "keldysh"){
-        for(int g = 0; g < nrcells; g++){
-            auto G = reciprocalVectors.row(g);
+        for(int ig = 0; ig < nrcells; ig++){
+            auto G = reciprocalVectors.row(ig);
+            g = {0.,0.,0.};
 
-            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
+            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G + g);
+            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G + g);
 
-            term += Ic*this->keldyshFT(g, g, k - k2)*conj(Iv);
+            term += conj(Ic)*this->keldyshFT(k_eff + G + g)*Iv; // conj(Ic)*this->keldyshFT(ig, ig, k_eff)*Iv;
         }
     } else if (potential == "rpa"){
-        for(int g = 0; g < nrcells; g++){
-            auto G = reciprocalVectors.row(g);
+        for(int ig = 0; ig < nrcells; ig++){
+            auto G = reciprocalVectors.row(ig);
+            
+            for(int ig2 = 0; ig2 < nrcells; ig2++){
+                auto G2 = reciprocalVectors.row(ig2);
 
-            for(int g2 = 0; g2 < nrcells; g2++){
-                auto G2 = reciprocalVectors.row(g2);
+                Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
+                Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-                Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-                Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
-
-                term += Ic*this->rpaFT(g, g2, k_eff)*conj(Iv);
+                term += conj(Ic)*this->rpaFT(ig, ig2, k_eff)*Iv;
             }
         }
     } else {
@@ -2540,7 +2579,9 @@ int ExcitonTB::fecthReciprocalLatticeVector(arma::rowvec G){
         }
     }
 
-    return -1; //G not found
+    std::cout << "Reciprocal lattice vector G not found in the reciprocal lattice." << std::endl;
+
+    return -1; // G not found
 }
 
 /**
@@ -3091,15 +3132,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                 }
             }
         }
-
-        std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
-
-        // Takes the k vector closest to the origin
-        arma::mat k_mat_aux = system->kpoints;
-        sortVectors(k_mat_aux);
-        arma::rowvec k0 = this->percentage*k_mat_aux.row(1); 
-
-        this->compute_ScreenedPotential_regularization(k0, this->isotropic);
     }
 
 
@@ -3287,12 +3319,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         // Comment is temporary
         std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
 
-        // Takes the k vector closest to the origin
-        arma::mat k_mat_aux = system->kpoints;
-        sortVectors(k_mat_aux);
-        arma::rowvec k0 = this->percentage*k_mat_aux.row(1); 
-
-        this->compute_ScreenedPotential_regularization(k0, this->isotropic);
+        this->compute_ScreenedPotential_regularization(this->isotropic);
     }
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
@@ -4152,7 +4179,7 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         for(uint i = 0; i < lattice_vectors.n_rows; ++i)
         {
-            std::cout << " R(" << i << ") = " << lattice_vectors.row(i) << "\n";
+            // std::cout << " R(" << i << ") = " << lattice_vectors.row(i) << "\n";
         }
         
         std::cout << "nk = " << system->nk << std::endl;
@@ -4361,8 +4388,13 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
  * Method to compute the regularization of the dielectric matrix at q = 0
  * @details Computes numerically the head element of the dielectric matrix at q=0
  */
-void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0, bool is_system_isotropic)
+void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropic)
 {
+    // Takes the k vector of the BZ for the exciton closest to the origin
+    arma::mat k_mat_aux = system->kpoints;
+    sortVectors(k_mat_aux);
+    arma::rowvec q0 = this->percentage*k_mat_aux.row(1); 
+
     uint basisdim = this->system->basisdim;
     uint nk = this->nk_aux;
 
@@ -4388,6 +4420,13 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
     if (origin_index == -1) {
        std::cout << "The origin is not included in the list of q points, so the regularization can not (or does not need to) be computed). Terminating." << std::endl;
        return;
+    }
+
+    if (this->potential_ == "keldysh"){
+
+        this->W00_at_0_ = (2 + this->r0*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
+
+        return;
     }
 
     // Calculates the inverse dielectric matrix at q = 0 infinitesimal
@@ -4560,6 +4599,12 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
 
     uint64_t basisDimBSE = basisStates.n_rows;
     std::cout << "BSE dimension: " << basisDimBSE << std::endl;
+
+    if (this->mode == "reciprocalspace"){
+       std::cout << "Done.\nComputing regularization for term W00(q = 0)..." << std::endl;
+        this->compute_ScreenedPotential_regularization(this->isotropic);
+    }
+ 
     std::cout << "Initializing Bethe-Salpeter matrix... " << std::flush;
 
     HBS_ = arma::zeros<cx_mat>(basisDimBSE, basisDimBSE);
