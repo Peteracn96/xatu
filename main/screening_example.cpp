@@ -102,7 +102,7 @@ int main(int argc, char* argv[]){
     {
         arma::rowvec Raux = LatticeVectors.row(i);
 
-        std::cout << "R(" << i << ") = " << Raux << std::endl;
+        // std::cout << "R(" << i << ") = " << Raux << std::endl;
     }
 
     int nRdif = (nRvectors*nRvectors-1)/2 + nRvectors;
@@ -472,13 +472,13 @@ int main(int argc, char* argv[]){
     arma::rowvec Rprime = LatticeVectors.row(Rprime_index);
     arma::rowvec tprime_i = motif.row(tprime_index).subvec(0,2);
 
-    std::cout << "R_index = " << R_index << std::endl;
-    std::cout << "Rprime_index = " << Rprime_index << std::endl;
+    // std::cout << "R_index = " << R_index << std::endl;
+    // std::cout << "Rprime_index = " << Rprime_index << std::endl;
 
-    std::cout << "t_index = " << t_index << std::endl;
-    std::cout << "tprime_index = " << tprime_index << std::endl;
+    // std::cout << "t_index = " << t_index << std::endl;
+    // std::cout << "tprime_index = " << tprime_index << std::endl;
 
-    std::cout << "pos_prime_index = " << pos_prime_index << std::endl;
+    // std::cout << "pos_prime_index = " << pos_prime_index << std::endl;
 
     double sum = 0;
 
@@ -492,18 +492,18 @@ int main(int argc, char* argv[]){
 
             double norm = arma::norm(R + t - (R2_vector + t2));
             
-            if (norm > 1E-7){
+            // if (norm > 1E-7){
                 //sum += my_coulomb(norm)*mos2_exciton.realPolarizabilityMatrixElement(R2_vector, Rprime_vector, i2, tprime_index);
                 double T_m_element = T(R2*NAtoms + i2,pos_prime_index);
                 sum += my_coulomb(norm)*T_m_element;
-                std::cout << T_m_element << ",";
-            }
+                // std::cout << T_m_element << ",";
+            // }
         }
     }
     std::cout << std::endl;
 
     std::cout << mos2_exciton.realPolarizabilityMatrixElement(LatticeVectors.row(0),LatticeVectors.row(0),0,1) << std::endl;
-    std::cout << "sum = " << sum << std::endl;
+    //std::cout << "sum = " << sum << std::endl;
     std::cout << "epsilon.slice(0)(0,0) = " << 1 - sum << std::endl;
 
     // Prints the epsilon matrices
@@ -526,13 +526,13 @@ int main(int argc, char* argv[]){
 
     // epsilonInv.print("epsilon(0)^-1:");
 
-    arma::cx_vec eigval = arma::eig_gen(M);
+    arma::cx_vec eigval = arma::eig_gen(epsilonInv);
 
-    //eigval.print("Eigenvalues of epsilon^-1(0)^T*epsilon^-1(0)");
+    eigval.print("Eigenvalues of epsilon^-1(0):");
 
     // Square root of all the eigenvalues
     // for (arma::uword i = 0; i < n_positions; ++i){
-    //     std::cout << "sqrt(eigval(" << i << ")) = " << std::sqrt( eigval(i)) << std::endl;
+    //     std::cout << "eigval(" << i << ") = " << eigval(i) << std::endl;
     // }
 
     // Solves for W
@@ -553,7 +553,7 @@ int main(int argc, char* argv[]){
     // }
 
     // Prints the V and W columns side by side
-    NAtoms = 2;
+    NAtoms = 1;
     std::cout << std::endl;
 
     for (arma::uword t_j = 0; t_j < NAtoms; ++t_j){
@@ -574,7 +574,7 @@ int main(int argc, char* argv[]){
     }
 
     // Prints the V and W columns in mathematica format
-    NAtoms = 3;
+    /*NAtoms = 3;
     std::cout << "{" << std::flush;
     for (arma::uword t_j = 0; t_j < 1; ++t_j){
         
@@ -598,7 +598,7 @@ int main(int argc, char* argv[]){
             index_aux++;
         }
     }
-    std::cout << "}" << std::flush;
+    std::cout << "}" << std::flush;*/
 
     // Write screened potential in a file
 
