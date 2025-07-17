@@ -43,14 +43,15 @@ int main(int argc, char* argv[]){
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
-    //systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    // systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    systemConfig.reset(new xatu::SystemConfiguration(modelfile));
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
     excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
     exciton.setMode(excitonConfig->excitonInfo.mode);
+    // exciton.system->setAU(true); // Comment if input model is not CRYSTAL
 
     exciton.brillouinZoneMesh(exciton.ncell);
     exciton.initializeHamiltonian();
