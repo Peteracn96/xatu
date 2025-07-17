@@ -4415,49 +4415,53 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
         this->eigvalkqStack_.col(i) = auxEigVal;
         this->eigveckqStack_.slice(i) = auxEigvec;
     }
-    std::cout << "Done.\n" << std::flush;
+
+    std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, null_vector, q0);
+
+    double potentialg = coulomb_2D_FT(null_vector + q0);
 
     // Calculates the inverse dielectric matrix at q0 infinitesimal, to regularize W_00(0)
+    // The screening parameter can be estimated from the head element of the direct dielectric matrix
+    // arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
+    // arma::cx_mat auxvecsol(nGs, nGs, arma::fill::zeros);
+    // arma::cx_mat auxvec(nGs, nGs, arma::fill::eye);
 
-    arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
-    arma::cx_mat auxvecsol(nGs, nGs, arma::fill::zeros);
-    arma::cx_mat auxvec(nGs, nGs, arma::fill::eye);
+    // arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
 
-    arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
+    // int i = 0;
+    // for (uint g = 0; g < nGs; g++)
+    // {
+    //     for (uint g2 = g; g2 < nGs; g2++)
+    //     {
+    //         indecesg.row(i)(0) = g;
+    //         indecesg.row(i)(1) = g2;
+    //         i++;
+    //     }
+    // }
 
-    int i = 0;
-    for (uint g = 0; g < nGs; g++)
-    {
-        for (uint g2 = g; g2 < nGs; g2++)
-        {
-            indecesg.row(i)(0) = g;
-            indecesg.row(i)(1) = g2;
-            i++;
-        }
-    }
+    
+    // #pragma omp parallel for
+    // for (uint i = 0; i < nGs*(nGs + 1)/2; i++)
+    // {
+    //     int g = indecesg.row(i)(0);
+    //     int g2 = indecesg.row(i)(1);
 
-    #pragma omp parallel for
-    for (uint i = 0; i < nGs*(nGs + 1)/2; i++)
-    {
-        int g = indecesg.row(i)(0);
-        int g2 = indecesg.row(i)(1);
+    //     arma::rowvec G = ReciprocalVectors.row(g);
+    //     arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        arma::rowvec G = ReciprocalVectors.row(g);
-        arma::rowvec G2 = ReciprocalVectors.row(g2);
+    //     std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0);
 
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0);
+    //     double potentialg = std::sqrt(coulombFT(g, g, q0)) * std::sqrt(coulombFT(g2, g2, q0)); // coulombFT(g, g, q0);
+    //     // double potentialg2 = coulombFT(g2, g2, q0);
+    //     double kroneckerdelta = g == g2 ? 1 : 0;
 
-        double potentialg = std::sqrt(coulombFT(g, g, q0)) * std::sqrt(coulombFT(g2, g2, q0)); // coulombFT(g, g, q0);
-        // double potentialg2 = coulombFT(g2, g2, q0);
-        double kroneckerdelta = g == g2 ? 1 : 0;
+    //     dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+    //     dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
+    // }
 
-        dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
-        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
-    }
+    // auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
 
-    auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
-
-    std::complex<double> head_element = auxvecsol(0, 0);
+    std::complex<double> head_element = 1.0 - potentialg*Chi; // auxvecsol(0, 0);
 
     double Re_head_element = std::real(head_element);
     double slope = (Re_head_element - 1.)/q0_norm;
@@ -4481,31 +4485,38 @@ void ExcitonTB::compute_ScreenedPotential_regularization(const arma::rowvec &q0,
         }
         std::cout << "Done.\n" << std::flush;
 
-        #pragma omp parallel for
-        for (uint i = 0; i < nGs * (nGs + 1) / 2; i++)
-        {
-            int g = indecesg.row(i)(0);
-            int g2 = indecesg.row(i)(1);
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, null_vector, q0_perpendicular);
 
-            arma::rowvec G = ReciprocalVectors.row(g);
-            arma::rowvec G2 = ReciprocalVectors.row(g2);
+        double potentialg = coulomb_2D_FT(null_vector + q0_perpendicular); // coulombFT(g, g, q0);
 
-            std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular);
+        // The screening parameter can be estimated from the head element of the direct dielectric matrix
+        // #pragma omp parallel for
+        // for (uint i = 0; i < nGs * (nGs + 1) / 2; i++)
+        // {
+        //     int g = indecesg.row(i)(0);
+        //     int g2 = indecesg.row(i)(1);
 
-            double potentialg = std::sqrt(coulombFT(g, g, q0_perpendicular)) * std::sqrt(coulombFT(g2, g2, q0_perpendicular)); // coulombFT(g, g, q0);
-            // double potentialg2 = coulombFT(g2, g2, q0);
-            double kroneckerdelta = g == g2 ? 1 : 0;
+        //     arma::rowvec G = ReciprocalVectors.row(g);
+        //     arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-            dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg * Chi;
-            dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg * std::conj(Chi);
-        }
+        //     std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular);
 
-        auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
+        //     double potentialg = std::sqrt(coulombFT(g, g, q0_perpendicular)) * std::sqrt(coulombFT(g2, g2, q0_perpendicular)); // coulombFT(g, g, q0);
+        //     // double potentialg2 = coulombFT(g2, g2, q0);
+        //     double kroneckerdelta = g == g2 ? 1 : 0;
 
-        std::complex<double> head_element = auxvecsol(0, 0);
+        //     dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg * Chi;
+        //     dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg * std::conj(Chi);
+        // }
+
+        // auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
+
+        std::complex<double> head_element = 1.0 - potentialg * Chi; // auxvecsol(0, 0);
 
         Re_head_element_perp = std::real(head_element);
         this->slope_perp_ = (Re_head_element_perp - 1.) / q0_norm;
+    } else {
+        this->slope_perp_ = this->slope_;
     }
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
