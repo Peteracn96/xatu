@@ -1375,37 +1375,36 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     arma::mat reciprocalVectors = this->trunreciprocalLattice_;
     //int Gcutoff = system_->truncateReciprocalSupercell(radius).n_rows;
 
-    arma::rowvec null_vector(3,arma::fill::zeros);
+    // arma::rowvec null_vector(3,arma::fill::zeros);
 
-    arma::rowvec k_dif = k - k2;
-    arma::rowvec kQ_dif = kQ - k2Q;
+    // arma::rowvec k_dif = k - k2;
+    // arma::rowvec kQ_dif = kQ - k2Q;
 
-    int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
-    int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
-    arma::rowvec k_eff = system->kpoints.row(k_eff_index);
-    arma::rowvec kQ_eff = system->kpoints.row(kQ_eff_index);
+    // int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
+    // int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
+    // arma::rowvec k_eff = system->kpoints.row(k_eff_index);
+    // arma::rowvec kQ_eff = system->kpoints.row(kQ_eff_index);
 
-    arma::rowvec g = k_dif - k_eff;
-    uint g_index = this->fetchReciprocalLatticeVector(g);
+    // arma::rowvec g = k_dif - k_eff;
+    // uint g_index = this->fetchReciprocalLatticeVector(g);
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
         for(int ig = 0; ig < nrcells; ig++){
             auto G = reciprocalVectors.row(ig);
 
-            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G);
+            Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
+            Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
 
             term += Ic*this->coulombFT(ig, ig, k - k2)*conj(Iv);
         }
     } else if (potential == "keldysh"){
         for(int ig = 0; ig < nrcells; ig++){
             auto G = reciprocalVectors.row(ig);
-            g = {0.,0.,0.};
 
-            Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G + g);
-            Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G + g);
+            Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
+            Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
 
-            term += conj(Ic)*this->keldyshFT(k_eff + G + g)*Iv; // conj(Ic)*this->keldyshFT(ig, ig, k_eff)*Iv;
+            term += conj(Ic)*this->keldyshFT(k - k2 + G)*Iv; // conj(Ic)*this->keldyshFT(ig, ig, k_eff)*Iv;
         }
     } else if (potential == "rpa"){
         for(int ig = 0; ig < nrcells; ig++){
@@ -1417,7 +1416,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-                term += conj(Ic)*this->rpaFT(ig, ig2, k_eff)*Iv;
+                term += conj(Ic)*this->rpaFT(ig, ig2, k - k2)*Iv;
             }
         }
     } else {
@@ -4566,6 +4565,13 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
     std::cout << "BSE dimension: " << basisDimBSE << std::endl;
 
     if (this->mode == "reciprocalspace"){
+
+        uint nGs = system->truncateReciprocalSupercell(this->Gc_exciton).n_rows;
+        
+        if (this->nReciprocalVectors != nGs) {
+            std::cout << "The number of G vectors to compute the exciton " << this->nReciprocalVectors << " does not match with the number of G vectors in the reciprocal sublattice " << nGs  << " for the cutoff " << this->Gc_exciton  << " angstrom^{-1}." << std::endl; 
+        }
+        
         this->compute_ScreenedPotential_regularization(this->isotropic);
     }
  
@@ -4624,7 +4630,7 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
             recpotptr directPotential = selectReciprocalPotential(this->potential_);
             arma::rowvec k = system->kpoints.row(k_index);
             arma::rowvec k2 = system->kpoints.row(k2_index);
-            D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
+            D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k + Q, k2 + Q, this->potential_, this->nReciprocalVectors);
             if(this->exchange){
                 recpotptr exchangePotential = selectReciprocalPotential(this->exchangePotential_);
                 X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, this->exchangePotential_, this->nReciprocalVectors);
@@ -5261,9 +5267,11 @@ void ExcitonTB::printInformation(){
  */
 void ExcitonTB::printReciprocalLattice() {
     uint nGs_to_print = this->trunreciprocalLattice_.n_rows;
+    uint nGs_total = this->trunreciprocalLattice_.n_rows;
 
     std::cout << "Printing the last " << nGs_to_print << " G vectors:\n";
-    for (uint i = nGs - nGs_to_print; i < nGs; i++) 
+
+    for (uint i = nGs_total - nGs_to_print; i < nGs_total; i++) 
     {
         arma::rowvec G = this->trunreciprocalLattice_.row(i);
 
