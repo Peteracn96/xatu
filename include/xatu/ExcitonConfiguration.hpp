@@ -28,8 +28,6 @@ class ExcitonConfiguration : public ConfigurationBase{
         arma::rowvec shift;
         // Cutoff to be used 
         double cutoff;
-        // Cut off for G vectors
-        double Gcutoff;
         // Bool true/false if Gcutoff was/was not found
         bool Gcutoff_found = false;
         // Dielectric constants
@@ -44,8 +42,8 @@ class ExcitonConfiguration : public ConfigurationBase{
         bool exchange = false;
         // Scissor cut to correct the bandgap
         double scissor = 0.0;
-        // Number of reciprocal vectors to use in reciprocal space calculation
-        int nReciprocalVectors = 0;
+        // G cutoff for reciprocal vectors to use in reciprocal space calculation
+        double Gc_ReciprocalVectors = 0.0;
         // Potential to use in direct term
         std::string potential = "keldysh";
         // Potential to use in exchange if active

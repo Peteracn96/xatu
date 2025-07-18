@@ -53,6 +53,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::cx_cube ftMotifStack;
         std::complex<double> ftX;
         arma::mat potentialMat;
+        double Gc_exciton_ = 10.0;
         int nReciprocalVectors_ = 1;
         
         // Internals for dielectric function
@@ -85,7 +86,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::mat Polarizabilitymatrix_;
         arma::mat Wmatrix_;
         arma::colvec U00_list_;
-        double percentage_ = 0.5; // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
+        double percentage_ = 0; // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
         double W00_at_0_ = 0.0;
         arma::rowvec q0_ = {0.05, 0.0, 0.0};
         bool isotropic_ = true; // Is system isotropic
@@ -105,6 +106,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         const std::string& mode = mode_;
         // Return number of reciprocal lattice vectors to use in summations (mode="reciprocalspace")
         const int& nReciprocalVectors = nReciprocalVectors_;
+        // Return Gc cutoff for reciprocal lattice vectors to use in summations (mode="reciprocalspace")
+        const double& Gc_exciton = Gc_exciton_;
         // Return motif vectors where the real space dielectric function is computed at
         const arma::ivec& ts = ts_;
         // Returns polarizability matrix in real space
@@ -162,7 +165,7 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Specify number of bands participating (int)
         ExcitonTB(const SystemConfiguration&, int ncell, int nbands, int nrmbands,
-                  const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const int nG);
+                  const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const double Gc_exciton);
 
         ~ExcitonTB();
 
@@ -171,7 +174,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setParameters(double, double, double);
         void setGauge(std::string);
         void setMode(std::string);
-        void setReciprocalVectors(int);
+        void setReciprocalVectors(double);
         void setRegularization(double);
         void setGcutoff(double);
         void setValenceBands(int);
@@ -240,7 +243,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         ResultTB* diagonalizeRaw(std::string method = "diag", int nstates = 8) override;
 
         // Static dielectric function
-        int fecthReciprocalLatticeVector(arma::rowvec);
+        int fetchReciprocalLatticeVector(arma::rowvec);
         arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
@@ -275,7 +278,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
         std::unique_ptr<ResultTB> diagonalize(std::string method = "diag", int nstates = 8);
-        void CompareInteractionMatrixElements(double, int, std::string);
+        void CompareInteractionMatrixElements(double, double, std::string);
         // Fermi golden rule       
         double pairDensityOfStates(double, double) const;
         void writePairDOS(FILE*, double delta, int n = 100);
@@ -288,6 +291,7 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Print information
         void printInformation();
+        void printReciprocalLattice();
      
         // Write BZ mesh in a file
         void writeBZtofile() const;

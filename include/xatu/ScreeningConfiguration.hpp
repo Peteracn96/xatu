@@ -29,6 +29,8 @@ class ScreeningConfiguration : public ConfigurationBase{
         arma::ivec ts = {0, 0};
         // Number of Bravais lattice vectors to use in real space calculation
         int nLatticeVectors = 0;
+        // Gc cutoff for the reciprocal lattice vectors
+        double Gcutoff = 10.0;
         // Regularization distance
         double regularization = 0.0;
         // Compute dielectric function or polarizability or none

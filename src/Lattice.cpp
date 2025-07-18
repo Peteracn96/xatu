@@ -513,7 +513,7 @@ arma::mat Lattice::truncateSupercell(int ncell, double radius){
  * @param radius Radius of the cutoff sphere.
  * @returns List of reciprocal cells in cartesian coordinates.
 */
-arma::mat Lattice::truncateReciprocalSupercell(int ncell, double radius){
+arma::mat Lattice::truncateReciprocalSupercell(double radius){
 
 	arma::imat combinations = generateCombinationsGcutoff(radius, ndim);//generateOrderedCombinations(ncell, ndim);
 	std::vector<arma::rowvec> cells_vector;

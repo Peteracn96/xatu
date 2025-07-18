@@ -79,9 +79,10 @@ void ExcitonConfiguration::parseContent(){
             std::vector<double> eps = parseLine<double>(content[0]);
             excitonInfo.eps = arma::vec(eps);
         }
-        else if(arg == "reciprocal"){
+        else if(arg == "gcutoff"){
             excitonInfo.mode = "reciprocalspace";
-            excitonInfo.nReciprocalVectors = parseScalar<int>(content[0]);
+            excitonInfo.Gc_ReciprocalVectors = parseScalar<double>(content[0]);
+            excitonInfo.Gcutoff_found = true;
         }
         else if(arg == "exchange"){
             std::string str = parseWord(content[0]);
@@ -106,10 +107,6 @@ void ExcitonConfiguration::parseContent(){
         }
         else if(arg == "regularization"){
             excitonInfo.regularization = parseScalar<double>(content[0]);
-        }
-        else if(arg == "gcutoff"){
-            excitonInfo.Gcutoff = parseScalar<double>(content[0]);
-            excitonInfo.Gcutoff_found = true;
         }
         else if(arg == "percentage"){
             excitonInfo.percentage = parseScalar<double>(content[0]);
@@ -160,7 +157,7 @@ void ExcitonConfiguration::checkContentCoherence(){
     if (excitonInfo.mode != "realspace" && excitonInfo.mode != "reciprocalspace"){
         throw std::invalid_argument("Invalid mode. Use 'realspace' or 'reciprocalspace'");
     }
-    if (excitonInfo.Gcutoff < 0){
+    if (excitonInfo.Gc_ReciprocalVectors < 0){
         throw std::invalid_argument("Gcutoff must be a positive number");
     }
 };

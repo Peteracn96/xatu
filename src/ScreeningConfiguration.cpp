@@ -19,7 +19,7 @@ ScreeningConfiguration::ScreeningConfiguration(){
  * @param filename Name of file with the exciton configuration.
  */
 ScreeningConfiguration::ScreeningConfiguration(std::string filename) : ConfigurationBase(filename){
-    this->expectedArguments = {"function","valence.bands","conduction.bands","ncell_aux","spin"};
+    this->expectedArguments = {"function","valence.bands","conduction.bands","ncell_aux","spin","gcutoff"};
     parseContent();
     checkArguments();
     checkContentCoherence();
@@ -68,6 +68,9 @@ void ScreeningConfiguration::parseContent(){
             std::vector<int> ts = parseLine<int>(content[0]);
             screeningInfo.ts(0) = ts[0];
             screeningInfo.ts(1) = ts[1];
+        }
+        else if(arg == "gcutoff"){
+            screeningInfo.Gcutoff = parseScalar<double>(content[0]);
         }
         else if(arg == "spin"){
             std::string spin_string = parseWord(content[0]);
