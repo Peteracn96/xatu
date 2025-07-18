@@ -1385,14 +1385,14 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
     // int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
-    arma::rowvec k_eff = system->kpoints.row(k_eff_index);
+    arma::rowvec k_eff = system_->kpoints.row(k_eff_index);
     // arma::rowvec kQ_eff = system->kpoints.row(kQ_eff_index);
 
     arma::rowvec g = k_dif - k_eff;
 
     uint g_index = 0;
     
-    if (arma::norm(g) > 1E-7) 
+    if (arma::norm(g) > 1E-12) 
     {
         g_index = this->fetchReciprocalLatticeVector(g);
     }
@@ -2612,7 +2612,7 @@ int ExcitonTB::fetchReciprocalLatticeVector(arma::rowvec G){
         }
     }
 
-    std::cout << "Reciprocal lattice vector G not found in the reciprocal lattice." << std::endl;
+    std::cout << "Reciprocal lattice vector G = (" << G(0) << ", " << G(1) << ") not found in the reciprocal lattice." << std::endl;
 
     return -1; // G not found
 }
