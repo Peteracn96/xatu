@@ -23,12 +23,13 @@ double my_coulomb(double r) {
 int main(int argc, char* argv[]){
 
     // Parse console stdin
+    int n_args = 5;
 
-    if (argc != 5){
+    if (argc != n_args){
 		throw std::invalid_argument("Error: Two input files are expected");
 	}
-    else if (argc < 5){
-        throw std::invalid_argument("Error: At least two input file are required (system config, exciton config and screening config).");
+    else if (argc < n_args){
+        throw std::invalid_argument("Error: At least two input file are required (system config, exciton config, screening config and screening data file).");
     };
 
     std::string modelfile = argv[1];
@@ -43,15 +44,17 @@ int main(int argc, char* argv[]){
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    // systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
-    systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    // systemConfig.reset(new xatu::SystemConfiguration(modelfile));
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
     excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
+    // xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig);
+
     exciton.setMode(excitonConfig->excitonInfo.mode);
-    // exciton.system->setAU(true); // Comment if input model is not CRYSTAL
+    exciton.system->setAU(true); // Comment if input model is not CRYSTAL
 
     exciton.brillouinZoneMesh(exciton.ncell);
     exciton.initializeHamiltonian();
@@ -71,7 +74,7 @@ int main(int argc, char* argv[]){
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
 
     xatu::printEnergies(results, nstates, decimals);
-
+    /*
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
     std::cout << "|                                    Output                                 |" << std::endl;
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
@@ -124,7 +127,7 @@ int main(int argc, char* argv[]){
     if(writeAbs){
         std::cout << "Writing absorption spectrum fo file... " << std::endl;
         results->writeAbsorptionSpectrum();
-    }
+    }*/
 
     return 0;
 }
