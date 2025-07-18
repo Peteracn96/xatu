@@ -112,19 +112,19 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     this->percentage_ = percentage;
 
     if (cfg.excitonInfo.Gcutoff_found){
-        this->Gcutoff_ = cfg.excitonInfo.Gc_ReciprocalVectors;
+        this->Gc_exciton_ = cfg.excitonInfo.Gc_ReciprocalVectors;
     } else {
-        this->Gcutoff_ = (this->ncell)/2.5 * arma::norm(system->reciprocalLattice.row(0));
+        this->Gc_exciton_ = (this->ncell)/2.5 * arma::norm(system->reciprocalLattice.row(0));
     }
 
     if (this->mode == "reciprocalspace"){
         if (this->trunreciprocalLattice_.is_empty()){
 
-            double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
-            radius = this->Gcutoff_;
-            this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(radius);
+            // double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
+            // radius = this->Gcutoff_;
+            this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gc_exciton_);
 
-            this->nReciprocalVectors_ = system_->truncateReciprocalSupercell(this->Gc_exciton_).n_rows;
+            this->nReciprocalVectors_ = this->trunreciprocalLattice_.n_rows;
 
             if (this->nReciprocalVectors_ > (int)this->trunreciprocalLattice_.n_rows){
                 throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
@@ -244,15 +244,15 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::ivec ts             = cfg.screeningInfo.ts;
     uint ncell_aux            = cfg.screeningInfo.ncell_aux;
     bool model_has_spin       = cfg.screeningInfo.spin;
-    // double percentage         = cfg.screeningInfo.percentage; 
     bool isotropic            = cfg.screeningInfo.isotropic;
-
+    double Gcutoff            = cfg.screeningInfo.Gcutoff;
     this->ts_ = ts;
 
-    this->isscreeningset = true;
-    this->function_ = function;
-    this->ncell_aux_ = ncell_aux;
-    this->nk_aux_ = pow(ncell_aux, 2);
+    this->isscreeningset      = true;
+    this->function_           = function;
+    this->ncell_aux_          = ncell_aux;
+    this->nk_aux_             = pow(ncell_aux, 2);
+    this->Gcutoff_            = Gcutoff;
 
     uint totalvbands = system->fermiLevel + 1;
     uint totalcbands = system->basisdim - totalvbands;
@@ -375,11 +375,14 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         }
 
     } else if (this->mode == "reciprocalspace"){
-        double radius = this->Gcutoff_ * arma::norm(system->reciprocalLattice.row(0));
-        radius = this->Gcutoff_; //This is temporary to see if it works. It seems it works, however need to discuss this further with Toni
+        double radius = this->Gcutoff_;
         this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(radius);
 
         uint ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
+
+        if (ngs < this->nReciprocalVectors) {
+            throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the screening (" + std::to_string(ngs) + ") may not be less than the number of vectors included for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") .");
+        }
 
         if (cfg.screeningInfo.function == "dielectric" || cfg.screeningInfo.function == "polarizability"){
             if (gs(0) >= ngs || gs(1) >= ngs){
@@ -1355,7 +1358,7 @@ std::complex<double> ExcitonTB::realSpaceInteractionTerm(const arma::cx_vec& coe
  * @param kQ kpoint corresponding to k + Q.
  * @param k2Q kpoint corresponding to k' + Q.
  * @param potential Potential used to compute the matrix element (Coulomb, Keldysh or dielectric function within RPA)
- * @param nrcells Number of reciprocal vectors included in the double sum over G and G'
+ * @param nGs Number of reciprocal vectors included in the sum over G (and G')
  * @return Interaction term.
  */
 std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& coefsK, 
@@ -1367,7 +1370,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                                      const arma::rowvec& kQ, 
                                      const arma::rowvec& k2Q,
                                      std::string potential,
-                                     int nrcells) {
+                                     int nGs) {
     
     std::complex<double> Ic, Iv;
     std::complex<double> term = 0;
@@ -1375,21 +1378,27 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     arma::mat reciprocalVectors = this->trunreciprocalLattice_;
     //int Gcutoff = system_->truncateReciprocalSupercell(radius).n_rows;
 
-    // arma::rowvec null_vector(3,arma::fill::zeros);
+    arma::rowvec null_vector(3,arma::fill::zeros);
 
-    // arma::rowvec k_dif = k - k2;
+    arma::rowvec k_dif = k - k2;
     // arma::rowvec kQ_dif = kQ - k2Q;
 
-    // int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
+    int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
     // int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
-    // arma::rowvec k_eff = system->kpoints.row(k_eff_index);
+    arma::rowvec k_eff = system->kpoints.row(k_eff_index);
     // arma::rowvec kQ_eff = system->kpoints.row(kQ_eff_index);
 
-    // arma::rowvec g = k_dif - k_eff;
-    // uint g_index = this->fetchReciprocalLatticeVector(g);
+    arma::rowvec g = k_dif - k_eff;
+
+    uint g_index = 0;
+    
+    if (arma::norm(g) > 1E-7) 
+    {
+        g_index = this->fetchReciprocalLatticeVector(g);
+    }
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
-        for(int ig = 0; ig < nrcells; ig++){
+        for(int ig = 0; ig < nGs; ig++){
             auto G = reciprocalVectors.row(ig);
 
             Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
@@ -1398,7 +1407,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
             term += Ic*this->coulombFT(ig, ig, k - k2)*conj(Iv);
         }
     } else if (potential == "keldysh"){
-        for(int ig = 0; ig < nrcells; ig++){
+        for(int ig = 0; ig < nGs; ig++){
             auto G = reciprocalVectors.row(ig);
 
             Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
@@ -1407,16 +1416,29 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
             term += conj(Ic)*this->keldyshFT(k - k2 + G)*Iv; // conj(Ic)*this->keldyshFT(ig, ig, k_eff)*Iv;
         }
     } else if (potential == "rpa"){
-        for(int ig = 0; ig < nrcells; ig++){
-            auto G = reciprocalVectors.row(ig);
+        for(int ig = 0; ig < nGs; ig++){
             
-            for(int ig2 = 0; ig2 < nrcells; ig2++){
-                auto G2 = reciprocalVectors.row(ig2);
+            int G_index = ig;
+            auto G = reciprocalVectors.row(ig) + g;
+
+            if (arma::norm(g) > 1E-7) 
+            {
+                G_index = this->fetchReciprocalLatticeVector(G);
+            }
+            
+            for(int ig2 = 0; ig2 < nGs; ig2++){
+                int G2_index = ig2;
+                auto G2 = reciprocalVectors.row(ig2) + g;
+
+                if (arma::norm(g) > 1E-7) 
+                {
+                    G2_index = this->fetchReciprocalLatticeVector(G2);
+                }
 
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-                term += conj(Ic)*this->rpaFT(ig, ig2, k - k2)*Iv;
+                term += conj(Ic)*this->rpaFT(G_index, G2_index, k_eff)*Iv;
             }
         }
     } else {
@@ -1727,7 +1749,11 @@ void ExcitonTB::initializeHamiltonian(){
     std::cout << "Initializing basis for BSE... " << std::flush;
     initializeBasis();
     generateBandDictionary();
-    printReciprocalLattice();
+
+    if (this->mode == "reciprocal") {
+        printReciprocalLattice();
+    }
+    
     initializeResultsH0();
 }
 
@@ -3313,7 +3339,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             std::cout << percentage << "%, " << std::flush;
         }
         // Comment is temporary
-        std::cout << "Done.\nComputing regularization for term W00(0)..." << std::endl;
+        std::cout << "Done.\n" << std::endl;
 
         this->compute_ScreenedPotential_regularization(this->isotropic);
     }
@@ -4362,7 +4388,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
  */
 void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropic)
 {
-    std::cout << "\nComputing regularization for term W00(q = 0)..." << std::endl;
+    std::cout << "\nComputing regularization for term W00(q = 0)... " << std::flush;
 
     // Takes the k vector of the BZ for the exciton closest to the origin
     arma::mat k_mat_aux = system->kpoints;
@@ -4385,6 +4411,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
         this->W00_at_0_ = (2 + this->r0*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
 
+        std::cout << "Done.\n" << std::endl;
         return;
     }
 
@@ -4416,7 +4443,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
         this->eigveckqStack_.slice(i) = auxEigvec;
     }
 
-    std::cout << " done, " << std::endl;
+    std::cout << "done, " << std::flush;
 
     std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, null_vector, q0);
 
@@ -4522,7 +4549,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
 
-    std::cout << " Regularization computed with success." << std::endl;
+    std::cout << "regularization computed with success." << std::endl;
 }
 
 /**
@@ -5855,7 +5882,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
         int read_nqs = (line_counter-1)/ngs; // Last line stores info for W_00(0) regularization
 
         if (nqs != read_nqs) {
-            std::cout << "The number of k points read from file  (" + std::to_string(nqs) + ")  and from the configuration file (" + std::to_string(read_nqs) + ") do not coincide! Terminating." << std::endl;
+            std::cout << "The number of k points read from data file  (" + std::to_string(read_nqs) + ")  and from the exciton configuration file (" + std::to_string(nqs) + ") do not coincide!\n The exciton can not be computed with the provided screening data file. Terminating." << std::endl;
             exit(0); 
         }
 
