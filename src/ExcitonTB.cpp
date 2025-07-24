@@ -852,6 +852,15 @@ void ExcitonTB::setq_points_list(arma::mat q_points)
     this->qpoints_list_ = q_points;
 }
 
+/**
+ * Sets the percentage for regularization radius q0 for reciprocal space calculation of the exciton
+ * @param percentage
+ * @return void
+*/
+void ExcitonTB::setPercentage(double percentage){
+    this->percentage_ = percentage;
+}
+
 /* ------------------------------ Getters ------------------------------ */
 int ExcitonTB::getNGs() const {
 
@@ -1173,15 +1182,7 @@ double ExcitonTB::keldyshFT(arma::rowvec q) const {
     double qnorm = arma::norm(q);
 
     if (qnorm < eps){
-        potential = 0;
-        double percentage = this->percentage; // 0.48;
-
-        if (percentage == 0.0) {
-            return 0;
-        }
-
-        double q0 = percentage*arma::norm(arma::rowvec({0.024184, 0.0418879})); //2/r0;
-        potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
+        return this->W00_at_0_;
     }
     else{
         potential = 1/(qnorm*(1 + r0*qnorm));
@@ -1392,10 +1393,6 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     uint g_index = 0;
     
-    if (arma::norm(g) > 1E-12) 
-    {
-        g_index = this->fetchReciprocalLatticeVector(g);
-    }
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
         for(int ig = 0; ig < nGs; ig++){
@@ -3224,6 +3221,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
         uint nGs = ReciprocalVectors.n_rows;
 
+
         // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
         if (this->Chimatrix_.is_empty()) {
             this->Chimatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
@@ -3341,7 +3339,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         // Comment is temporary
         std::cout << "Done.\n" << std::endl;
 
-        this->compute_ScreenedPotential_regularization(this->isotropic);
     }
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
@@ -4395,6 +4392,9 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     sortVectors(k_mat_aux);
     arma::rowvec q0 = this->percentage*k_mat_aux.row(1); 
 
+    std::cout << "\nchosen percentage = " << this->percentage << "." <<std::endl;
+    std::cout << "regularization radius q0 = " << arma::norm(q0) << "." << std::endl;
+
     uint basisdim = this->system->basisdim;
     uint nk = this->nk_aux;
 
@@ -4410,6 +4410,8 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     if (this->potential_ == "keldysh"){
 
         this->W00_at_0_ = (2 + this->r0*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
+
+        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
 
         std::cout << "Done.\n" << std::endl;
         return;

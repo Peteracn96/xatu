@@ -42,7 +42,7 @@ class ScreeningConfiguration : public ConfigurationBase{
         // Number of k points in each direction for the auxiliary coarser BZ mesh
         int ncell_aux = 17;
         // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
-        double percentage = 0.5;
+        // double percentage = 0.5;
         // Is system isotropic
         bool isotropic = true;
     };
