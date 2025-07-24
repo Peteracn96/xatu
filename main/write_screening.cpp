@@ -40,7 +40,7 @@ int main(int argc, char* argv[]){
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    //systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    // systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
     systemConfig.reset(new xatu::SystemConfiguration(modelfile));
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
     excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
@@ -49,6 +49,13 @@ int main(int argc, char* argv[]){
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
     exciton.setMode(excitonConfig->excitonInfo.mode);
     // exciton.system->setAU(true); // Comment if input model is not CRYSTAL
+
+    std::cout << "+---------------------------------------------------------------------------+" << std::endl;
+    std::cout << "|                                  Parameters                               |" << std::endl;
+    std::cout << "+---------------------------------------------------------------------------+" << std::endl;
+    
+    std::cout << "System configuration file: " << modelfile << "\n" << std::endl;
+    std::cout << "q points file file:        " << q_points_file << "\n" << std::endl;
 
 
     exciton.brillouinZoneMesh(exciton.ncell);
@@ -77,13 +84,18 @@ int main(int argc, char* argv[]){
 
     exciton.compute_2D_DielectricMatrix(q_points_file);
 
+    size_t lastindex = q_points_file.find_last_of("."); 
+    std::string rawname = q_points_file.substr(0, lastindex); 
+
     exciton.invertDielectricMatrix();
 
-    // exciton.writePolarizabilityMatrix("../" + q_points_file + "_polarizability.dat");
+    // exciton.writePolarizabilityMatrix(rawname + "_polarizability.dat");
 
-    exciton.writeInverseDielectricMatrix("../" + q_points_file + "_inv_epsilon.dat");
+    // exciton.writeDielectricMatrix(rawname + "_epsilon.dat");
 
-    // exciton.writeDielectricMatrix("../" + q_points_file + "_epsilon.dat");
+    exciton.writeInverseDielectricMatrix(rawname + "_inv_epsilon.dat");
+
+    
 
     return 0;
 }
