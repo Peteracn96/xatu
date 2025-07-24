@@ -4407,6 +4407,12 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     uint nGs = ReciprocalVectors.n_rows;
 
+    if (this->percentage == 0.0) {
+        this->W00_at_0_ = 0.0;
+        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
+        return;
+    }
+
     if (this->potential_ == "keldysh"){
 
         this->W00_at_0_ = (2 + this->r0*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
