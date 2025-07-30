@@ -4392,8 +4392,6 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     sortVectors(k_mat_aux);
     arma::rowvec q0 = this->percentage*k_mat_aux.row(1); 
 
-    std::cout << "\nchosen percentage = " << this->percentage << "." <<std::endl;
-    std::cout << "regularization radius q0 = " << arma::norm(q0) << "." << std::endl;
 
     uint basisdim = this->system->basisdim;
     uint nk = this->nk_aux;
@@ -4403,6 +4401,9 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
     double q0_norm = arma::norm(q0);
     arma::rowvec null_vector = {0., 0., 0.};
+
+    std::cout << "\nchosen percentage = " << this->percentage << "." <<std::endl;
+    std::cout << "regularization radius q0 = " << q0_norm << "." << std::endl;
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     uint nGs = ReciprocalVectors.n_rows;
