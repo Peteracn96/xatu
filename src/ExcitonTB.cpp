@@ -1391,8 +1391,9 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     arma::rowvec g = k_dif - k_eff;
 
-    uint g_index = 0;
-    
+    uint g_index = this->fetchReciprocalLatticeVector(g);
+
+    int G_index = 0;
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
         for(int ig = 0; ig < nGs; ig++){
@@ -1405,7 +1406,12 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
         }
     } else if (potential == "keldysh"){
         for(int ig = 0; ig < nGs; ig++){
-            auto G = reciprocalVectors.row(ig);
+            auto G = reciprocalVectors.row(ig) + g;
+
+            if (arma::norm(g) > 1E-7) 
+            {
+                G_index = this->fetchReciprocalLatticeVector(G);
+            }
 
             Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
