@@ -1393,26 +1393,24 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     int g_index = this->fetchReciprocalLatticeVector(g);
 
-    // std::cout << "g_index = " << g_index << std::endl;
-    
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
         for(int ig = 0; ig < nGs; ig++){
-            auto G = reciprocalVectors.row(ig);
+            arma::rowvec G = reciprocalVectors.row(ig);
 
             Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
 
-            term += Ic*this->coulombFT(ig, ig, k - k2)*conj(Iv);
+            term += conj(Ic)*this->coulombFT(ig, ig, k - k2 + G)*Iv;
         }
     } else if (potential == "keldysh"){
         for(int ig = 0; ig < nGs; ig++){
-            auto G = reciprocalVectors.row(ig);
+            arma::rowvec G = reciprocalVectors.row(ig);
 
             Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
 
-            term += conj(Ic)*this->keldyshFT(k - k2 + G)*Iv; // conj(Ic)*this->keldyshFT(ig, ig, k_eff)*Iv;
+            term += conj(Ic)*this->keldyshFT(k - k2 + G)*Iv;
         }
     } else if (potential == "rpa"){
         for(int ig = 0; ig < nGs; ig++){
@@ -3241,7 +3239,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
         uint nGs = ReciprocalVectors.n_rows;
-        nGs = 9; // For the moment, only 9 G vectors are considered in the calculation
 
         // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
         if (this->Chimatrix_.is_empty()) {
@@ -3306,7 +3303,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 this->eigvalkqStack_.col(ik) = auxEigVal;
                 this->eigveckqStack_.slice(ik) = auxEigvec;
             };
-            std::cout << nGs << ", " << std::flush;
+
             #pragma omp parallel for 
             for (uint ig = 0; ig < nGs*(nGs+1)/2; ig++){
                 uint g  = indecesqg.row(ig)(0);
@@ -3422,7 +3419,6 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
         uint nGs = ReciprocalVectors.n_rows;
-        nGs = 9; // For the moment, only 9 G vectors are considered in the calculation
 
         // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
         if (this->Chimatrix_.is_empty()) {
@@ -4333,7 +4329,7 @@ void ExcitonTB::invertDielectricMatrix(){
 
         uint nGs = this->trunreciprocalLattice_.n_rows;
         uint Nqtotal = this->epsilonmatrix_.n_slices; // The number of q points can be different from the BZ mesh size
-        nGs = 9; // For the moment, only 9 G vectors are considered in the calculation
+
         if (Nqtotal < 1) {
             std::cout << "Dielectric matrix must have been computed at least at one point." << std::endl;
             exit(0);
@@ -5627,7 +5623,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) {
 
         uint ngs = this->epsilonmatrix_.slice(0).n_rows;         // The number of G vectors can in general be different from the number of generated G vectors
         uint nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
-        nGs = 9; // For the moment, only 9 G vectors are considered in the calculation
+
         if (ngs == 0 || nqs == 0){
             std::cout << "Dielectric matrix was not computed. Exiting." << std::endl;
             exit(0);
