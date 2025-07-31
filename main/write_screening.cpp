@@ -40,16 +40,27 @@ int main(int argc, char* argv[]){
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    // systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
-    systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    if (modelfile.find(".outp") != std::string::npos){
+        systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    }
+    else if (modelfile.find(".model") != std::string::npos){
+        systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    } else {
+        throw std::invalid_argument("Error: Unsupported system configuration file format. Use .outp or .model files.");
+    }
+
+
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
     excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
     exciton.setMode(excitonConfig->excitonInfo.mode);
-    // exciton.system->setAU(true); // Comment if input model is not CRYSTAL
 
+    if (modelfile.find(".outp") != std::string::npos){
+        exciton.system->setAU(true); // if input model is CRYSTAL
+    }
+    
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
     std::cout << "|                                  Parameters                               |" << std::endl;
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
