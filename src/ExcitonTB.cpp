@@ -3508,7 +3508,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
 
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
 
-                double potentialg = std::sqrt(coulomb_2D_FT(q + G)); // double potentialg = coulomb_2D_FT(q + G);
+                double potentialg = coulomb_2D_FT(q + G); // double potentialg = coulomb_2D_FT(q + G);
 
                 double kroneckerdelta = g == g2? 1 : 0;
 
