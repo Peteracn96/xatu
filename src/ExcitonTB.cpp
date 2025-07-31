@@ -1409,10 +1409,10 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
         for(int ig = 0; ig < nGs; ig++){
             auto G = reciprocalVectors.row(ig);
 
-            Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G-g);
-            Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G-g);
+            Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
+            Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
 
-            term += conj(Ic)*this->keldyshFT(k_eff + G)*Iv; // conj(Ic)*this->keldyshFT(ig, ig, k_eff)*Iv;
+            term += conj(Ic)*this->keldyshFT(k - k2 + G)*Iv; // conj(Ic)*this->keldyshFT(ig, ig, k_eff)*Iv;
         }
     } else if (potential == "rpa"){
         for(int ig = 0; ig < nGs; ig++){
@@ -3444,18 +3444,15 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
 
         arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
 
-        // Generates all the combinations of (k,G,G') indices
+        // Generates all the combinations of (G,G') indices
         uint i = 0;
-        //for (uint iq = 0; iq < Nqpoints; iq++){
-            for (uint g = 0; g < nGs; g++){
-                for (uint g2 = g; g2 < nGs; g2++){
-                    //indecesqg.row(i)(0) = iq;
-                    indecesqg.row(i)(0) = g;
-                    indecesqg.row(i)(1) = g2;
-                    i++;
-                }
+        for (uint g = 0; g < nGs; g++){
+            for (uint g2 = 0; g2 < nGs; g2++){
+                indecesqg.row(i)(0) = g;
+                indecesqg.row(i)(1) = g2;
+                i++;
             }
-        //}
+        }
 
         printReciprocalLattice();
 
@@ -3464,10 +3461,15 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
         vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
 
-        double d = arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(arma::abs(system->motif.col(2))));
+        double d = arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(arma::abs(system->motif.col(2)))); // Or set it manually
 
         if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
             d = 3; // If the material is hBN, set thickness to 3.3 Angstroms
+        }
+
+        if (d < 1e-6) {
+            std::cout << "Thickness of the material is is null. Set it to a finite value. Terminating." << std::endl;
+            exit(1);
         }
 
         std::cout << "Computation at\n" << std::flush;
@@ -3495,7 +3497,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
             };
             std::cout << nGs << ", " << std::flush;
             #pragma omp parallel for 
-            for (uint ig = 0; ig < nGs*(nGs+1)/2; ig++){
+            for (uint ig = 0; ig < nGs*nGs; ig++){
                 uint g  = indecesqg.row(ig)(0);
                 uint g2 = indecesqg.row(ig)(1);
 
@@ -3505,14 +3507,12 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
                 std::complex<double> Chi = this->compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
 
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
-                this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
 
-                double potentialg = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2)); // double potentialg = coulomb_2D_FT(q + G);
-                double potentialg2 = coulomb_2D_FT(q + G2);
+                double potentialg = std::sqrt(coulomb_2D_FT(q + G)); // double potentialg = coulomb_2D_FT(q + G);
+
                 double kroneckerdelta = g == g2? 1 : 0;
 
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
-                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
             }
 
             // These lines are temporary
