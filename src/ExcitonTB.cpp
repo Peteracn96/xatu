@@ -147,7 +147,9 @@ void ExcitonTB::verifypotential(){
     }
 
     if ((this->potential_ != "rpa" || (this->exchangePotential_ != "rpa" && this->exchange)) && this->isscreeningset == true && this->function_ == "exciton") {
-        continueprompt("You have provided a screening file, yet you have not chosen the rpa potential.\nDo you wish to continue?[y/n]\n");
+        // continueprompt("You have provided a screening file, yet you have not chosen the rpa potential.\nDo you wish to continue?[y/n]\n");
+        std::cout << "You have provided a screening file, yet you have not chosen the rpa potential." << std::endl;
+        exit(1);
     }
 }
 
@@ -2810,10 +2812,13 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         arma::vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
         
+        std::cout << "q point " << std::flush;
+
+        # pragma omp parallel for
         for (uint iq = 0; iq < Nqpoints; ++iq)
         {
             arma::rowvec q = q_points.row(iq);
-            
+
             for (uint i = 0; i < nk_aux; i++)
             {
                 arma::rowvec kq = this->kpoints_aux.row(i) + q;
@@ -2823,9 +2828,11 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                 this->eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
                 this->eigveckqStack_test[iq].slice(i) = auxEigvec;
             };
+
+            std::cout << iq + 1 << ", " << std::flush;
         }
 
-        std::cout << "Done. \nComputing dielectric matrix in the BZ mesh... \n" << std::flush;
+        std::cout << "\nDone. \nComputing dielectric matrix in the BZ mesh... \n" << std::flush;
 
         arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
