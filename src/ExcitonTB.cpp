@@ -1418,27 +1418,16 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     } else if (potential == "rpa"){
         for(int ig = 0; ig < nGs; ig++){
             
-            int G_index = ig;
-            auto G = reciprocalVectors.row(ig) + g;
-
-            if (arma::norm(g) > 1E-7) 
-            {
-                G_index = this->fetchReciprocalLatticeVector(G);
-            }
+            auto G = reciprocalVectors.row(ig) - g;
             
             for(int ig2 = 0; ig2 < nGs; ig2++){
-                int G2_index = ig2;
-                auto G2 = reciprocalVectors.row(ig2) + g;
 
-                if (arma::norm(g) > 1E-7) 
-                {
-                    G2_index = this->fetchReciprocalLatticeVector(G2);
-                }
+                auto G2 = reciprocalVectors.row(ig2) - g;
 
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-                term += conj(Ic)*this->rpaFT(G_index, G2_index, k_eff)*Iv;
+                term += conj(Ic)*this->rpaFT(ig, ig2, k_eff)*Iv;
             }
         }
     } else {
@@ -2932,6 +2921,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
             /**** Refactorization of code to make it more efficient - Asymmetric part of the BZ*****/
 
+            std::cout << " (Number of k points is even. Computing the dielectric matrix at the asymmetric part of the BZ... )" << std::endl;
             uint iq_test = 0;
             arma::rowvec q_test = q_points.row(iq_test);
 
@@ -2957,8 +2947,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
                     std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
 
-                    double potentialg = coulombFT(g, g, q); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
-                    double potentialg2 = coulombFT(g2, g2, q); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
+                    double potentialg =  std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, q);
+                    double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g2, g2, q));
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
@@ -3017,7 +3007,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
             /**** Refactorization of code to make it more efficient - Center symmetric part of the BZ*****/
 
-    
+            std::cout << " (Computing the dielectric matrix at the center-symmetric part of the BZ... )" << std::endl;
+
             // Computes the dielectric matrix at the centersymmetric submesh of the BZ
             uint iq_i = (2 * Ncells - 1);
             uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
@@ -3062,11 +3053,11 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->Chimatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = Chi;
                     this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = std::conj(Chi);
 
-                    double potentialg = coulombFT(g, g, q); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
-                    double potentialg2 = coulombFT(g2, g2, q); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
+                    double potentialg  = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, q);
+                    double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
 
-                    double potentialnegativeG = coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex)); // std::sqrt(coulombFT(negativeG, negativeG, q)) * std::sqrt(coulombFT(negativeG2, negativeG2, q)); //
-                    double potentialnegativeG2 = coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex));
+                    double potentialnegativeG  = std::sqrt(coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex))) * std::sqrt(coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex))); // coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex));
+                    double potentialnegativeG2 = std::sqrt(coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex))) * std::sqrt(coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex))); // coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex));
                     double kroneckerdelta = g == g2 ? 1 : 0;
 
                     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * this->Chimatrix_.slice(iq).row(g)(g2);

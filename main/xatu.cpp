@@ -197,13 +197,11 @@ int main(int argc, char* argv[]){
             
             std::string filename_dielectric = excitonConfig->excitonInfo.label;
 
-            bulkExciton.writeDielectricMatrix("../" + filename_dielectric + "_epsilon.dat");
+            // bulkExciton.writeDielectricMatrix("../" + filename_dielectric + "_epsilon.dat");
 
-            bulkExciton.writeInverseDielectricMatrix("../" + filename_dielectric + "_invepsilon.dat");
+            bulkExciton.writeInverseDielectricMatrix(filename_dielectric + "_invepsilon.dat");
 
-            bulkExciton.writePolarizabilityMatrix("../" + excitonConfig->excitonInfo.label + "_polarizability_matrix.dat");
-
-            
+            // bulkExciton.writePolarizabilityMatrix("../" + excitonConfig->excitonInfo.label + "_polarizability_matrix.dat");
 
             std::cout << "\nComputation of the exciton with screening under testing.\n" << std::endl;
 
