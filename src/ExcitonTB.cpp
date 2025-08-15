@@ -1009,16 +1009,13 @@ double ExcitonTB::coulomb(double r, uint i, uint j) const {
 
         if (system->motif.col(4)(i) == 0)
         {
-            std::cout << "Deu bosta. Aqui vai o valor lido: " << system->motif.col(4)(i) << std::endl;
+            std::cout << "Something went wrong, here is the regularization value from input model: " << system->motif.col(4)(i) << std::endl;
         }
         
         return system->motif.col(4)(i);
+    } else{
+        return ec/(4E-10*PI*eps0*r);   
     }
-
-    // if (r > cutoff){
-    //     return 0.0;
-    // }
-    return (r != 0.0) ? ec/(4E-10*PI*eps0*r) : ec*1E10/(4*PI*eps0*regularization);    
 }
 
 /**
