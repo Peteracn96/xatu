@@ -2814,7 +2814,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         
         std::cout << "q point " << std::flush;
 
-        # pragma omp parallel for
         for (uint iq = 0; iq < Nqpoints; ++iq)
         {
             arma::rowvec q = q_points.row(iq);
