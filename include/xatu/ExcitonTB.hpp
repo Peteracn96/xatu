@@ -249,6 +249,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
         double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
         inline std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
+        std::complex<double> compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, double);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec &, const arma::rowvec &, const arma::rowvec &, const int);
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
@@ -270,6 +271,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void compute_2D_DielectricMatrix_at_q(const arma::rowvec&, const int);
         void compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &, const int);
         void compute_2D_DielectricMatrix(std::string);
+        void compute_quasi2D_DielectricMatrix(std::string);
         void compute_ScreenedPotential_regularization(bool);
         void compute_2D_PolarizabilityMatrix(std::string);
         void compute_2D_RPAInvDielectricMatrix(std::string);
