@@ -6159,6 +6159,8 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
         this->W00_at_0_ = (2 + 0.5*(this->slope_ + this->slope_perp_)*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
     }
 
+    std::cout << "Inverse of dielectric matrix read from file with success." << std::endl;
+
     file.close();
 }
 }
