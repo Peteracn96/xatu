@@ -1390,7 +1390,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     arma::rowvec g = k_dif - k_eff;
 
-    uint g_index = this->fetchReciprocalLatticeVector(g);
+    //uint g_index = this->fetchReciprocalLatticeVector(g);
 
     int G_index = 0;
 
@@ -6120,23 +6120,8 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
             double aux;
             column_counter = 0;
             int pair_counter = 0;
-            while(ss >> aux) {   
-                if (column_counter%2 == 0) {
-                    Re_part = aux;
-                } else {
-                    Im_part = aux;
-                    this->Invepsilonmatrix_.slice(k_counter)(line_counter%ngs, (column_counter - 1)/2) = Re_part + imag*Im_part;
-                }
-                column_counter++;
-            }
 
-            //std::cout << "\n";
-            ++line_counter;
-            if (line_counter%ngs == 0){
-                k_counter++;
-            } 
-            
-            if (line_counter == total_lines) {
+            if (line_counter + 1 == total_lines) {
                 column_counter = 0;
                 while(ss >> aux) {   
                     if (column_counter == 0) {
@@ -6152,7 +6137,24 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
                     }
                     column_counter++;
                 }
+                break;
             }
+
+            while(ss >> aux) {   
+                if (column_counter%2 == 0) {
+                    Re_part = aux;
+                } else {
+                    Im_part = aux;
+                    this->Invepsilonmatrix_.slice(k_counter)(line_counter%ngs, (column_counter - 1)/2) = Re_part + imag*Im_part;
+                }
+                column_counter++;
+            }
+
+            //std::cout << "\n";
+            ++line_counter;
+            if (line_counter%ngs == 0){
+                k_counter++;
+            } 
         }
 
         double q0_norm = arma::norm(this->q0_);
