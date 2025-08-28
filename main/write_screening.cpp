@@ -20,6 +20,8 @@ double my_coulomb(double r) {
     //return 1/r;
 }
 
+// command example: ./write_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt
+
 int main(int argc, char* argv[]){
 
     // Parse console stdin
@@ -91,9 +93,9 @@ int main(int argc, char* argv[]){
     //     exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening_" + std::to_string(nGs) + ".dat");
     // }
 
-    //exciton.compute_2D_DielectricMatrix_Opt("MoS2_TB_q_points_test.dat"); not optimal at the end
+    exciton.compute_quasi2D_DielectricMatrix(q_points_file);
 
-    exciton.compute_2D_DielectricMatrix(q_points_file);
+    // exciton.compute_2D_DielectricMatrix(q_points_file);
 
     size_t lastindex = q_points_file.find_last_of("."); 
     std::string rawname = q_points_file.substr(0, lastindex); 
@@ -105,8 +107,6 @@ int main(int argc, char* argv[]){
     // exciton.writeDielectricMatrix(rawname + "_epsilon.dat");
 
     exciton.writeInverseDielectricMatrix(rawname + "_inv_epsilon.dat");
-
-    
 
     return 0;
 }

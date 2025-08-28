@@ -1405,12 +1405,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
         }
     } else if (potential == "keldysh"){
         for(int ig = 0; ig < nGs; ig++){
-            auto G = reciprocalVectors.row(ig) + g;
-
-            if (arma::norm(g) > 1E-7) 
-            {
-                G_index = this->fetchReciprocalLatticeVector(G);
-            }
+            auto G = reciprocalVectors.row(ig);
 
             Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
@@ -2628,7 +2623,7 @@ int ExcitonTB::fetchReciprocalLatticeVector(arma::rowvec G){
 }
 
 /**
- * Method to compute the static 2D polarizability matrix in the BZ mesh.
+ * Method to compute the static 2D dielectric matrix in the BZ mesh.
  * @return void
 */
 void ExcitonTB::compute_2D_DielectricMatrix(){
@@ -3366,7 +3361,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 }
 
 /**
- * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
+ * Method to compute the quasi 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
  * @return void
 */
 void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
@@ -3412,7 +3407,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
 
         std::cout << "Nqpoints = " << Nqpoints << std::endl;
 
-        std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
+        std::cout << "Computing quasi 2D dielectric matrix at the specified q points... \n" << std::flush;
 
         uint nk = this->nk_aux;
         uint basisdim = system->basisdim;
@@ -3436,16 +3431,14 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
         arma::cx_cube epsilonmatrix(Nqpoints,nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
-        arma::imat indecesqg(Nqpoints*nGs*(nGs+1)/2,3,arma::fill::zeros);
-
-        arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
+        arma::imat indecesg(nGs*nGs,2,arma::fill::zeros);
 
         // Generates all the combinations of (G,G') indices
         uint i = 0;
         for (uint g = 0; g < nGs; g++){
             for (uint g2 = 0; g2 < nGs; g2++){
-                indecesqg.row(i)(0) = g;
-                indecesqg.row(i)(1) = g2;
+                indecesg.row(i)(0) = g;
+                indecesg.row(i)(1) = g2;
                 i++;
             }
         }
@@ -3457,14 +3450,14 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
         vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
 
-        double d = arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(arma::abs(system->motif.col(2)))); // Or set it manually
+        double d = 3.2;// arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(arma::abs(system->motif.col(2)))); // Or set it manually
 
         if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
-            d = 3; // If the material is hBN, set thickness to 3.3 Angstroms
+            d = 3.2; // If the material is hBN, set thickness to 3.3 Angstroms
         }
 
         if (d < 1e-6) {
-            std::cout << "Thickness of the material is is null. Set it to a finite value. Terminating." << std::endl;
+            std::cout << "Thickness of the material is null. Set it to a finite value. Terminating." << std::endl;
             exit(1);
         }
 
@@ -3491,11 +3484,11 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
                 this->eigvalkqStack_.col(ik) = auxEigVal;
                 this->eigveckqStack_.slice(ik) = auxEigvec;
             };
-            std::cout << nGs << ", " << std::flush;
+
             #pragma omp parallel for 
             for (uint ig = 0; ig < nGs*nGs; ig++){
-                uint g  = indecesqg.row(ig)(0);
-                uint g2 = indecesqg.row(ig)(1);
+                uint g  = indecesg.row(ig)(0);
+                uint g2 = indecesg.row(ig)(1);
 
                 arma::rowvec G = ReciprocalVectors.row(g);                
                 arma::rowvec G2 = ReciprocalVectors.row(g2);
@@ -3604,7 +3597,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
 
         std::cout << "Nqpoints = " << Nqpoints << std::endl;
 
-        std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
+        std::cout << "Computing polarizability matrix in the specified q points... \n" << std::flush;
 
         uint nk = this->nk_aux;
         uint basisdim = system->basisdim;
