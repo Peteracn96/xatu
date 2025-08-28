@@ -84,8 +84,9 @@ wp=0.0d0
 wn_sp=0.0d0
 sigma_w_sp=0.0d0
 do i=1,nw
-  wp(i)=(w0+(wrange-w0)/dble(nw)*dble(i-1))/27.211385d0
-end do  
+  wp(i)=(w0 + (wrange-w0)/dble(nw)*dble(i-1))/27.211385d0
+  !wp_ex(i)=(w0 + (wrange-w0)/dble(nw)*dble(i-1))/27.211385d0
+end do
 
 !exciton arrays
 norb_ex_band=nv_ex*nc_ex !number of electron-hole pairs per k-point 
