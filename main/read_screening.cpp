@@ -69,9 +69,7 @@ int main(int argc, char* argv[]){
     exciton.brillouinZoneMesh(exciton.ncell);
     exciton.initializeHamiltonian();
 
-    int NGs = exciton.nReciprocalVectors;
-
-    std::cout << "Number of reciprocal vectors used in the calculation: " << NGs << std::endl;
+    exciton.printInformation();
 
     exciton.readInverseDielectricMatrix(inv_epsilon_file);
 
