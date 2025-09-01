@@ -3072,7 +3072,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2);
                 }
 
-                percentage = percentage + ((double)ik + 1)*100./(double)Nqpoints;
+                percentage = ((double)ik + 1)*100./(double)Nqpoints;
 
                 if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
                 {
