@@ -2167,6 +2167,10 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     std::complex<double> term_aux_2 = 0.;
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
+    if (arma::norm(q) < 1E-7 && (arma::norm(G) < 1E-7 || arma::norm(G2) < 1E-7)){
+        return 0.;
+    }
+
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
@@ -3497,9 +3501,13 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
 
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
 
-                double potentialg = coulomb_2D_FT(q + G); // double potentialg = coulomb_2D_FT(q + G);
+                double potentialg = std::sqrt(coulomb_2D_FT(q + G))*std::sqrt(coulomb_2D_FT(q + G2)); // double potentialg = coulomb_2D_FT(q + G);
 
                 double kroneckerdelta = g == g2? 1 : 0;
+
+                if (arma::norm(q + G) < 1e-6 || arma::norm(q + G2) < 1e-6){
+                    potentialg = 0;
+                }
 
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
             }
