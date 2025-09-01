@@ -1390,9 +1390,11 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     arma::rowvec g = k_dif - k_eff;
 
-    //uint g_index = this->fetchReciprocalLatticeVector(g);
+    uint g_index = 0; // this->fetchReciprocalLatticeVector(g);
 
     int G_index = 0;
+
+    // nGs = 1; // no local-field effects
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
         for(int ig = 0; ig < nGs; ig++){
@@ -1415,11 +1417,11 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     } else if (potential == "rpa"){
         for(int ig = 0; ig < nGs; ig++){
             
-            auto G = reciprocalVectors.row(ig) - g;
+            auto G = reciprocalVectors.row(ig); // - g;
             
             for(int ig2 = 0; ig2 < nGs; ig2++){
 
-                auto G2 = reciprocalVectors.row(ig2) - g;
+                auto G2 = reciprocalVectors.row(ig2); // - g;
 
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
@@ -2587,7 +2589,7 @@ void ExcitonTB::PolarizabilityMesh() {
             };
 
             arma::rowvec q = system->kpoints.row(iq);
-            Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, iq);
+            Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, q);
         }
 
         std::cout << "Chi computed" << std::endl;
