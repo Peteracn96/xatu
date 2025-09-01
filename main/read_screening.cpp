@@ -82,7 +82,7 @@ int main(int argc, char* argv[]){
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
 
     xatu::printEnergies(results, nstates, decimals);
-    /*
+    
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
     std::cout << "|                                    Output                                 |" << std::endl;
     std::cout << "+---------------------------------------------------------------------------+" << std::endl;
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]){
     if(writeAbs){
         std::cout << "Writing absorption spectrum fo file... " << std::endl;
         results->writeAbsorptionSpectrum();
-    }*/
+    }
 
     return 0;
 }
