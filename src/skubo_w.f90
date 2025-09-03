@@ -429,6 +429,9 @@ read(10,*) type_broad
 read(10,*)  
 read(10,*) file_name_sp
 read(10,*) file_name_ex
+print *, "Writing absorption spectrum to files:"
+print *, file_name_sp
+print *, file_name_ex
 close(10)
     
 return
