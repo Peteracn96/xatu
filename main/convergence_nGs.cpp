@@ -33,19 +33,19 @@ int main(int argc, char* argv[]){
     int nrmbands = 0;
     arma::rowvec Q = {0., 0., 0.};
     arma::rowvec q = {0.2, 0., 0.};
-    arma::rowvec parameters = {1., 1., 10.};
-    arma::mat q_points_list = {{0.2, 0., 0.}};
+    arma::rowvec parameters = {1., 1., 36.};
+    arma::mat q_points_list = {{0.2,0.0,0.}};
     
     std::string modelfile = argv[1];
     std::string excitonfile = argv[2];
     std::string screeningfile = argv[3];
     
     int nstates = 8;
-    int Nk = 20;
+    int Nk = 60;
     int nG = 25;
     double Gcutoff = 10.0;
     int ncell = 20;
-    arma::vec Gcutoff_array = arma::regspace(3., 3., 54);
+    arma::vec Gcutoff_array = arma::regspace(10, 2., 20);
 
     // FILE* textfile_en = fopen(filename.c_str(), "a");
 
@@ -55,14 +55,24 @@ int main(int argc, char* argv[]){
     std::unique_ptr<xatu::ExcitonConfiguration> excitonConfig;
     std::unique_ptr<xatu::ScreeningConfiguration> screeningConfig;
 
-    systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
-    //systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    if (modelfile.find(".outp") != std::string::npos){
+        systemConfig.reset(new xatu::CRYSTALConfiguration(modelfile, 100));
+    }
+    else if (modelfile.find(".model") != std::string::npos){
+        systemConfig.reset(new xatu::SystemConfiguration(modelfile));
+    } else {
+        throw std::invalid_argument("Error: Unsupported system configuration file format. Use .outp or .model files.");
+    }
+
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
     excitonConfig.reset(new xatu::ExcitonConfiguration(excitonfile));
 
     xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
     bulkExciton.setMode(excitonConfig->excitonInfo.mode);
-    bulkExciton.system->setAU(true);
+    
+    if (modelfile.find(".outp") != std::string::npos){
+        bulkExciton.system->setAU(true); // if input model is CRYSTAL
+    }
 
     std::cout << "System configuration file parsed." << std::endl;
 
@@ -70,7 +80,7 @@ int main(int argc, char* argv[]){
 
     std::cout << "Exciton configuration initialized." << std::endl;
 
-    std::string filename = excitonConfig->excitonInfo.label +  "_inv_epsilon_vs_nGs";
+    std::string filename = excitonConfig->excitonInfo.label +  "_EX_vs_nGs";
 
     cout << "+---------------------------------------------------------------------------+" << endl;
     cout << "|                                  Parameters                               |" << endl;
@@ -86,7 +96,7 @@ int main(int argc, char* argv[]){
 
     arma::cout << "Orbitals: " << bulkExciton.system->orbitals << arma::endl;
     bulkExciton.setMode("reciprocalspace");
-    bulkExciton.setPotential("rpa");
+    bulkExciton.setPotential("keldysh");
 
     cout << "+---------------------------------------------------------------------------+" << endl;
     cout << "|                                Initialization                             |" << endl;
@@ -99,13 +109,11 @@ int main(int argc, char* argv[]){
 
     uint nGs_aux = 0;
 
-    arma::ivec nGs_array(25,arma::fill::zeros);
-    uint j = 0; // Number of points in the plot will be j-1
+    // arma::ivec nGs_array(25,arma::fill::zeros);
+    // uint j = 0; // Number of points in the plot will be j-1
 
-    /*for (int i = 0; i < Gcutoff_array.n_elem; i++)
+    for (int i = 0; i < Gcutoff_array.n_elem; i++)
     {
-
-
         double gc = Gcutoff_array(i);
 
         bulkExciton.setGcutoff(gc);
@@ -117,15 +125,24 @@ int main(int argc, char* argv[]){
             continue;
         }
 
-        nGs_aux = bulkExciton.getNGs();
-        nGs_array(j) = nGs_aux;
-        ++j;
+        std::cout << "Gcutoff: " << gc << std::endl;
+        std::cout << "nGs_aux: " << nGs_aux << std::endl;
+
+        // nGs_aux = bulkExciton.getNGs();
+        // nGs_array(j) = nGs_aux;
+        // ++j;
+
+        bulkExciton.BShamiltonian();
+        auto results = bulkExciton.diagonalize("diag", nstates);
+
+        cout << "+---------------------------------------------------------------------------+" << endl;
+        cout << "|                                    Results                                |" << endl;
+        cout << "+---------------------------------------------------------------------------+" << endl;
+
+        printEnergies(results, nstates, 6);
     }
-
-    std::cout << "Number of Gs for each Gcutoff: " << nGs_array(j - 1) << std::endl;*/
-
     
-    for(int i = 0; i < Gcutoff_array.n_elem; i++){
+    /*for(int i = 0; i < Gcutoff_array.n_elem; i++){
 
         auto start = high_resolution_clock::now();
 
@@ -159,7 +176,7 @@ int main(int argc, char* argv[]){
         ++j;
 
         std::cout << "Computation " << (i + 1)*100 / Gcutoff_array.n_elem << "%% complete." << std::endl;
-    }
+    }*/
 
     return 0;
 };
