@@ -29,7 +29,7 @@ int main(int argc, char* argv[]){
         throw std::invalid_argument("Error: At least two input file are required (system config, exciton config and screening config).");
     };
     
-    int nbands = 1;
+    
     int nrmbands = 0;
     arma::rowvec Q = {0., 0., 0.};
     arma::rowvec q = {0.2, 0., 0.};
@@ -41,11 +41,8 @@ int main(int argc, char* argv[]){
     std::string screeningfile = argv[3];
     
     int nstates = 8;
-    int Nk = 60;
-    int nG = 25;
-    double Gcutoff = 10.0;
-    int ncell = 20;
-    arma::vec Gcutoff_array = arma::regspace(10, 2., 20);
+    double Gcutoff = 10.0;;
+    arma::vec Gcutoff_array = arma::regspace(2, 2., 20);
 
     // FILE* textfile_en = fopen(filename.c_str(), "a");
 
@@ -76,11 +73,12 @@ int main(int argc, char* argv[]){
 
     std::cout << "System configuration file parsed." << std::endl;
 
-    //xatu::ExcitonTB bulkExciton = xatu::ExcitonTB(*systemConfig, ncell, nbands, nrmbands, parameters, Q, Gcutoff, nG);
-
     std::cout << "Exciton configuration initialized." << std::endl;
 
     std::string filename = excitonConfig->excitonInfo.label +  "_EX_vs_nGs";
+
+    int ncell = excitonConfig->excitonInfo.ncell;
+    int nbands = excitonConfig->excitonInfo.nbands;
 
     cout << "+---------------------------------------------------------------------------+" << endl;
     cout << "|                                  Parameters                               |" << endl;
@@ -105,7 +103,7 @@ int main(int argc, char* argv[]){
     bulkExciton.brillouinZoneMesh(ncell);
     bulkExciton.initializeHamiltonian();
 
-    bulkExciton.setq_points_list(q_points_list);
+    // bulkExciton.setq_points_list(q_points_list);
 
     uint nGs_aux = 0;
 

@@ -743,7 +743,8 @@ void ExcitonTB::setGcutoff(double Gcutoff){
     this->Gcutoff_ = Gcutoff;
     uint nGs = this->trunreciprocalLattice_.n_rows;
     this->nGs = nGs;
-
+    this->Gc_exciton_ = Gcutoff;
+    this->nReciprocalVectors_ = nGs;
     if (nGs_aux < nGs) {
         this->trunreciprocalLattice_.submat(0, 0, nGs_aux - 1, 2) = reciprocalLattice_old; // When increasing the G cutoff, conserves the order of the G vectors
     }
@@ -1371,7 +1372,6 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                                      const arma::rowvec& k2Q,
                                      std::string potential,
                                      int nGs) {
-    
     std::complex<double> Ic, Iv;
     std::complex<double> term = 0;
     double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
@@ -4813,10 +4813,10 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
 
     if (this->mode == "reciprocalspace"){
 
-        uint nGs = system->truncateReciprocalSupercell(this->Gc_exciton).n_rows;
+        uint nGs = system->truncateReciprocalSupercell(this->Gc_exciton_).n_rows;
         
         if (this->nReciprocalVectors != nGs) {
-            std::cout << "The number of G vectors to compute the exciton " << this->nReciprocalVectors << " does not match with the number of G vectors in the reciprocal sublattice " << nGs  << " for the cutoff " << this->Gc_exciton  << " angstrom^{-1}." << std::endl; 
+            std::cout << "The number of G vectors to compute the exciton " << this->nReciprocalVectors << " does not match with the number of G vectors in the reciprocal sublattice " << nGs  << " for the cutoff " << this->Gc_exciton_  << " angstrom^{-1}." << std::endl; 
         }
         
         this->compute_ScreenedPotential_regularization(this->isotropic);
