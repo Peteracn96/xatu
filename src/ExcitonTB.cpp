@@ -1390,6 +1390,11 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     arma::rowvec g = k_dif - k_eff;
 
+    uint firstGvector = 1;
+    if (this->Gc_exciton_ < arma::norm(reciprocalVectors.row(firstGvector))){
+        g = null_vector;
+    }
+
     uint g_index = 0; // this->fetchReciprocalLatticeVector(g);
 
     int G_index = 0;
@@ -1417,11 +1422,11 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
     } else if (potential == "rpa"){
         for(int ig = 0; ig < nGs; ig++){
             
-            auto G = reciprocalVectors.row(ig); // - g;
+            auto G = reciprocalVectors.row(ig) - g;
             
             for(int ig2 = 0; ig2 < nGs; ig2++){
 
-                auto G2 = reciprocalVectors.row(ig2); // - g;
+                auto G2 = reciprocalVectors.row(ig2) - g;
 
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
