@@ -286,8 +286,6 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         this->g_s = 2;
     }
 
-    std::cout << "Spin degeneracy is g_s = " << this->g_s << std::endl;
-
     std::vector<arma::s64> valence, conduction;
     int basisdim = system->basisdim;
 
@@ -1868,9 +1866,6 @@ double ExcitonTB::computesinglePolarizability(const arma::rowvec& R, const arma:
 */
 std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::rowvec &q, arma::rowvec &G, arma::rowvec& G2)
 {
-
-    std::cout << "cutoff = " << cutoff << "\n";
-
     std::ofstream polarfile("polarizability_convergence.dat"); 
 
     if (!polarfile.is_open()) { // check if the file was opened successfully
@@ -1889,10 +1884,6 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
 
     int upperindexcband = nvbands + ncbandsincluded - 1;
     int lowerindexvbands = nvbands - nvbandsincluded;
-
-    std::cout << "Total of valence bands = " << nvbands << "\n";
-    std::cout << "Total of conduction bands = " << ncbands << "\n";
-    std::cout << "fermi level = " << system->fermiLevel << "\n";
 
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
@@ -1952,12 +1943,8 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
         auto G = this->trunreciprocalLattice_.row(i);
         std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << "), |G| = " << arma::norm(G) << std::endl;  
     }
-    
-    std::cout << "Selected (G,G') pair:" << "\n";
-    std::cout << "G = G(" << this->Gs(0) << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ")" << std::endl;
-    std::cout << "G' = G(" << this->Gs(1) << ") = (" << G2(0) << ", " << G2(1) << ", " << G2(2) << ")" << std::endl;
 
-    std::cout << "The value of the polarizability according to the correct expression is = " << g_s*term_aux/((std::complex<double>)nk) << std::endl;
+    std::cout << "The value of the polarizability is = " << g_s*term_aux/((std::complex<double>)nk) << std::endl;
 
     return g_s*term_aux/((std::complex<double>)nk);
 }
@@ -2576,12 +2563,14 @@ void ExcitonTB::PolarizabilityMesh() {
             this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk_aux);
             this->eigvalkqStack_ = arma::mat(basisdim, nk_aux);
         }
-
-        #pragma omp parallel for
+        std::cout << "iq = ";
+        // #pragma omp parallel for
         for (uint iq = 0; iq < nq; iq++){
 
             vec auxEigVal(basisdim);
             arma::cx_mat auxEigvec(basisdim, basisdim);
+
+            arma::rowvec q = system->kpoints.row(iq);
 
             for (uint i = 0; i < nk_aux; i++)
             {
@@ -2591,12 +2580,13 @@ void ExcitonTB::PolarizabilityMesh() {
                 this->eigvalkqStack_.col(i) = auxEigVal;
                 this->eigveckqStack_.slice(i) = auxEigvec;
             };
-
-            arma::rowvec q = system->kpoints.row(iq);
+            
+            std::cout << iq << " " << std::flush;
+            
             Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, q);
         }
 
-        std::cout << "Chi computed" << std::endl;
+        std::cout << "\n Chi computed" << std::endl;
         
         for (uint iq = 0; iq < nq; iq++){
             auto q = system_->kpoints.row(iq);
@@ -4837,6 +4827,9 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
     }
 
     if(mode == "reciprocalspace"){
+
+        printReciprocalLattice();
+
         std::complex<double> Chi;
 
         arma::rowvec q = this->q_;
@@ -4866,7 +4859,6 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         };
 
         Chi = computesinglePolarizabilityMatrixElement(q, g, g2);
-        std::complex<double> Chi_aux = this->compute_2D_PolarizabilityMatrixElement(g, g2, q);
 
         double potential = coulombFT(this->Gs_(0), this->Gs_(0), q);
 
@@ -4875,25 +4867,14 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         double d = 7; //arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(system->motif.col(2)));
 
         std::complex<long double> epsilon =  kroneckerdelta - potential*Chi;
-        std::complex<long double> epsilon_aux = kroneckerdelta - potential*Chi_aux;
 
         if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
             d = 3.5; // If the material is hBN, set thickness to 3.5 Angstroms
         }
 
-        std::complex<double> quasi2D_Chi = this->compute_quasi2D_PolarizabilityMatrixElement(g, g2, q, d);
-            
-        std::cout << "Polarizability at q = " << std::setprecision(17) << Chi << std::endl;
-        std::cout << "Or is the Polarizability at q = " << std::setprecision(17) << Chi_aux << " ?\n" << std::endl;
-        std::cout << "Quasi-2D polarizability at q = " << std::setprecision(17) << quasi2D_Chi << " ?\n" << std::endl;
+        std::cout << "\nepsilon_2D(q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
 
-        std::cout << "potential = " << std::setprecision(17) << potential << std::endl;
-
-        std::cout << "\nDielectric function at (q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
-        std::cout << "Dielectric function aux at (q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon_aux) << " + i" << std::imag(epsilon_aux) << std::endl;
-
-
-        std::cout << "\nDielectric function averaged over material's thickness d = " << d << ", at q is " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
+        std::cout << "\nepsilon_Q2D(d = " << d << ") = " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
     }
     
     auto stop = high_resolution_clock::now();
@@ -5948,16 +5929,21 @@ void ExcitonTB::printInformation(){
  * @return void 
  */
 void ExcitonTB::printReciprocalLattice() {
+    double cutoff = this->Gc_exciton;
     uint nGs_to_print = this->trunreciprocalLattice_.n_rows;
     uint nGs_total = this->trunreciprocalLattice_.n_rows;
 
-    std::cout << "Printing the last " << nGs_to_print << " G vectors:\n";
+    std::cout << "Reciprocal lattice vectors within cutoff |G| <= " << cutoff << " (angstrom^-1):" << std::endl;
 
-    for (uint i = nGs_total - nGs_to_print; i < nGs_total; i++) 
+    for (uint i = 0; i < nGs_total; i++) 
     {
         arma::rowvec G = this->trunreciprocalLattice_.row(i);
 
-        std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+        if (arma::norm(G) <= cutoff) {
+            std::cout << "G = G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << ") |G| = " << arma::norm(G) << std::endl;
+        } else {
+            return;
+        }
     }
 }
 
