@@ -7,7 +7,7 @@
 #include "xatu/ExcitonConfiguration.hpp"
 #include "xatu/ScreeningConfiguration.hpp"
 #include "xatu/ResultTB.hpp"
-
+#include <array>
 #ifndef constants
 #define PI 3.141592653589793
 #define ec 1.6021766E-19

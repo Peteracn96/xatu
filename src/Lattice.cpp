@@ -391,47 +391,47 @@ arma::imat Lattice::generateOrderedCombinations(int nvalues, int ndim){
 		ncombinations = (2*nvalues + 1)*(2*nvalues + 1);
 	}
 
-	std:: vector<std::array<int, 2>> combinationsvector;
+	// std:: vector<std::array<int, 2>> combinationsvector;
 
-	arma::imat combinations(ncombinations, ndim);
+	arma::imat combinations(ncombinations, ndim, arma::fill::zeros);
 	
 	//This piece of code generates all the combinations of (l,k) pairs to generate any reciprocal lattice vector l*G1 + k*G2 in a specific order.
-	combinationsvector.push_back({0,0});
+	// combinationsvector.push_back({0,0});
 
-	for (int i = 1; i <= nvalues; i=i+1){
-		for (int j = 0; j <= i; ++j){
+	// for (int i = 1; i <= nvalues; i=i+1){
+	// 	for (int j = 0; j <= i; ++j){
 
-			if (j == 0){
-				combinationsvector.push_back({-i,j});
-				combinationsvector.push_back({i,j});
-				combinationsvector.push_back({j,-i});
-				combinationsvector.push_back({j,i});
-			}
+	// 		if (j == 0){
+	// 			combinationsvector.push_back({-i,j});
+	// 			combinationsvector.push_back({i,j});
+	// 			combinationsvector.push_back({j,-i});
+	// 			combinationsvector.push_back({j,i});
+	// 		}
 
-			if (j != 0 && j != i){
-				combinationsvector.push_back({-i,j});
-				combinationsvector.push_back({i,-j});
-				combinationsvector.push_back({j,-i});
-				combinationsvector.push_back({-j,i});
-				combinationsvector.push_back({-j,-i});
-				combinationsvector.push_back({j,i});
-				combinationsvector.push_back({-i,-j});
-				combinationsvector.push_back({i,j});
-			}
+	// 		if (j != 0 && j != i){
+	// 			combinationsvector.push_back({-i,j});
+	// 			combinationsvector.push_back({i,-j});
+	// 			combinationsvector.push_back({j,-i});
+	// 			combinationsvector.push_back({-j,i});
+	// 			combinationsvector.push_back({-j,-i});
+	// 			combinationsvector.push_back({j,i});
+	// 			combinationsvector.push_back({-i,-j});
+	// 			combinationsvector.push_back({i,j});
+	// 		}
 			
-			if (j == i){
-				combinationsvector.push_back({-i,j});
-				combinationsvector.push_back({i,-j});
-				combinationsvector.push_back({-j,-i});
-				combinationsvector.push_back({j,i});
-			}
-		}
-	}
+	// 		if (j == i){
+	// 			combinationsvector.push_back({-i,j});
+	// 			combinationsvector.push_back({i,-j});
+	// 			combinationsvector.push_back({-j,-i});
+	// 			combinationsvector.push_back({j,i});
+	// 		}
+	// 	}
+	// }
 
-	for (int i = 0; i < ncombinations; ++i){
-		combinations.row(i)(0) = combinationsvector[i][0];
-		combinations.row(i)(1) = combinationsvector[i][1];
-	}
+	// for (int i = 0; i < ncombinations; ++i){
+	// 	combinations.row(i)(0) = combinationsvector[i][0];
+	// 	combinations.row(i)(1) = combinationsvector[i][1];
+	// }
 
 	return combinations;
 }

@@ -183,49 +183,49 @@ arma::mat ExcitonTB::generateReciprocalVectors(int nreciprocal){
         listk(2*i) = i;
     }
 
-    combinations.push_back({0,0});
+    // combinations.push_back({0,0});
 
-    for (int i = 1; i <= nreciprocal; i=i+1){
-        for (int j = 0; j <= i; ++j){
+    // for (int i = 1; i <= nreciprocal; i=i+1){
+    //     for (int j = 0; j <= i; ++j){
 
-            if (j == 0){
-                combinations.push_back({-i,j});
-                combinations.push_back({i,j});
-                combinations.push_back({j,-i});
-                combinations.push_back({j,i});
-            }
+    //         if (j == 0){
+    //             combinations.push_back({-i,j});
+    //             combinations.push_back({i,j});
+    //             combinations.push_back({j,-i});
+    //             combinations.push_back({j,i});
+    //         }
             
 
-            if (j != 0 && j != i){
-                combinations.push_back({-i,j});
-                combinations.push_back({i,-j});
-                combinations.push_back({j,-i});
-                combinations.push_back({-j,i});
-                combinations.push_back({-j,-i});
-                combinations.push_back({j,i});
-                combinations.push_back({-i,-j});
-                combinations.push_back({i,j});
-            }
+    //         if (j != 0 && j != i){
+    //             combinations.push_back({-i,j});
+    //             combinations.push_back({i,-j});
+    //             combinations.push_back({j,-i});
+    //             combinations.push_back({-j,i});
+    //             combinations.push_back({-j,-i});
+    //             combinations.push_back({j,i});
+    //             combinations.push_back({-i,-j});
+    //             combinations.push_back({i,j});
+    //         }
             
-            if (j == i){
-                combinations.push_back({-i,j});
-                combinations.push_back({i,-j});
-                combinations.push_back({-j,-i});
-                combinations.push_back({j,i});
-            }
-        }
-    }
+    //         if (j == i){
+    //             combinations.push_back({-i,j});
+    //             combinations.push_back({i,-j});
+    //             combinations.push_back({-j,-i});
+    //             combinations.push_back({j,i});
+    //         }
+    //     }
+    // }
 
-    if (ncombinations != combinations.size()){
-        std::cout << "Length of combinations vector different from the number of combinations" << std::endl;
-        exit(0);
-    }
+    // if (ncombinations != combinations.size()){
+    //     std::cout << "Length of combinations vector different from the number of combinations" << std::endl;
+    //     exit(0);
+    // }
 
-    for (uint i = 0; i < ncombinations; ++i){
-        int l = combinations[i][0];
-        int k = combinations[i][1];
-        ReciprocalVectors.row(i) = l*G1 + k*G2;
-    }
+    // for (uint i = 0; i < ncombinations; ++i){
+    //     int l = combinations[i][0];
+    //     int k = combinations[i][1];
+    //     ReciprocalVectors.row(i) = l*G1 + k*G2;
+    // }
 
     return ReciprocalVectors;
 }
@@ -1394,9 +1394,6 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
         g_index = this->fetchReciprocalLatticeVector(g);
         g = null_vector;
     }
-
-
-    int G_index = 0;
 
     if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
         for(int ig = 0; ig < nGs; ig++){
@@ -5234,8 +5231,10 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
         if (this->nReciprocalVectors != nGs) {
             std::cout << "The number of G vectors to compute the exciton " << this->nReciprocalVectors << " does not match with the number of G vectors in the reciprocal sublattice " << nGs  << " for the cutoff " << this->Gc_exciton_  << " angstrom^{-1}." << std::endl; 
         }
-        
-        this->compute_ScreenedPotential_regularization(this->isotropic);
+
+        if (this->Invepsilonmatrix_.is_empty()) {
+            this->compute_ScreenedPotential_regularization(this->isotropic);
+        }
     }
     std::cout << "this->nReciprocalVectors: " << this->nReciprocalVectors << std::endl;
     std::cout << "Initializing Bethe-Salpeter matrix... " << std::flush;
