@@ -1218,7 +1218,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     else
     {
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        potential = std::sqrt(coulombFT(g2, g2, q)) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * std::sqrt(coulombFT(g2, g2, q));
+        potential = std::sqrt(coulombFT(g, g, q)) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * std::sqrt(coulombFT(g2, g2, q));
     }
 
     return potential;
@@ -1426,7 +1426,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                 auto G2 = reciprocalVectors.row(ig2) - g;
 
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
-                Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
+                Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
                 term += conj(Ic)*this->rpaFT(ig + g_index, ig2 + g_index, k_eff)*Iv;
             }
