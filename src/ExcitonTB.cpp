@@ -5237,7 +5237,7 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
         
         this->compute_ScreenedPotential_regularization(this->isotropic);
     }
- 
+    std::cout << "this->nReciprocalVectors: " << this->nReciprocalVectors << std::endl;
     std::cout << "Initializing Bethe-Salpeter matrix... " << std::flush;
 
     HBS_ = arma::zeros<cx_mat>(basisDimBSE, basisDimBSE);
