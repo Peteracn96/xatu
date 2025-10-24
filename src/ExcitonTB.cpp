@@ -1740,7 +1740,7 @@ void ExcitonTB::initializeHamiltonian(){
     initializeBasis();
     generateBandDictionary();
 
-    if (this->mode == "reciprocal") {
+    if (this->mode == "reciprocalspace") {
         printReciprocalLattice();
     }
     
