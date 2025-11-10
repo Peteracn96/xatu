@@ -5181,7 +5181,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     }
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
-
+    std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
     std::cout << "regularization computed with success." << std::endl;
 }
 
@@ -5232,9 +5232,9 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
             std::cout << "The number of G vectors to compute the exciton " << this->nReciprocalVectors << " does not match with the number of G vectors in the reciprocal sublattice " << nGs  << " for the cutoff " << this->Gc_exciton_  << " angstrom^{-1}." << std::endl; 
         }
 
-        if (this->Invepsilonmatrix_.is_empty()) {
+        // if (this->Invepsilonmatrix_.is_empty()) {
             this->compute_ScreenedPotential_regularization(this->isotropic);
-        }
+        // }
     }
     std::cout << "this->nReciprocalVectors: " << this->nReciprocalVectors << std::endl;
     std::cout << "Initializing Bethe-Salpeter matrix... " << std::flush;
