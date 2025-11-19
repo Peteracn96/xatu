@@ -1208,17 +1208,38 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
 
     double qnorm = arma::norm(q);
 
-    if (qnorm < eps && g == 0 && g2 == 0){
-        potential = this->W00_at_0_;
-    }
-    else if ((qnorm < eps && g == 0 && g2 != 0) || (qnorm < eps && g != 0 && g2 == 0))
-    {
-        potential = 0.0;
-    }
+    if (qnorm < eps){
+        uint iq0 = system->findEquivalentPointBZ(q, this->ncell_);
+
+        if (g == 0 && g2 == 0){
+            potential = this->W00_at_0_;
+        }
+        else if (g == 0 && g2 != 0)
+        {
+            potential = (4/3)*std::sqrt(coulombFT(0, 0, this->q0_)) * std::sqrt(coulombFT(g2, g2, q));
+        }
+        else if (g != 0 && g2 == 0)
+        {
+            for (uint iG1 = 1; iG1 < this->trunreciprocalLattice_.n_rows; iG1++)
+            {
+                potential += this->Invepsilonmatrix_.slice(iq0).row(g)(iG1) * std::sqrt(coulombFT(0, 0, this->q0_)) * std::sqrt(coulombFT(iG1, iG1, q));
+            }
+            potential = (std::complex<double>)(4/3) * potential;
+        } else {
+            for (uint iG1 = 1; iG1 < this->trunreciprocalLattice_.n_rows; iG1++)
+            {
+                potential += this->Invepsilonmatrix_.slice(iq0).row(g)(iG1) * std::sqrt(coulombFT(iG1, iG1, q)) * std::sqrt(coulombFT(g2, g2, q));
+            }
+            potential = (std::complex<double>)(4/3) * potential;
+        }
+    } 
     else
     {
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        potential = std::sqrt(coulombFT(g, g, q)) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * std::sqrt(coulombFT(g2, g2, q));
+        for (uint iG1 = 1; iG1 < this->trunreciprocalLattice_.n_rows; iG1++)
+        {
+            potential += this->Invepsilonmatrix_.slice(iq).row(g)(iG1) * std::sqrt(coulombFT(iG1, iG1, q)) * std::sqrt(coulombFT(g2, g2, q));
+        }
     }
 
     return potential;
