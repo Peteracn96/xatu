@@ -80,12 +80,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::cx_cube Chimatrix_;
         arma::cx_cube epsilonmatrix_;
         arma::cx_cube Invepsilonmatrix_;
-        arma::cx_cube ChiRPAmatrix_;
-        arma::cx_cube RPAInvepsilonmatrix_;
 
-        arma::mat Polarizabilitymatrix_;
-        arma::mat Wmatrix_;
-        arma::colvec U00_list_;
         double percentage_ = 0; // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
         double W00_at_0_ = 0.0;
         arma::rowvec q0_ = {0.05, 0.0, 0.0};
@@ -110,10 +105,6 @@ class ExcitonTB : public Exciton<SystemTB> {
         const double& Gc_exciton = Gc_exciton_;
         // Return motif vectors where the real space dielectric function is computed at
         const arma::ivec& ts = ts_;
-        // Returns polarizability matrix in real space
-        const arma::mat& Polarizabilitymatrix = Polarizabilitymatrix_;
-        // Returns matrix of the screened potential
-        const arma::mat& Wmatrix = Wmatrix_;
         // Returns auxiliar coarser BZ mesh to compute the dielectric function
         arma::mat& kpoints_aux = kpoints_aux_;
         // Returns percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
@@ -245,16 +236,13 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Static dielectric function
         int fetchReciprocalLatticeVector(arma::rowvec);
-        arma::mat generateReciprocalVectors(int);
         std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
-        double computesinglePolarizability(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
         inline std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         std::complex<double> compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, double);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec &, const arma::rowvec &, const arma::rowvec &, const int);
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const int);
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
-        //double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const;
         std::complex<double> compute_quasi2D_DielectricMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const double);
 
         public:
@@ -264,25 +252,20 @@ class ExcitonTB : public Exciton<SystemTB> {
         void initializeScreeningAttributes(const ScreeningConfiguration&, const std::string);
         void computesingleDielectricFunctionMatrixElement();
         void computesingleInverseDielectricMatrix(std::string);
-        double realPolarizabilityMatrixElement(const arma::rowvec&,const arma::rowvec&, const int, const int) const; //Temporarily public
         void PolarizabilityMesh();
         void compute_2D_DielectricMatrix();
         void compute_quasi2D_DielectricMatrix();
-        void compute_2D_DielectricMatrix_Opt();
-        void compute_2D_DielectricMatrix_at_q(const arma::rowvec&, const int);
-        void compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &, const int);
         void compute_2D_DielectricMatrix(std::string);
         void compute_quasi2D_DielectricMatrix(std::string);
+        void compute_2D_DielectricMatrix_at_q(const arma::rowvec&, const int);
+        void compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &, const int);
         void compute_ScreenedPotential_regularization(bool);
         void compute_2D_PolarizabilityMatrix(std::string);
-        void compute_2D_RPAInvDielectricMatrix(std::string);
-        arma::cx_mat compute_2D_RPAPolarizabilityMatrix_at_q(const arma::rowvec&, const int);
-        arma::cx_mat compute_2D_RPAInvDielectricMatrix_at_q(const arma::rowvec&, const int);
         void invertDielectricMatrix();
         void BShamiltonian();
         void BShamiltonian(const arma::imat& basis);
         std::unique_ptr<ResultTB> diagonalize(std::string method = "diag", int nstates = 8);
-        void CompareInteractionMatrixElements(double, double, std::string);
+
         // Fermi golden rule       
         double pairDensityOfStates(double, double) const;
         void writePairDOS(FILE*, double delta, int n = 100);
@@ -301,16 +284,12 @@ class ExcitonTB : public Exciton<SystemTB> {
         void writeBZtofile() const;
         // Write polarizability matrix in a file
         void writePolarizabilityMatrix(std::string) const;
-        // Write polarizability matrix in a file
-        void writeRPAPolarizabilityMatrix(std::string) const;
         // Read inverse of dielectric matrix in a file
         void readInverseDielectricMatrix(std::string);
         // Write inverse of dielectric matrix in a file
         void writeInverseDielectricMatrix(std::string); // if the user did not compute the inverse dielectric matrix, then the method tries to do it
         // Write dielectric matrix in a file
         void writeDielectricMatrix(std::string) const;
-        // Write inverse of dielectric matrix in a file
-        void writeRPAInverseDielectricMatrix(std::string) const;
 
         // Verifies if potential chosen is 'rpa' and if a screening file was not provided
         void verifypotential();
