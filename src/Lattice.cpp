@@ -377,67 +377,7 @@ arma::mat Lattice::generateCombinations(int nvalues, int ndim, bool centered){
 }
 
 /**
- * Method to generate a list with combinations of Bravais vectors, ordered in a specific way.
- * @details Each row of the list stores the integers which correspond
- * to the coefficients of the linear combinations of Bravais basis vectors.
- * @param nvalues Number of cells in one direction.
- * @param ndim Dimension of the system.
- * @returns List of cell combinations.
-*/
-arma::imat Lattice::generateOrderedCombinations(int nvalues, int ndim){
-	
-	int ncombinations = 0;
-	if (ndim == 2){ //For now implements only 2D systems
-		ncombinations = (2*nvalues + 1)*(2*nvalues + 1);
-	}
-
-	// std:: vector<std::array<int, 2>> combinationsvector;
-
-	arma::imat combinations(ncombinations, ndim, arma::fill::zeros);
-	
-	//This piece of code generates all the combinations of (l,k) pairs to generate any reciprocal lattice vector l*G1 + k*G2 in a specific order.
-	// combinationsvector.push_back({0,0});
-
-	// for (int i = 1; i <= nvalues; i=i+1){
-	// 	for (int j = 0; j <= i; ++j){
-
-	// 		if (j == 0){
-	// 			combinationsvector.push_back({-i,j});
-	// 			combinationsvector.push_back({i,j});
-	// 			combinationsvector.push_back({j,-i});
-	// 			combinationsvector.push_back({j,i});
-	// 		}
-
-	// 		if (j != 0 && j != i){
-	// 			combinationsvector.push_back({-i,j});
-	// 			combinationsvector.push_back({i,-j});
-	// 			combinationsvector.push_back({j,-i});
-	// 			combinationsvector.push_back({-j,i});
-	// 			combinationsvector.push_back({-j,-i});
-	// 			combinationsvector.push_back({j,i});
-	// 			combinationsvector.push_back({-i,-j});
-	// 			combinationsvector.push_back({i,j});
-	// 		}
-			
-	// 		if (j == i){
-	// 			combinationsvector.push_back({-i,j});
-	// 			combinationsvector.push_back({i,-j});
-	// 			combinationsvector.push_back({-j,-i});
-	// 			combinationsvector.push_back({j,i});
-	// 		}
-	// 	}
-	// }
-
-	// for (int i = 0; i < ncombinations; ++i){
-	// 	combinations.row(i)(0) = combinationsvector[i][0];
-	// 	combinations.row(i)(1) = combinationsvector[i][1];
-	// }
-
-	return combinations;
-}
-
-/**
- * Method to generate a list with combinations of Bravais vectors, ordered in a specific way.
+ * Method to generate a list with combinations of primitive reciprocal lattice vectors, ordered in a specific way (they are sorted at another instance).
  * @details Each row of the list stores the integers which correspond
  * to the coefficients of the linear combinations of Bravais basis vectors.
  * @param nvalues Number of cells in one direction.
@@ -509,13 +449,12 @@ arma::mat Lattice::truncateSupercell(int ncell, double radius){
 
 /**
  * Method to generate a list of reciprocal cells contained within a sphere of specified radius.
- * @param ncell List of cells in one direction.
  * @param radius Radius of the cutoff sphere.
- * @returns List of reciprocal cells in cartesian coordinates.
+ * @returns List of (sorted) reciprocal cells in cartesian coordinates.
 */
 arma::mat Lattice::truncateReciprocalSupercell(double radius){
 
-	arma::imat combinations = generateCombinationsGcutoff(radius, ndim);//generateOrderedCombinations(ncell, ndim);
+	arma::imat combinations = generateCombinationsGcutoff(radius, ndim);
 	std::vector<arma::rowvec> cells_vector;
 	for (int i = 0; i < combinations.n_rows; i++){
 		arma::rowvec lattice_vector = arma::zeros<arma::rowvec>(3);
