@@ -29,21 +29,21 @@ int main(int argc, char* argv[]){
         throw std::invalid_argument("Error: At least one input file is required (system config.)");
     };
     
-    int nbands = 2;
+    int nbands = 1;
     int nrmbands = 0;
     arma::rowvec Q = {0., 0., 0.};
-    arma::rowvec parameters = {1., 1., 5.172};
+    arma::rowvec parameters = {1., 1., 36.2};
     std::string modelfile = argv[1];    
     int nstates = 8;
-    double Gc_exciton = 20;
-    double Gcutoff = 20.0;
+    double Gc_exciton = 18.0;
+    double Gcutoff = 18.0;
 
     int ncell = 60;
 
-    arma::vec percentage_array = {1.1, 1.2, 1.3, 1.35, 1.4, 1.45, 1.5, 1.55};
+    arma::vec percentage_array = {1.35,1.4,1.45,1.5,1.55,1.6,1.65,1.7,1.75,1.8,1.9,2.0};
 
     bool writeEigvals = true;
-    std::string filename = "eigval_convergence_hBN_HSE06_Gc_20_0_with_reg_extra.out";
+    std::string filename = "eigval_convergence_MoS2_with_reg_extra.out";
     FILE* textfile_en = fopen(filename.c_str(), "a");
 
     cout << "+---------------------------------------------------------------------------+" << endl;
@@ -65,15 +65,11 @@ int main(int argc, char* argv[]){
 
     bulkExciton.system->setAU(true); // Comment if input model is not CRYSTAL
 
-    arma::cout << "Orbitals: " << bulkExciton.system->orbitals << arma::endl;
-
     bulkExciton.setMode("reciprocalspace");
     bulkExciton.setPotential("keldysh");
 
-    cout << "Valence bands:\n" << bulkExciton.valenceBands << endl;
-    cout << "Conduction bands:\n" << bulkExciton.conductionBands << endl;
-    cout << "Gauge used: " << bulkExciton.gauge << "\n" << endl;
-    
+    bulkExciton.printInformation();
+
     cout << "+---------------------------------------------------------------------------+" << endl;
     cout << "|                                Initialization                             |" << endl;
     cout << "+---------------------------------------------------------------------------+" << endl;
