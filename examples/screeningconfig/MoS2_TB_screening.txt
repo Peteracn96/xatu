@@ -3,10 +3,16 @@
 # conduction.bands
 8
 # vectors
-2 0
+0 0
 # momentum
 0 0 0.
 # function
 exciton
 # motif.vectors
 1 0
+# spin
+false
+# ncell_aux
+15
+# gcutoff
+5

@@ -1,12 +1,14 @@
 # label
-hBN_DFT_Chi
+hBN_DFT_exciton
 # ncells
-20
+60
 # bands
 1
 # Dielectric
-1 1 10
+1 1 5.084
 # potential
 keldysh
-# mode
-realspace
+# gcutoff
+3.0
+# percentage
+0.8
