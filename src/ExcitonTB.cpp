@@ -5181,7 +5181,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     }
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
-
+    std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
     std::cout << "regularization computed with success." << std::endl;
 }
 
