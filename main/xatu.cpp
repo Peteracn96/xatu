@@ -158,7 +158,7 @@ int main(int argc, char* argv[]){
 
     bulkExciton.initializeHamiltonian();
 
-    // If screening flag is present, computes the static dielectric function and exits.
+    // If screening flag is present, computes the static dielectric function first
     if(screeningArg.isSet()){
 
         if (screeningConfig->screeningInfo.function == "dielectric") {
@@ -197,17 +197,8 @@ int main(int argc, char* argv[]){
             
             std::string filename_dielectric = excitonConfig->excitonInfo.label;
 
-            // bulkExciton.writeDielectricMatrix("../" + filename_dielectric + "_epsilon.dat");
-
             bulkExciton.writeInverseDielectricMatrix(filename_dielectric + "_invepsilon.dat");
 
-            // bulkExciton.writePolarizabilityMatrix("../" + excitonConfig->excitonInfo.label + "_polarizability_matrix.dat");
-
-            std::cout << "\nComputation of the exciton with screening under testing.\n" << std::endl;
-
-            //continueprompt("Do you wish to procceed with the computation of the exciton?[y/n]\n");
-            
-            // return 0;
         } else {
             std::cout << "\nThe value '" + screeningConfig->screeningInfo.function + "' assigned to 'function' not recognized. Terminating program.\n" << std::endl;
             return 0;
@@ -302,15 +293,6 @@ int main(int argc, char* argv[]){
         std::cout << "Writing excitons spin fo file: " << filename_spin << std::endl;
         results->writeSpin(nstates, textfile_spin);
     }
-
-    // bool writeInverseDielectricMatrix = screeningArg.isSet();
-    // if(writeInverseDielectricMatrix){
-        // std::string filename_dielectric = output + ".dat";
-        // FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
-
-        // std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
-        // bulkExciton.writeInverseDielectricMatrix(textfile_dielectric);
-    // }
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
