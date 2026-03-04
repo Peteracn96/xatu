@@ -43,21 +43,6 @@ read_screening: main/read_screening.cpp $(OBJECTS)
 write_screening: main/write_screening.cpp $(OBJECTS) 
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 
-convergence_real: main/convergence_real.cpp $(OBJECTS) 
-	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
-
-convergence_reciprocal: main/convergence_reciprocal.cpp $(OBJECTS) 
-	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
-
-convergence_ngs: main/convergence_nGs.cpp $(OBJECTS) 
-	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
-
-screening_example: main/screening_example.cpp $(OBJECTS) 
-	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
-
-rpa_screening: main/rpa_screening.cpp $(OBJECTS) 
-	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
-
 convergence_regularization: main/convergence_regularization.cpp $(OBJECTS) 
 	$(CC) -o bin/$@ $< $(CFLAGS) $(INCLUDE) $(LIBS)
 

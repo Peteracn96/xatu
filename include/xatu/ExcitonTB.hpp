@@ -189,7 +189,6 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Potentials
         double keldysh(double) const;
         void STVH0(double, double*) const;
-        double STVH1(double) const;
         double coulomb(double) const;
         double rpa(double) const; // In principle will accept more than a double
         const potptr selectPotential(std::string);
