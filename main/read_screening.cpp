@@ -58,7 +58,6 @@ int main(int argc, char* argv[]){
 
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
-    // xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig);
 
     exciton.setMode(excitonConfig->excitonInfo.mode);
     

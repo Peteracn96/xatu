@@ -20,7 +20,7 @@ double my_coulomb(double r) {
     //return 1/r;
 }
 
-// command example: ./write_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt
+// command example: ./write_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_q_points_file>.dat
 
 int main(int argc, char* argv[]){
 
@@ -72,41 +72,17 @@ int main(int argc, char* argv[]){
 
 
     exciton.brillouinZoneMesh(exciton.ncell);
-    exciton.initializeHamiltonian();
+    exciton.initializeHamiltonian();    
 
-    exciton.writeBZtofile();
-
-    // const int array_size = 11;
-    // int nGs_array[array_size] = {1,8,9,13,19,30,37,39,43,55,61};
-
-    // for (int gs = 0; gs < array_size; ++gs) {
-
-	//     int nGs = nGs_array[gs];
-
-	//     exciton.setReciprocalVectors(nGs);
-
-    //     // Testing the code for RPA calculation
-    //     exciton.compute_2D_RPAInvDielectricMatrix("MoS2_TB_q_points_test.dat");
-
-    //     exciton.writeRPAPolarizabilityMatrix("MoS2_RPA_polarizability_" + std::to_string(nGs) + ".dat");
-
-    //     exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening_" + std::to_string(nGs) + ".dat");
-    // }
-
-    exciton.compute_quasi2D_DielectricMatrix(q_points_file);
-
-    // exciton.compute_2D_DielectricMatrix(q_points_file);
+    exciton.compute_2D_DielectricMatrix(q_points_file);
+    // exciton.compute_quasi2D_DielectricMatrix(q_points_file);
 
     size_t lastindex = q_points_file.find_last_of("."); 
     std::string rawname = q_points_file.substr(0, lastindex); 
 
-    exciton.invertDielectricMatrix();
+    exciton.invertDielectricMatrix();    
 
-    // exciton.writePolarizabilityMatrix(rawname + "_polarizability.dat");
-
-    // exciton.writeDielectricMatrix(rawname + "_epsilon.dat");
-
-    exciton.writeInverseDielectricMatrix(rawname + "_inv_epsilon.dat");
+    exciton.writeInverseDielectricMatrix(rawname + "_invepsilon.dat");
 
     return 0;
 }
