@@ -5,13 +5,14 @@
 # vectors
 0 0
 # momentum
-0.001  0.   0
+0.  0.  0.
 # function
 dielectric
 # ncell_aux
-10
+15
 # spin
 false
 # isotropic
 true
 # gcutoff
+3.0
