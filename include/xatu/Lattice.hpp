@@ -92,7 +92,6 @@ class Lattice {
         arma::mat truncateSupercell(int, double);
         arma::mat truncateReciprocalSupercell(double);
         arma::mat generateCombinations(int n, int ndim, bool centered = false);
-        arma::imat generateOrderedCombinations(int, int);
         arma::imat generateCombinationsGcutoff(double, int);
 
         /* Crystal operations */
