@@ -67,7 +67,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
         double slope_perp_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0 along the direction perpendicular for slope_
         uint ncell_aux_ = 11; // Number of unit cells used to compute the dielectric function
-        uint nk_aux_ = 121; // Number of k points used to compute the dielectric function
+        uint nk_aux_ = ncell_aux_*ncell_aux_; // Number of k points used to compute the dielectric function
         uint g_s_ = 1; // Spin degeneracy
         arma::mat kpoints_aux_; // Auxiliar coarser BZ mesh to compute the dielectric function
         arma::mat qpoints_list_;
@@ -165,7 +165,6 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setParameters(double, double, double);
         void setGauge(std::string);
         void setMode(std::string);
-        void setReciprocalVectors(double);
         void setRegularization(double);
         void setGcutoff(double);
         void setValenceBands(int);
@@ -183,14 +182,11 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Getters
         int getNGs() const;
 
-        double coulomb(double, uint, uint) const; // Temporarily public while testing
-
     private:
         // Potentials
         double keldysh(double) const;
         void STVH0(double, double*) const;
         double coulomb(double) const;
-        double rpa(double) const; // In principle will accept more than a double
         const potptr selectPotential(std::string);
 
         // Fourier transforms

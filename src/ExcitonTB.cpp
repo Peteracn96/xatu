@@ -427,7 +427,7 @@ ExcitonTB::ExcitonTB(std::shared_ptr<SystemTB> sys, int ncell, const arma::ivec&
     system_ = sys;
     initializeExcitonAttributes(ncell, bands, parameters, Q);
 
-    if ((int)bands.n_elem > system->basisdim){
+    if ((int) bands.n_elem > system->basisdim){
         std::cout << "Error: Number of bands cannot be higher than actual material bands" << std::endl;
         exit(1);
     }
@@ -560,36 +560,12 @@ void ExcitonTB::setMode(std::string mode){
     if(mode != "realspace" && mode != "reciprocalspace"){
         throw std::invalid_argument("setMode(): mode must be either realspace or reciprocalspace");
     }
-    this->mode_ = mode;
-}
 
-/**
- * Sets the number of reciprocal vectors to use if the exciton calculation is set to 'reciprocalspace'.
- * @param Gc_exciton Cutoff for reciprocal lattice vectors included in the calculation of the exciton
- * @return void 
- */
-void ExcitonTB::setReciprocalVectors(double Gc_exciton){
-
-    int nReciprocalVectors = system_->truncateReciprocalSupercell(Gc_exciton).n_rows;
-
-    if(Gc_exciton < 0){
-
-        throw std::invalid_argument("setReciprocalVectors(): given cutoff must be positive");
-
-    } else if ((uint)nReciprocalVectors > this->trunreciprocalLattice_.n_rows && !this->trunreciprocalLattice_.is_empty()) {
-
-        throw std::invalid_argument("setReciprocalVectors(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(nReciprocalVectors) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
-        exit(0);
-
-    } else if (this->trunreciprocalLattice_.is_empty()) {
-
-        std::cout << "The reciprocal lattice vectors for calculating the exciton were not generated. Terminating." << std::endl;
-        exit(0);
-
+    if (mode == "reciprocalspace" && this->trunreciprocalLattice_.is_empty()) {
+        this->trunreciprocalLattice_ = this->system->truncateReciprocalSupercell(this->Gcutoff_);
     }
 
-    this->Gc_exciton_ = Gc_exciton;
-    this->nReciprocalVectors_ = nReciprocalVectors;
+    this->mode_ = mode;
 }
 
 /**
@@ -1423,8 +1399,7 @@ void ExcitonTB::initializeHamiltonian(){
 
     this->excitonbasisdim_ = system->nk*valenceBands.n_elem*conductionBands.n_elem;
     this->totalCells_ = pow(ncell*system->factor, system->ndim);
-    // system->bravaisLattice.print("Bravais Lattice vectors:");
-    // system->motif.print("Motif vectors:");
+
     std::cout << "Initializing basis for BSE... " << std::flush;
     initializeBasis();
     generateBandDictionary();
