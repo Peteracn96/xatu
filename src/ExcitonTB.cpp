@@ -3115,7 +3115,7 @@ ResultTB* ExcitonTB::diagonalizeRaw(std::string method, int nstates){
         std::cout << "Lanczos method..." << std::flush;
 
         arma::cx_vec cx_eigval;
-        //arma::eigs_gen(cx_eigval, eigvec, arma::sp_cx_mat(HBS), nstates, "sr");
+        arma::eigs_gen(cx_eigval, eigvec, arma::sp_cx_mat(HBS), nstates, "sr");
         eigval = arma::real(cx_eigval);
     }
     
