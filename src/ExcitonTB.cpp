@@ -113,7 +113,7 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     if (cfg.excitonInfo.Gcutoff_found){
         this->Gc_exciton_ = cfg.excitonInfo.Gc_ReciprocalVectors;
     } else {
-        this->Gc_exciton_ = (this->ncell)/2.5 * arma::norm(system->reciprocalLattice.row(0));
+        this->Gc_exciton_ = 3.0;
     }
 
     if (this->mode == "reciprocalspace"){
@@ -1540,8 +1540,6 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
     int ncbandsincluded = this->nconductionbands_;
     int upperindexcband = nvbands + ncbandsincluded - 1;
 
-    //int basisdim = nvbands + ncbands;
-
     arma::cx_vec coefskq, coefsk;
 
     std::complex<double> term = 0.;    
@@ -2666,8 +2664,9 @@ void ExcitonTB::invertDielectricMatrix(){
  * @details Computes the purely 2D version.
  * @return void
 */
-void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
-    auto start = high_resolution_clock::now();
+std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
+
+    std::complex<double> epsilon = 0.0;
 
     if(mode == "realspace"){
         std::cout << "Numerical screening in real space not implemented. Terminating." << std::endl;
@@ -2710,25 +2709,18 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         double potential = std::sqrt(coulomb_2D_FT(q + g))*std::sqrt(coulomb_2D_FT(q + g2));
 
-        double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
+        std::complex<double> kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1. : 0.;
 
         double d = 7;
 
-        std::complex<long double> epsilon =  kroneckerdelta - potential*Chi;
+        epsilon =  kroneckerdelta - ((std::complex<double>) potential)*Chi;
 
         if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
             d = 3.5; // If the material is hBN, set thickness to 3.5 Angstroms
-        }
-
-        std::cout << "\nepsilon_2D(q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
-
-        std::cout << "\nepsilon_Q2D(d = " << d << ") = " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
+        }   
     }
-    
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<milliseconds>(stop - start);
 
-    std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
+    return epsilon;
 }
 
 /**
@@ -3572,13 +3564,8 @@ void ExcitonTB::printInformation(){
             }
 
             if (this->mode == "realspace"){
-                arma::rowvec vector(this->trunLattice_.row(this->Gs_(0)));
-                arma::rowvec vectorprime(this->trunLattice_.row(this->Gs_(1)));
-
-                std::cout << std::left << std::setw(0) << "Selected R(" << std::setw(0) << this->Gs_(0) << "): " << vector(0) << " " << vector(1) << " " << vector(2) << std::endl;
-                std::cout << std::left << std::setw(0) << "Selected R'(" << std::setw(0) << this->Gs_(1) << "): " << vectorprime(0) << " " << vectorprime(1) << " " << vectorprime(2) << std::endl;
-                std::cout << std::left << std::setw(0) << "Selected t_i = " << std::setw(0) << system->motif.row(ts(0)).subvec(0,2) << std::endl;
-                std::cout << std::left << std::setw(0) << "Selected t_j = " << std::setw(0) << system->motif.row(ts(1)).subvec(0,2) << std::endl;
+                std::cout << "Numerical screening in real space not implemented. Terminating." << std::endl;
+                exit(0);
             }
            
         } else if (this->function_ == "none" || this->function_ == "inversedielectric") {

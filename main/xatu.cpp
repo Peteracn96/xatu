@@ -162,7 +162,10 @@ int main(int argc, char* argv[]){
     if(screeningArg.isSet()){
 
         if (screeningConfig->screeningInfo.function == "dielectric") {
-            bulkExciton.computesingleDielectricFunctionMatrixElement();
+            
+            std::complex<double> epsilon = bulkExciton.computesingleDielectricFunctionMatrixElement();
+            std::cout << "\nepsilon_2D(q) = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
+            
             return 0;
         } else if (screeningConfig->screeningInfo.function == "polarizability") {
 
