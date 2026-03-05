@@ -179,40 +179,6 @@ TEST_CASE("Screening file parsing", "[screeningfile_parsing]"){
     std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;
 }
 
-TEST_CASE("DFT hBN screening", "[DFT-hBN-screening]"){
-
-    std::cout.clear();
-    std::cout << std::setw(40) << std::left << "Testing DFT hBN screening (polarizability, direct dielectric matrix, and inverse dielectric matrix)... ";
-    std::cout.setstate(std::ios_base::failbit);
-
-    std::string modelfile = "../examples/material_models/DFT/hBN_base_HSE06.outp";
-    xatu::CRYSTALConfiguration config = xatu::CRYSTALConfiguration(modelfile, 100);
-
-    std::string excitonfile = "../examples/excitonconfig/hBN_reciprocal.txt";
-    xatu::ExcitonConfiguration excitonconfig = xatu::ExcitonConfiguration(excitonfile);
-
-    std::string screeningfile = "../examples/screeningconfig/hBN_DFT_screening.txt";
-    xatu::ScreeningConfiguration screeningconfig = xatu::ScreeningConfiguration(screeningfile);
-
-    xatu::ExcitonTB exciton = xatu::ExcitonTB(config, excitonconfig, screeningconfig);
-    
-    exciton.system->setAU(true);
-    exciton.brillouinZoneMesh(excitonconfig.excitonInfo.ncell);
-    exciton.initializeHamiltonian();
-    
-    double expectedGcutoff = 3.0;
-    REQUIRE(excitonconfig.excitonInfo.Gc_ReciprocalVectors == expectedGcutoff);
-
-    std::complex<double> expectedepsilon = 2.0014619240;
-
-    std::complex<double> epsilon = exciton.computesingleDielectricFunctionMatrixElement();
-
-    REQUIRE_THAT(std::real(epsilon), Catch::Matchers::WithinAbs(std::real(expectedepsilon), 1E-4));
-
-    std::cout.clear();
-    std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;
-}
-    
 TEST_CASE("TB hBN energies (full diagonalization)", "[tb-hBN-fulldiag]"){
 
     std::cout.clear();
@@ -323,7 +289,7 @@ TEST_CASE("TB hBN energies (reciprocal)", "[tb-hBN-reciprocal]"){
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(config, ncell, 1, 0, {1, 1, 10});
     exciton.setMode("reciprocalspace");
-    exciton.setReciprocalVectors(5);
+    exciton.setGcutoff(3.0);
 
     exciton.brillouinZoneMesh(ncell);
     exciton.initializeHamiltonian();
@@ -332,9 +298,9 @@ TEST_CASE("TB hBN energies (reciprocal)", "[tb-hBN-reciprocal]"){
 
     auto energies = xatu::detectDegeneracies(results->eigval, nstates, 6);
     
-    std::vector<std::vector<double>> expectedEnergies = {{6.234291, 1}, 
-                                                         {6.236636, 1},
-                                                         {6.731819, 1}};
+    std::vector<std::vector<double>> expectedEnergies = {{6.200045075, 1}, 
+                                                         {6.300352, 1},
+                                                         {6.832558, 1}};
     for(uint i = 0; i < energies.size(); i++){
         REQUIRE_THAT(energies[i][0], Catch::Matchers::WithinAbs(expectedEnergies[i][0], 1E-4));
         REQUIRE(energies[i][1] == expectedEnergies[i][1]);
@@ -869,3 +835,36 @@ TEST_CASE("MoS2 absorption", "[MoS2-kubo]"){
     std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;
 }
 
+TEST_CASE("DFT hBN screening", "[DFT-hBN-screening]"){
+
+    std::cout.clear();
+    std::cout << std::setw(40) << std::left << "Testing DFT hBN screening (polarizability, direct dielectric matrix, and inverse dielectric matrix)... ";
+    std::cout.setstate(std::ios_base::failbit);
+
+    std::string modelfile = "../examples/material_models/DFT/hBN_base_HSE06.outp";
+    xatu::CRYSTALConfiguration config = xatu::CRYSTALConfiguration(modelfile, 100);
+
+    std::string excitonfile = "../examples/excitonconfig/hBN_reciprocal.txt";
+    xatu::ExcitonConfiguration excitonconfig = xatu::ExcitonConfiguration(excitonfile);
+
+    std::string screeningfile = "../examples/screeningconfig/hBN_DFT_screening.txt";
+    xatu::ScreeningConfiguration screeningconfig = xatu::ScreeningConfiguration(screeningfile);
+
+    xatu::ExcitonTB exciton = xatu::ExcitonTB(config, excitonconfig, screeningconfig);
+    
+    exciton.system->setAU(true);
+    exciton.brillouinZoneMesh(excitonconfig.excitonInfo.ncell);
+    exciton.initializeHamiltonian();
+    
+    double expectedGcutoff = 3.0;
+    REQUIRE(excitonconfig.excitonInfo.Gc_ReciprocalVectors == expectedGcutoff);
+
+    std::complex<double> expectedepsilon = 2.0014619240;
+
+    std::complex<double> epsilon = exciton.computesingleDielectricFunctionMatrixElement();
+
+    REQUIRE_THAT(std::real(epsilon), Catch::Matchers::WithinAbs(std::real(expectedepsilon), 1E-4));
+
+    std::cout.clear();
+    std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;
+}
