@@ -123,7 +123,7 @@ arma::mat SystemConfiguration::parseMotif(std::vector<std::string>& content){
             throw std::invalid_argument("Motif must be of shape (x,y,z,'species')");
         }
 
-        atom = { x, y, z, species};
+        atom = { x, y, z, species };
         motif.row(i) = arma::rowvec(atom);
     }
 
