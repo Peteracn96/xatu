@@ -72,7 +72,7 @@ int main(int argc, char* argv[]){
     exciton.printInformation();
 
     exciton.readInverseDielectricMatrix(inv_epsilon_file);
-
+       
     exciton.BShamiltonian();
 
     auto results = exciton.diagonalize("diag", nstates);

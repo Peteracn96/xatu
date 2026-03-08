@@ -1,16 +1,16 @@
 # label
-MoS2_test_asymmetric_epsilon_refactored_odd
+MoS2_DFT
 # ncells
-11
+30
 # bands
 1
 # Dielectric
-1 4 13.55
+1 1 13.55
 # totalmomentum
 0.0 0.0 0.0
 # gcutoff
 5
-# reciprocal
-19
 # potential
 rpa
+# percentage
+0.6

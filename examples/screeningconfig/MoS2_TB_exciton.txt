@@ -1,14 +1,18 @@
-# mode
-reciprocalspace
-# valence bands
+# valence.bands
 14
-# conduction bands
+# conduction.bands
 8
-# removedbands
-0
-# reciprocal vectors
-1 2
+# vectors
+0 0
 # momentum
-0.5 0.5 0.
+0.2 0.0 0.
 # function
-none
+exciton
+# ncell_aux
+17
+# spin
+false
+# percentage
+0.5
+# isotropic
+yes

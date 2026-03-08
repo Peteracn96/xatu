@@ -1,14 +1,16 @@
 # valence.bands
-26
+13
 # conduction.bands
-8
+4
 # vectors
 0 0
 # momentum
-0.5 0.0 0.
+0.1 0.0 0.
 # function
 dielectric
 # ncell_aux
-20
+15
 # spin
-true
+false
+# gcutoff
+10
