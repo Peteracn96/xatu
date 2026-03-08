@@ -257,8 +257,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void compute_quasi2D_DielectricMatrix();
         void compute_2D_DielectricMatrix(std::string);
         void compute_quasi2D_DielectricMatrix(std::string);
-        void compute_2D_DielectricMatrix_at_q(const arma::rowvec&, const int);
-        void compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &, const int);
+        void compute_2D_DielectricMatrix_at_q(const arma::rowvec&);
         void compute_ScreenedPotential_regularization(bool);
         void compute_2D_PolarizabilityMatrix(std::string);
         void invertDielectricMatrix();

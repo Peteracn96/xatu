@@ -2809,7 +2809,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(){
 
             percentage = ((double)ik + 1)*100./(double)Nqpoints;
 
-            if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
+            if (ik % 5 == 0)
             {
                 std::cout << (int) percentage << "%%, " << std::flush;
                 percentage_aux = percentage;
@@ -3330,7 +3330,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
  * Method to compute the strictly 2D static polarizability matrix and dielectric matrix at a specific q point from the list of q points. More useful for isotropic systems.
  * @return void
 */
-void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const int iq){
+void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q){
 
     uint nk = this->nk_aux;
     int basisdim = system->basisdim;
@@ -3347,24 +3347,8 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
     arma::cx_mat epsilon_GG(nGs, nGs, arma::fill::zeros);
 
     arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
-
-    arma::mat q_points = this->qpoints_list_;
-    uint Nq_points = q_points.n_rows;
-
-    if (iq >= (int)Nq_points || iq < 0) {
-        std::cout << "The index iq provided is out of bounds. Exiting." << std::endl;
-        std::exit(1);
-    }
-
-    if (q_points.is_empty() || Nq_points == 0) {
-        std::cout << "Can't compute dielectric matrix at q, if list of q points is empty. Exiting." << std::endl;
-        std::exit(1);
-    }
-
-    if (arma::norm(q - q_points.row(iq)) > 1e-6) {
-        std::cout << "The q point provided does not coincide with q vector with index iq in the list of q points. Exiting." << std::endl;
-        std::exit(1);
-    }
+    uint Nq_points = 1;
+    uint iq = 0;
 
     // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
     if (this->Chimatrix_.is_empty()) {
@@ -3445,51 +3429,6 @@ void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q, const in
 
     this->Chimatrix_.slice(iq) = Chi0_GG;
     this->epsilonmatrix_.slice(iq) = epsilon_GG;
-}
-
-/**
- * Method to compute the strictly 2D inverse dielectric function matrix at a specific q point from the list of q points. More useful for isotropic systems.
- * @return void
- */
-void ExcitonTB::compute_2D_InvDielectricMatrix_at_q(const arma::rowvec &q, const int iq)
-{
-    arma::mat q_points = this->qpoints_list_;
-    uint Nq_points = q_points.n_rows;
-
-    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    uint nGs = ReciprocalVectors.n_rows;
-
-    if (q_points.is_empty() || Nq_points == 0)
-    {
-        std::cout << "Can't compute dielectric matrix at q, if list of q points is empty. Exiting." << std::endl;
-        std::exit(1);
-    }
-
-    if (arma::norm(q - q_points.row(iq)) > 1e-6)
-    {
-        std::cout << "The q point provided does not coincide with q vector with index iq in the list of q points. Exiting." << std::endl;
-        std::exit(1);
-    }
-
-    // In case the inverse dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
-
-    if (this->Invepsilonmatrix_.is_empty())
-    {
-        this->Invepsilonmatrix_ = arma::cx_cube(nGs, nGs, Nq_points, arma::fill::zeros);
-    }
-    else
-    {
-        this->Invepsilonmatrix_.reshape(nGs, nGs, Nq_points);
-    }
-
-    compute_2D_DielectricMatrix_at_q(q, iq);
-
-    arma::cx_dmat auxvecsol(nGs, nGs, arma::fill::zeros);
-    arma::cx_dmat Identity(nGs, nGs, arma::fill::eye);
-
-    auxvecsol = arma::solve(this->epsilonmatrix_.slice(iq), Identity);
-
-    this->Invepsilonmatrix_.slice(iq) = auxvecsol;
 }
 
 /**
