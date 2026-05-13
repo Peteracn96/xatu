@@ -977,8 +977,7 @@ recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This fu
 double ExcitonTB::coulomb_2D_FT(const arma::rowvec& k) const {
 
     double potential = 0;
-    double eps = 1E-12; //arma::norm(system->reciprocalLattice.row(0))*1E-3/totalCells;
-
+    double eps = 1E-12;
     double knorm = arma::norm(k);
     if (knorm < eps){
         potential = 0;
@@ -1395,7 +1394,7 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec &coefs1,
         int species = system->motif.row(i)(3);
         arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2);
 
-        double extra_factor = 2*(1 - exp(-arma::norm(k1 - k2 + G) * d/2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2)))/arma::norm(k1 - k2 + G);
+        double extra_factor = 2*(1 - exp(-arma::norm(k1 - k2 + G) * d/2) * cosh(arma::norm(k1 - k2 + G) * atomPosition(2)))/(d*arma::norm(k1 - k2 + G));
 
         index_max += system->orbitals(species);
         phases.subvec(index_min, index_max) *= extra_factor * exp(-imag * arma::dot(k1 - k2 + G, atomPosition));
@@ -1616,10 +1615,6 @@ void ExcitonTB::initializeHamiltonian(){
     initializeBasis();
     generateBandDictionary();
 
-    if (this->mode == "reciprocalspace") {
-        printReciprocalLattice();
-    }
-    
     initializeResultsH0();
 }
 
@@ -1706,12 +1701,7 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
 
     polarfile.close();
 
-    for(uint i = 0; i < this->trunreciprocalLattice_.n_rows; i++){
-        auto G = this->trunreciprocalLattice_.row(i);
-        std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << "), |G| = " << arma::norm(G) << std::endl;  
-    }
-
-    std::cout << "The value of the polarizability is = " << g_s*term_aux/((std::complex<double>)nk) << std::endl;
+    std::cout << "Chi = " << g_s*term_aux/((std::complex<double>)nk) << std::endl;
 
     return g_s*term_aux/((std::complex<double>)nk);
 }
@@ -1799,11 +1789,12 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
 }
 
 /**
- * Method to compute the (G,G') matrix element of the static 2D polarizability at the specified arbitrary momentum vector q.
- * @details The purely 2D polarizability is computed
+ * Method to compute the (G,G') matrix element of the static Q2D polarizability at the specified momentum q.
+ * @details The Q2D polarizability computed has meaning only when multiplied by the Coulomb potential
  * @param G Reciprocal lattice vector G
  * @param G2 Reciprocal lattice vector G2
  * @param q Momentum vector q
+ * @param d Thickness of the 2D system
  * @return Polarizability
 */
 inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q, double d) {
@@ -1828,6 +1819,8 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     std::complex<double> term = 0.;
     std::complex<double> term_aux = 0.;
     std::complex<double> term_aux_2 = 0.;
+    std::complex<double> term_aux_3 = 0.;
+    std::complex<double> term_aux_4 = 0.;
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     if (arma::norm(q) < 1E-7 && (arma::norm(G) < 1E-7 || arma::norm(G2) < 1E-7)){
@@ -1867,20 +1860,28 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
                     coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
-                std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G, d);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
+                std::complex<double> IvcG_d = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
+                std::complex<double> IcvG_d = blochCoherenceFactor(coefsk, coefskq, kq, k, G, d);
+                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
+                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
 
-                std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
+                std::complex<double> IvcG2_d = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2, d);
+                std::complex<double> IcvG2_d = blochCoherenceFactor(coefsk, coefskq, kq, k, G2, d);
+                std::complex<double> IvcG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G);
+                std::complex<double> IcvG = blochCoherenceFactor(coefsk, coefskq, kq, k, G);
 
-                term_aux += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+                term_aux += IvcG_d*std::conj(IvcG2) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
                 
-                term_aux_2 += IcvG*std::conj(IcvG2)  / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
+                term_aux_2 += IcvG_d*std::conj(IcvG2)  / (eigvalkStack_.col(ik)(ic) - eigvalkqStack_.col(ik)(iv));
+
+                term_aux_3 += std::conj(IvcG2_d)*IvcG  / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
+
+                term_aux_4 += std::conj(IcvG2_d)*IcvG  / (eigvalkStack_.col(ik)(ic) - eigvalkqStack_.col(ik)(iv));
             }
         }
     }
 
-    return g_s*(term_aux + term_aux_2)/(d*(std::complex<double>)nk);
+    return g_s*(term_aux - term_aux_2 + term_aux_3 - term_aux_4)/(2.0*(std::complex<double>)nk);
 }
 
 /**
@@ -1895,7 +1896,7 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    const double potential = coulomb_2D_FT(G + q);
+    const double potential = std::sqrt(coulomb_2D_FT(G + q))*std::sqrt(coulomb_2D_FT(G2 + q));
 
     std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,q);
             
@@ -1915,9 +1916,11 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
     
     double potential = std::sqrt(coulomb_2D_FT(q + G))*std::sqrt(coulomb_2D_FT(q + G2));
 
-    double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
+    double kroneckerdelta = arma::norm(G - G2) < 10E-4 ? 1 : 0;
 
-    std::complex<double> epsilon = kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+    std::complex<double> Chi_Q2D = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+
+    std::complex<double> epsilon = kroneckerdelta - potential*Chi_Q2D;
 
     return epsilon;
 }
@@ -3523,7 +3526,7 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         Chi = computesinglePolarizabilityMatrixElement(q, g, g2);
 
-        double potential = coulombFT(this->Gs_(0), this->Gs_(0), q);
+        double potential = std::sqrt(coulomb_2D_FT(q + g))*std::sqrt(coulomb_2D_FT(q + g2));
 
         double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
 
@@ -4487,7 +4490,7 @@ void ExcitonTB::printInformation(){
  * @return void 
  */
 void ExcitonTB::printReciprocalLattice() {
-    double cutoff = this->Gc_exciton;
+    double cutoff = this->Gcutoff_;
     uint nGs_to_print = this->trunreciprocalLattice_.n_rows;
     uint nGs_total = this->trunreciprocalLattice_.n_rows;
 
