@@ -3154,34 +3154,13 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
             }
 
-            // These lines are temporary
-            // std::cout << "Inverting matrix and printing it to file..." << std::endl;
-
-            // std::string aux_file_name = "q_point_" + std::to_string(iq) + "_" + kpointsfile;
-
-            // FILE* textfile = fopen(aux_file_name.c_str(), "w");
-
-            // if (textfile == NULL){
-            //     std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
-            //     exit(1);
-            // }
-
-            // this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
-            // int nGs_cut = 100;
-            // //for(uint i = 0; i < Nqp; i++){
-            //     for (uint g = 0; g < nGs_cut; g++){
-            //         for (uint g2 = 0; g2 < nGs_cut; g2++){
-            //             std::complex<double> aux = this->Invepsilonmatrix_.slice(iq).at(g,g2);
-            //             fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
-            //         }
-            //         fprintf(textfile, "\n");
-            //     }
-            // //}
-
-            // fclose(textfile);
 
             double percentage = ((double)iq + 1.0) / (double)Nqpoints * 100;
-            std::cout << percentage << "%, " << std::flush;
+
+            if ((int) percentage % 10 == 0)
+            {
+                std::cout << percentage << "%, " << std::endl;
+            }
         }
         // Comment is temporary
         std::cout << "Done.\n" << std::endl;
