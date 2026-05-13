@@ -197,17 +197,8 @@ int main(int argc, char* argv[]){
             
             std::string filename_dielectric = excitonConfig->excitonInfo.label;
 
-            // bulkExciton.writeDielectricMatrix("../" + filename_dielectric + "_epsilon.dat");
-
-            bulkExciton.writeInverseDielectricMatrix(filename_dielectric + "_invepsilon.dat");
-
-            // bulkExciton.writePolarizabilityMatrix("../" + excitonConfig->excitonInfo.label + "_polarizability_matrix.dat");
-
-            std::cout << "\nComputation of the exciton with screening under testing.\n" << std::endl;
-
-            //continueprompt("Do you wish to procceed with the computation of the exciton?[y/n]\n");
-            
-            // return 0;
+            bulkExciton.writeInverseDielectricMatrix(filename_dielectric + "_invepsilon.dat");        
+        
         } else {
             std::cout << "\nThe value '" + screeningConfig->screeningInfo.function + "' assigned to 'function' not recognized. Terminating program.\n" << std::endl;
             return 0;
