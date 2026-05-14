@@ -2599,7 +2599,6 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(){
         uint nk = Nqpoints;
         uint Nktotal = system->nk;
         
-        // uint nq = this->qpoints_list_.n_rows;
         uint Ncells = this->ncell_;      
         uint odd = Ncells % 2;
         uint nq = odd == 1 ? Ncells * (Ncells - odd) / 2 + (Ncells - odd) / 2 + 1 : (2 * Ncells - 1) + (Ncells - 1) * (Ncells - 2) / 2 + Ncells / 2 + 1; // Only half of the BZ
