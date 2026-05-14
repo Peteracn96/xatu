@@ -1818,11 +1818,8 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
 
-    std::complex<double> term = 0.;
     std::complex<double> term_aux = 0.;
-    std::complex<double> term_aux_2 = 0.;
-    std::complex<double> term_aux_3 = 0.;
-    std::complex<double> term_aux_4 = 0.;
+    std::complex<double> term_aux_2 = 0.;    
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     if (arma::norm(q) < 1E-7 && (arma::norm(G) < 1E-7 || arma::norm(G2) < 1E-7)){
