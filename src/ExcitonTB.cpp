@@ -3077,12 +3077,12 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
         arma::cx_cube epsilonmatrix(Nqpoints,nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
-        arma::imat indecesg(nGs*nGs,2,arma::fill::zeros);
+        arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
 
         // Generates all the combinations of (G,G') indices
         uint i = 0;
         for (uint g = 0; g < nGs; g++){
-            for (uint g2 = 0; g2 < nGs; g2++){
+            for (uint g2 = g; g2 < nGs; g2++){
                 indecesg.row(i)(0) = g;
                 indecesg.row(i)(1) = g2;
                 i++;
@@ -3109,18 +3109,9 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
 
         std::cout << "Computation at\n" << std::flush;
 
-        // These lines are temporary
-        // if (this->Invepsilonmatrix_.is_empty()) {
-        //     this->Invepsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
-        // } else {
-        //     this->Invepsilonmatrix_.reshape(nGs,nGs,Nqpoints);
-        // }
-
         for (uint iq = 0; iq < Nqpoints; iq++){  
 
             arma::rowvec q = q_points.row(iq);
-
-            //std::cout << iq << ", " << std::flush;
 
             for (uint ik = 0; ik < nk; ik++){
                 arma::rowvec kq = this->kpoints_aux.row(ik) + q;
@@ -3132,7 +3123,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
             };
 
             #pragma omp parallel for 
-            for (uint ig = 0; ig < nGs*nGs; ig++){
+            for (uint ig = 0; ig < nGs*(nGs+1)/2; ig++){
                 uint g  = indecesg.row(ig)(0);
                 uint g2 = indecesg.row(ig)(1);
 
@@ -3152,6 +3143,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
                 }
 
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
+                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
             }
 
 
@@ -3162,9 +3154,8 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
                 std::cout << percentage << "%, " << std::endl;
             }
         }
-        // Comment is temporary
-        std::cout << "Done.\n" << std::endl;
 
+        std::cout << "Done.\n" << std::endl;
     }
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
