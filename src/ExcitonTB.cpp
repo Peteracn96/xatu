@@ -2845,7 +2845,6 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(){
                     std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
 
                     double potentialg =  std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, q);
-                    double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g2, g2, q));
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
 
@@ -2917,7 +2916,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(){
                     double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
 
                     double potentialnegativeG  = std::sqrt(coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex))) * std::sqrt(coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex))); // coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex));
-                    double potentialnegativeG2 = potentialnegativeG; // coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex));
+                    double potentialnegativeG2 = potentialnegativeG;
                     double kroneckerdelta = g == g2 ? 1 : 0;
 
                     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * this->Chimatrix_.slice(iq).row(g)(g2);
@@ -2972,7 +2971,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(){
                     this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = std::conj(Chi);
 
                     double potentialg = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, system->kpoints.row(iq));
-                    double potentialg2 = potentialg; // coulombFT(g, g, system->kpoints.row(iq));
+                    double potentialg2 = potentialg;
 
                     double potentialnegativeG = std::sqrt(coulombFT(negativeG, negativeG, q_points.row(Nktotal - iq - 1))) * std::sqrt(coulombFT(negativeG2, negativeG2, q_points.row(Nktotal - iq - 1)));
                     double potentialnegativeG2 = potentialnegativeG;
