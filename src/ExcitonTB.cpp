@@ -168,6 +168,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     bool model_has_spin       = cfg.screeningInfo.spin;
     bool isotropic            = cfg.screeningInfo.isotropic;
     double Gcutoff            = cfg.screeningInfo.Gcutoff;
+    double d                  = cfg.screeningInfo.d;
     this->ts_ = ts;
 
     this->isscreeningset      = true;
@@ -175,6 +176,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     this->ncell_aux_          = ncell_aux;
     this->nk_aux_             = pow(ncell_aux, 2);
     this->Gcutoff_            = Gcutoff;
+    this->d_                  = d;
 
     uint totalvbands = system->fermiLevel + 1;
     uint totalcbands = system->basisdim - totalvbands;
@@ -2610,10 +2612,10 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(){
 
         uint ncell_aux = this->ncell_aux;
         uint nk_aux = this->nk_aux;
+
+        double d = this->d_;
         
         uint basisdim = system->basisdim;
-
-        double d = 6.11;
         
         std::cout << "Diagonalizing H(k+q) for every point q, for every point k... " << std::flush;
 
@@ -3206,6 +3208,11 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
         std::string line;
         double qx, qy, qz;
         arma::mat q_points;
+        double d = this->d;
+
+        if(d <= 1E-4){
+            d = 0.1;
+        }
 
         try{
             while(std::getline(inputfile, line)){
@@ -3267,18 +3274,7 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
         vec auxEigVal(basisdim);
-        arma::cx_mat auxEigvec(basisdim, basisdim);
-
-        double d = 6.11;// arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(arma::abs(system->motif.col(2)))); // Or set it manually
-
-        if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
-            d = 6.11; // If the material is hBN, set thickness to 3.3 Angstroms
-        }
-
-        if (d < 1e-6) {
-            std::cout << "Thickness of the material is null. Set it to a finite value. Terminating." << std::endl;
-            exit(1);
-        }
+        arma::cx_mat auxEigvec(basisdim, basisdim);        
 
         std::cout << "Computation at\n" << std::flush;
 
@@ -3638,6 +3634,7 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         printReciprocalLattice();
 
         std::complex<double> Chi;
+        double d = this->d;
 
         arma::rowvec q = this->q_;
 
@@ -3671,13 +3668,7 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
 
-        double d = 6.11; //arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(system->motif.col(2)));
-
         std::complex<long double> epsilon =  kroneckerdelta - potential*Chi;
-
-        if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
-            d = 3.5; // If the material is hBN, set thickness to 3.5 Angstroms
-        }
 
         std::cout << "\nepsilon_2D(q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
 
@@ -3748,6 +3739,8 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     arma::cx_mat auxEigvec(basisdim, basisdim);
     int nk = this->nk_aux;
 
+    double d = this->d;
+
     // If the eigvalkqStack_ and eigveckqStack_ are empty, reshape them
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty())
     {
@@ -3769,9 +3762,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
             this->eigvalkqStack_.col(i) = auxEigVal;
             this->eigveckqStack_.slice(i) = auxEigvec;
         }
-        std::cout << "Done.\n" << std::flush;
-
-    double d = 6.11;
+        std::cout << "Done.\n" << std::flush;    
         
     #pragma omp parallel for
     for (uint i = 0; i < iGmax; i++){

@@ -66,6 +66,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         int Nqpoints = 1;   // Number of q points to compute the dielectric function at
         double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
         double slope_perp_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0 along the direction perpendicular for slope_
+        double d_ = 1.0; // Effective thickness of the 2D system
         uint ncell_aux_ = 11; // Number of unit cells used to compute the dielectric function
         uint nk_aux_ = 121; // Number of k points used to compute the dielectric function
         uint g_s_ = 1; // Spin degeneracy
@@ -114,6 +115,8 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Returns spin degeneracy
         uint& g_s = g_s_;
+        // Returns thickness
+        double& d = d_;
 
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;
@@ -179,6 +182,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setTrunLattice(int,double);
         void setq_points_list(arma::mat);
         void setPercentage(double);
+        void setThickness(double);
 
         // Getters
         int getNGs() const;
