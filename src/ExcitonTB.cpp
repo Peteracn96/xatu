@@ -1816,11 +1816,8 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
 
-    std::complex<double> term = 0.;
     std::complex<double> term_aux = 0.;
-    std::complex<double> term_aux_2 = 0.;
-    std::complex<double> term_aux_3 = 0.;
-    std::complex<double> term_aux_4 = 0.;
+    std::complex<double> term_aux_2 = 0.;    
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     if (arma::norm(q) < 1E-7 && (arma::norm(G) < 1E-7 || arma::norm(G2) < 1E-7)){
@@ -3269,10 +3266,10 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
         vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
 
-        double d = 6.11;// arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(arma::abs(system->motif.col(2)))); // Or set it manually
+        double d = 3.33;// arma::max(arma::abs(system->motif.col(2))) + std::abs(arma::min(arma::abs(system->motif.col(2)))); // Or set it manually
 
         if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
-            d = 6.11; // If the material is hBN, set thickness to 3.3 Angstroms
+            d = 3.33; // If the material is hBN, set thickness to 3.3 Angstroms
         }
 
         if (d < 1e-6) {
