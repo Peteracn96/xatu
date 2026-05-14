@@ -2615,31 +2615,6 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(){
         
         std::cout << "Diagonalizing H(k+q) for every point q, for every point k... " << std::flush;
 
-        // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of q points
-        /*if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty())
-        {
-            this->eigvalkqStack_test = arma::cube(basisdim, nk_aux, nk, arma::fill::zeros);
-
-            std::vector<arma::cx_cube> vector_aux;
-            vector_aux.resize(nq);
-            this->eigveckqStack_test = vector_aux;
-
-            for (uint iq = 0; iq < nk; ++iq)
-            {
-                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
-            }
-        }
-        else
-        {
-            this->eigvalkqStack_test.set_size(basisdim, nk_aux, nq);
-            this->eigveckqStack_test.resize(nk);
-
-            for (uint iq = 0; iq < nk; ++iq)
-            {
-                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
-            }
-        }*/
-
         if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty())
         {
             this->eigvalkqStack_test = arma::cube(basisdim, nk_aux, Nqpoints, arma::fill::zeros);
