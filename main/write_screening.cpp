@@ -76,10 +76,13 @@ int main(int argc, char* argv[]){
 
     exciton.writeBZtofile();
 
-    // const int array_size = 11;
-    // int nGs_array[array_size] = {1,8,9,13,19,30,37,39,43,55,61};
+    const int array_size = 3;
+    double Gs_array[array_size] = {5.1,8,9};
 
-    // for (int gs = 0; gs < array_size; ++gs) {
+    size_t lastindex = q_points_file.find_last_of("."); 
+    std::string rawname = q_points_file.substr(0, lastindex); 
+
+    for (int gs = 0; gs < array_size; ++gs) {
 
 	//     int nGs = nGs_array[gs];
 
@@ -91,22 +94,21 @@ int main(int argc, char* argv[]){
     //     exciton.writeRPAPolarizabilityMatrix("MoS2_RPA_polarizability_" + std::to_string(nGs) + ".dat");
 
     //     exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening_" + std::to_string(nGs) + ".dat");
-    // }
+    
+        exciton.setGcutoff(Gs_array[gs]);
 
-    exciton.compute_quasi2D_DielectricMatrix(q_points_file);
+        exciton.compute_quasi2D_DielectricMatrix(q_points_file);  
+
+        exciton.invertDielectricMatrix();
+
+        exciton.writeInverseDielectricMatrix(rawname + "_inv_epsilon_symmetrized_Gc_" + std::to_string(Gs_array[gs]) + ".dat");
+    }
 
     // exciton.compute_2D_DielectricMatrix(q_points_file);
 
-    size_t lastindex = q_points_file.find_last_of("."); 
-    std::string rawname = q_points_file.substr(0, lastindex); 
-
-    exciton.invertDielectricMatrix();
-
     // exciton.writePolarizabilityMatrix(rawname + "_polarizability.dat");
 
-    // exciton.writeDielectricMatrix(rawname + "_epsilon.dat");
-
-    exciton.writeInverseDielectricMatrix(rawname + "_inv_epsilon.dat");
+    // exciton.writeDielectricMatrix(rawname + "_epsilon.dat");    
 
     return 0;
 }
