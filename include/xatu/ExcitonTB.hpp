@@ -258,6 +258,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void computesingleInverseDielectricMatrix(std::string);
         void PolarizabilityMesh();
         void compute_2D_DielectricMatrix();
+        void augment_single_2D_DielectricMatrix(double Gcutoff);
         void compute_quasi2D_DielectricMatrix();
         void augment_quasi2D_DielectricMatrix(double Gcutoff);
         void compute_2D_DielectricMatrix(std::string);
@@ -290,6 +291,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         void writePolarizabilityMatrix(std::string) const;
         // Read inverse of dielectric matrix in a file
         void readInverseDielectricMatrix(std::string);
+        // Read single inverse of dielectric matrix in a file
+        void read_single_InverseDielectricMatrix(std::string);
         // Write inverse of dielectric matrix in a file
         void writeInverseDielectricMatrix(std::string); // if the user did not compute the inverse dielectric matrix, then the method tries to do it
         // Write dielectric matrix in a file
