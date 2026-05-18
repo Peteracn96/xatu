@@ -5164,7 +5164,7 @@ void ExcitonTB::writeDielectricMatrix(std::string filename_dielectric) const
         exit(0);
     }
 
-    std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
+    std::cout << "Writing dielectric matrix fo file: " << filename_dielectric << std::endl;
 
     if (this->mode == "realspace")
     {
