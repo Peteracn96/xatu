@@ -259,6 +259,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void PolarizabilityMesh();
         void compute_2D_DielectricMatrix();
         void compute_quasi2D_DielectricMatrix();
+        void augment_quasi2D_DielectricMatrix(double Gcutoff);
         void compute_2D_DielectricMatrix(std::string);
         void compute_quasi2D_DielectricMatrix(std::string);
         void compute_2D_DielectricMatrix_at_q(const arma::rowvec&);
