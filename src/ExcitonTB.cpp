@@ -2580,6 +2580,173 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 }
 
 /**
+ * Method to augment the static 2D dielectric matrix in the BZ mesh.
+ * @return void
+*/
+void ExcitonTB::augment_single_2D_DielectricMatrix(double Gcutoff){
+
+    auto start = high_resolution_clock::now();
+ 
+    arma::mat qpoint_mat = arma::mat(1,3,arma::fill::zeros);
+    qpoint_mat.row(0) = this->q_;
+    this->setq_points_list(qpoint_mat); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
+    uint Nqpoints = this->qpoints_list_.n_rows;   
+    uint nq = 1;    
+    
+    arma::mat q_points(nq, 3, arma::fill::zeros);
+    q_points = this->qpoints_list_; 
+
+    uint ncell_aux = this->ncell_aux;
+    uint nk_aux = this->nk_aux;
+
+    uint basisdim = system->basisdim;
+
+    if (this->Invepsilonmatrix_.is_empty())
+    {
+        std::cout << "No inverse dielectric matrix exists. One must be provided before augmenting it. Terminating." << std::endl;
+        exit(0);
+    }
+
+    uint nq_points = this->Invepsilonmatrix_.n_slices;
+
+    if (nq_points != Nqpoints)
+    {
+        std::cout << "The number of q points in the provided inverse dielectric matrix (" << nq_points << ") does not match the number of q points (" << Nqpoints << "). Terminating." << std::endl;
+        exit(0);
+    }        
+
+    arma::cx_cube Invepsilonmatrix_provided = this->Invepsilonmatrix_;
+
+    if (this->epsilonmatrix_.is_empty())
+    {
+        this->epsilonmatrix_ = arma::cx_cube(Invepsilonmatrix_provided.n_rows, Invepsilonmatrix_provided.n_cols, Invepsilonmatrix_provided.n_slices, arma::fill::zeros);
+    }
+    else
+    {
+        if (this->epsilonmatrix_.n_rows != Invepsilonmatrix_provided.n_rows || this->epsilonmatrix_.n_cols != Invepsilonmatrix_provided.n_cols || this->epsilonmatrix_.n_slices != Invepsilonmatrix_provided.n_slices)
+        {
+            this->epsilonmatrix_.reshape(Invepsilonmatrix_provided.n_rows, Invepsilonmatrix_provided.n_cols, Invepsilonmatrix_provided.n_slices);
+        }
+    }
+
+    std::cout << "Inverting the provided inverse dielectric matrix... " << std::flush;
+    for (uint iq = 0; iq < Nqpoints; iq++) // inverts the inverse dielectric matrix to obtain the direct dielectric matrix
+    {
+        this->epsilonmatrix_.slice(iq) = arma::inv(Invepsilonmatrix_provided.slice(iq));
+    }
+    std::cout << "Done." << std::endl;
+    this->writeDielectricMatrix("dielectric_matrix_provided.dat");
+    arma::cx_cube dielectricmatrix_provided = this->epsilonmatrix_;
+
+    uint nGs_existing = this->Invepsilonmatrix_.slice(0).n_rows;
+    double Gcutoff_existing = this->Gcutoff_;   
+        
+    setGcutoff(Gcutoff);        
+
+    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+    uint nGs_new = ReciprocalVectors.n_rows;
+    
+    if (nGs_existing >= nGs_new)
+    {
+        std::cout << "The cutoff of the augmented dielectric matrix has to be higher than the existing one. Terminating." << std::endl;
+        exit(0);
+    }
+    
+    this->Chimatrix_.reshape(nGs_new, nGs_new, Nqpoints);
+    this->epsilonmatrix_.reshape(nGs_new, nGs_new, Nqpoints);
+    this->Invepsilonmatrix_.reshape(nGs_new, nGs_new, Nqpoints);
+
+    for (uint iq = 0; iq < Nqpoints; iq++)
+    {                       
+        this->epsilonmatrix_.slice(iq).submat(arma::span(0, nGs_existing - 1), arma::span(0, nGs_existing - 1)) = dielectricmatrix_provided.slice(iq);
+    }
+
+    arma::cx_mat auxvecsol(nGs_new,nGs_new,arma::fill::zeros);
+    arma::cx_mat auxvec(nGs_new,nGs_new,arma::fill::eye);
+    uint nGs_new_combinations = nGs_existing*(nGs_new-nGs_existing) +  (nGs_new-nGs_existing)*(nGs_new-nGs_existing+1)/2;
+    arma::imat indecesg(nGs_new_combinations,2,arma::fill::zeros);
+    std::cout << "Number of GG' combinations to compute: " << nGs_new_combinations << std::endl;
+    std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
+
+    if (this->eigvalkqStack_.is_empty() || this->eigveckqStack_.is_empty())
+    {
+        this->eigvalkqStack_ = arma::mat(basisdim, nk_aux, arma::fill::zeros);
+        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
+    }
+    else
+    {
+        this->eigvalkqStack_.set_size(basisdim, nk_aux);
+        this->eigveckqStack_.set_size(basisdim, basisdim, nk_aux);        
+    }
+
+    arma::vec auxEigVal(basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);
+    
+    arma::rowvec q = this->q_;
+    uint iq = 0;
+
+    for (uint i = 0; i < nk_aux; i++)
+    {
+        arma::rowvec kq = this->kpoints_aux.row(i) + q;
+        system->solveBands(kq, auxEigVal, auxEigvec);
+
+        auxEigvec = fixGlobalPhase(auxEigvec);
+        this->eigvalkqStack_.col(i) = auxEigVal;
+        this->eigveckqStack_.slice(i) = auxEigvec;
+    }   
+
+    std::cout << "\nDone. \nComputing the remaining Q2D dielectric function matrix elements... \n" << std::flush;
+       
+    int i=0;
+    for (uint g = 0; g < nGs_existing; g++){
+        for (uint g2 = nGs_existing; g2 < nGs_new; g2++){
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
+
+    for (uint g = nGs_existing; g < nGs_new; g++){
+        for (uint g2 = g; g2 < nGs_new; g2++){
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
+
+    #pragma omp parallel for
+    for (uint ig = 0; ig < nGs_new_combinations; ig++)
+    {        
+        uint g  = indecesg.row(ig)(0);
+        uint g2 = indecesg.row(ig)(1);
+
+        arma::rowvec G = ReciprocalVectors.row(g);
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
+        
+        uint negativeG = fetchReciprocalLatticeVector(-G);
+        uint negativeG2 = fetchReciprocalLatticeVector(-G2);
+        
+        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+
+        this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
+        this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
+
+        double potentialg  = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
+        double potentialg2 = potentialg;
+    
+        double kroneckerdelta = g == g2 ? 1 : 0;
+
+        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * this->Chimatrix_.slice(iq).row(g)(g2);
+        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * this->Chimatrix_.slice(iq).row(g2)(g);       
+    }           
+
+    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
+    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+
+    std::cout << "Done. \nCalculation of dielectric matrix done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
+}
+
+/**
  * Method to compute the static Q2D dielectric matrix in the BZ mesh.
  * @return void
 */
@@ -5350,6 +5517,102 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
         double q0_norm = arma::norm(this->q0_);
         this->W00_at_0_ = (2 + 0.5*(this->slope_ + this->slope_perp_)*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
+    }
+
+    std::cout << "Inverse of dielectric matrix read from file with success." << std::endl;
+
+    file.close();
+}
+
+
+/* Method to read the inverse of the dielectric matrix from a pre-existent file.
+ * @return void 
+ */
+void ExcitonTB::read_single_InverseDielectricMatrix(std::string filename_screening) {
+
+    std::complex<double> imag(0,1);
+    
+    std::ifstream file;
+
+    file.open(filename_screening);
+
+    if (!file.is_open()){
+        std::cout << "File for inverse of the dielectric matrix failed to open or does not exist. Terminating." << std::endl;
+        exit(0);
+    }
+
+    std::cout << "Reading inverse of dielectric matrix from file: " << filename_screening << std::endl;
+
+    if (this->mode == "reciprocalspace"){
+
+        uint ngs = this->trunreciprocalLattice_.n_rows;
+        uint nqs = 1;
+        int line_counter = 0;
+        uint column_counter = 0;
+
+        std::string line;
+
+        std::string fl;
+        std::getline(file, fl); // get first line
+
+        std::istringstream iss(fl);
+        double m_element;
+        while(iss >> m_element) {
+            column_counter++;
+        }
+
+        if (ngs != column_counter/2){
+            std::cout << "The number of reciprocal vectors read from file and from the configuration do not coincide! Terminating." << std::endl;
+            exit(0); 
+        }
+
+        file.seekg(0); // go back to the beginning of the file
+
+        while (std::getline(file, line)) {
+            ++line_counter;
+        }
+
+        file.clear(); // clear the error state
+
+        int total_lines = line_counter;
+
+        if (ngs != line_counter){
+            std::cout << "The number of lines read from file and the number of reciprocal vectorsfrom the configuration do not coincide! Terminating." << std::endl;
+            exit(0); 
+        }
+
+
+        file.seekg(0);
+
+        if (this->Invepsilonmatrix_.is_empty()) {
+            this->Invepsilonmatrix_ = arma::cx_cube(ngs,ngs,nqs,arma::fill::zeros);
+        } else {
+        
+            this->Invepsilonmatrix_.reshape(ngs,ngs,nqs);
+        }
+
+        line_counter = 0;
+        while (std::getline(file, line)) {
+            std::istringstream ss(line);
+            double Re_part = 0;
+            double Im_part = 0;
+            double aux;
+            column_counter = 0;
+            int pair_counter = 0;
+
+            while(ss >> aux) {   
+                if (column_counter%2 == 0) {
+                    Re_part = aux;
+                } else {
+                    Im_part = aux;
+                    this->Invepsilonmatrix_.slice(nqs-1)(line_counter%ngs, (column_counter - 1)/2) = Re_part + imag*Im_part;
+                }
+                column_counter++;
+            }
+
+            //std::cout << "\n";
+            ++line_counter;
+        }        
     }
 
     std::cout << "Inverse of dielectric matrix read from file with success." << std::endl;
