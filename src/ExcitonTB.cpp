@@ -3205,7 +3205,7 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
         arma::cx_mat auxvec(nGs_new,nGs_new,arma::fill::eye);
         uint nGs_new_combinations = nGs_existing*(nGs_new-nGs_existing) +  (nGs_new-nGs_existing)*(nGs_new-nGs_existing+1)/2;
         arma::imat indecesqg(nq*nGs_new_combinations,3,arma::fill::zeros);
-        std::cout << "Number of G'G combinations to compute: " << nGs_new_combinations << std::endl;
+        std::cout << "Number of extra GG' combinations to compute: " << nGs_new_combinations << std::endl;
         std::cout << "Diagonalizing H(k+q) for every point q, for every point k... " << std::flush;
 
         if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty())
