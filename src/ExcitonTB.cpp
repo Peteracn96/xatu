@@ -168,14 +168,16 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     bool model_has_spin       = cfg.screeningInfo.spin;
     bool isotropic            = cfg.screeningInfo.isotropic;
     double Gcutoff            = cfg.screeningInfo.Gcutoff;
-    this->ts_ = ts;
+    double d                  = cfg.screeningInfo.d;
 
+    this->ts_ = ts;    
     this->isscreeningset      = true;
     this->function_           = function;
     this->ncell_aux_          = ncell_aux;
     this->nk_aux_             = pow(ncell_aux, 2);
     this->Gcutoff_            = Gcutoff;
     this->isotropic           = isotropic;
+    this->d_                  = d;
 
     uint totalvbands = system->fermiLevel + 1;
     uint totalcbands = system->basisdim - totalvbands;
