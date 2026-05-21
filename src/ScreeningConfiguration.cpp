@@ -125,6 +125,9 @@ void ScreeningConfiguration::checkContentCoherence(){
     if(screeningInfo.ncell_aux < 1){
         throw std::invalid_argument("The number of points in the coarser BZ mesh in each direction, ncell_aux, has to be positive.");
     }
+    if(screeningInfo.d < 0){
+        throw std::invalid_argument("The thickness of the material must not be negative.");
+    }
 };
 
 }
