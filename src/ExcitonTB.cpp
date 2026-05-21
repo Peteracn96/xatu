@@ -1517,7 +1517,6 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
 inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q) {
 
     uint nk = this->nk_aux;
-    int basisdim = system->basisdim;
 
     int nvbands = valencebands.size();
     int nvbandsincluded = this->nvalencebands_;
@@ -1530,9 +1529,6 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
-        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-        this->eigvalkqStack_ = arma::mat(basisdim, nk);
-
         std::cout << "Bloch Hamiltonian has to be diagonalized at every k+q point before computing polarizability matrix elements. Terminating" << std::endl;
         exit(0);
     }
@@ -1568,41 +1564,39 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
 }
 
 /**
- * Method to compute the (G,G') matrix element of the static 2D polarizability at the specified arbitrary momentum vector q.
- * @details The purely 2D polarizability is computed
+ * Method to compute the (G,G') matrix element of the static Q2D polarizability at the specified momentum q.
+ * @details The Q2D polarizability computed has meaning only when multiplied by the Coulomb potential
  * @param G Reciprocal lattice vector G
  * @param G2 Reciprocal lattice vector G2
  * @param q Momentum vector q
+ * @param d Thickness of the 2D system
  * @return Polarizability
 */
 inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q, double d) {
 
     uint nk = this->nk_aux;
-    int basisdim = system->basisdim;
 
     int nvbands = valencebands.size();
+    int ncbands = conductionbands.size();
+
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
 
     int upperindexcband = nvbands + ncbandsincluded - 1;
-
-    //int basisdim = nvbands + ncbands;
+    int lowerindexvbands = nvbands - nvbandsincluded;
 
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
 
     std::complex<double> term_aux = 0.;
-    std::complex<double> term_aux_2 = 0.;
+    std::complex<double> term_aux_2 = 0.;    
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     if (arma::norm(q) < 1E-7 && (arma::norm(G) < 1E-7 || arma::norm(G2) < 1E-7)){
         return 0.;
     }
 
-    if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
-        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-        this->eigvalkqStack_ = arma::mat(basisdim, nk);
-
+    if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {       
         std::cout << "Bloch Hamiltonian has to be diagonalized at every k+q point before computing polarizability matrix elements. Terminating" << std::endl;
         exit(0);
     }
@@ -1632,20 +1626,21 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
                     coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
-                std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G, d);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
+                std::complex<double> IvcG_d = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
+                std::complex<double> IcvG_d = blochCoherenceFactor(coefsk, coefskq, kq, k, G, d);
+               
+                std::complex<double> IvcG2_d = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2, d);
+                std::complex<double> IcvG2_d = blochCoherenceFactor(coefsk, coefskq, kq, k, G2, d);
 
-                std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G, d);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
 
-                term_aux += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
+                term_aux += IvcG_d*std::conj(IvcG2_d) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
                 
-                term_aux_2 += IcvG*std::conj(IcvG2)  / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
+                term_aux_2 += IcvG_d*std::conj(IcvG2_d)  / (eigvalkStack_.col(ik)(ic) - eigvalkqStack_.col(ik)(iv));
             }
         }
     }
 
-    return g_s*(term_aux + term_aux_2)/(d*(std::complex<double>)nk);
+    return g_s*(term_aux - term_aux_2)/((std::complex<double>)nk);
 }
 
 /**
