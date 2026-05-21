@@ -1572,7 +1572,7 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
  * @param d Thickness of the 2D system
  * @return Polarizability
 */
-inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q, double d) {
+inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q, const double d) {
 
     uint nk = this->nk_aux;
 
@@ -1655,7 +1655,7 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    const double potential = coulomb_2D_FT(G + q);
+    const double potential = coulomb_2D_FT(q + G)*coulomb_2D_FT(q + G2);
 
     std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,q);
             
@@ -1679,100 +1679,6 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
 
     std::complex<double> epsilon = kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
 
-    return epsilon;
-}
-
-/**
- * Method to compute the (G,G') matrix element of the static 2D polarizability at the specified momentum vector q.
- * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh.  The purely 2D polarizability is computed.
- * @param G Reciprocal lattice vector G
- * @param G2 Reciprocal lattice vector G2
- * @param iq Index of momentum vector q
- * @return Polarizability
-*/
-inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const int iq) {
-
-    int nk = this->nk_aux;    
-
-    int nvbands = valencebands.size();
-    int nvbandsincluded = this->nvalencebands_;
-    int ncbandsincluded = this->nconductionbands_;
-    int upperindexcband = nvbands + ncbandsincluded - 1;
-
-    arma::cx_vec coefskq, coefsk;
-    arma::cx_vec coefskq_c, coefsk_v;
-
-    std::complex<double> term_aux = 0.;
-    std::complex<double> g_s = this->g_s; // Spin degeneracy
-
-    for (int ik = 0; ik < nk; ik++){
-
-        arma::rowvec k = this->kpoints_aux.row(ik);
-        arma::rowvec kq = this->kpoints_aux.row(ik) + system->kpoints.row(iq);
-
-        const arma::cx_dmat *auxk_slice = &eigveckStack_.slice(ik);
-        const arma::cx_dmat *auxkq_slice = &eigveckqStack_.slice(ik);
-
-        for (int ic = nvbands; ic <= upperindexcband; ic++){
-
-            // Using the atomic gauge
-            if (gauge == "atomic"){
-                coefsk = system_->latticeToAtomicGauge(auxk_slice->col(ic), k);
-            } else {
-                coefsk = auxk_slice->col(ic);
-            }
-
-            if (gauge == "atomic") {
-                coefskq_c = system_->latticeToAtomicGauge(auxkq_slice->col(ic), kq);
-            } else {
-                coefskq_c = auxkq_slice->col(ic);
-            }
-
-            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
-
-                // Using the atomic gauge
-                if (gauge == "atomic"){
-                    coefskq = system_->latticeToAtomicGauge(auxkq_slice->col(iv), kq);
-                } else {
-                    coefskq = auxkq_slice->col(iv);
-                }
-
-                if (gauge == "atomic") {
-                    coefsk_v = system_->latticeToAtomicGauge(auxk_slice->col(iv), k);
-                } else {
-                    coefsk_v = auxk_slice->col(iv);
-                }
-
-                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
-
-                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
-
-                term_aux += std::conj(IvcG) * IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG) * IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
-            }
-        }
-    }
-
-    return g_s*term_aux/((std::complex<double>)totalCells);
-}
-
-/**
- * Method to compute the (G,G') matrix element of the static polarizability at the specified arbitrary momentum vector q.
- * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh. The purely 2D dielectric function is computed.
- * @param G Reciprocal lattice vector G
- * @param G2 Reciprocal lattice vector G2
- * @param iq Index of momentum vector q
- * @return Polarizability 
-*/
-std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const int iq) {
-
-    double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
-
-    double potential = coulomb_2D_FT(G + q);
-
-    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,iq);
-            
     return epsilon;
 }
 
