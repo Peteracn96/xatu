@@ -1821,8 +1821,6 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     int upperindexcband = nvbands + ncbandsincluded - 1;
     int lowerindexvbands = nvbands - nvbandsincluded;
 
-    //int basisdim = nvbands + ncbands;
-
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
 
@@ -1834,10 +1832,7 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
         return 0.;
     }
 
-    if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
-        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-        this->eigvalkqStack_ = arma::mat(basisdim, nk);
-
+    if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {       
         std::cout << "Bloch Hamiltonian has to be diagonalized at every k+q point before computing polarizability matrix elements. Terminating" << std::endl;
         exit(0);
     }
