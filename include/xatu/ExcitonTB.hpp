@@ -115,7 +115,9 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Returns spin degeneracy
         uint& g_s = g_s_;
-
+        // Returns thickness
+        double& d = d_;
+        
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;
         const arma::ivec& Gs = Gs_;
