@@ -2584,7 +2584,7 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         double d = this->d;
 
-        std::complex<long double> epsilon_Q2D =  kroneckerdelta - potential*computesinglePolarizabilityMatrixElement(q, g, g2, d);
+        std::complex<long double> epsilon_Q2D =  kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(q, g, g2, d);
 
         std::cout << "\nepsilon_2D(q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
 
