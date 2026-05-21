@@ -2580,13 +2580,15 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         std::complex<double> kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1. : 0.;
 
-        double d = 7;
+        std::complex<long double> epsilon =  kroneckerdelta - potential*Chi;
 
-        epsilon =  kroneckerdelta - ((std::complex<double>) potential)*Chi;
+        double d = this->d;
 
-        if (arma::max(arma::abs(system->motif.col(2))) < 1e-6) {
-            d = 3.5; // If the material is hBN, set thickness to 3.5 Angstroms
-        }   
+        std::complex<long double> epsilon_Q2D =  kroneckerdelta - potential*computesinglePolarizabilityMatrixElement(q, g, g2, d);
+
+        std::cout << "\nepsilon_2D(q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
+
+        std::cout << "\nepsilon_Q2D(d = " << d << ") = " << std::setprecision(17) << std::real(epsilon_Q2D) << " + i" << std::imag(epsilon_Q2D) << std::endl;
     }
 
     return epsilon;
