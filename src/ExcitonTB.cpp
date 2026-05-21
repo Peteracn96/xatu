@@ -2845,7 +2845,7 @@ void ExcitonTB::invertDielectricMatrix(){
 
 /**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
- * @details Computes the purely 2D version.
+ * @details Computes the 2D version.
  * @return void
 */
 std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
@@ -2908,10 +2908,7 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 }
 
 /**
- * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
- * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
- * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
- * kpoints coincides with the kmesh
+ * Method to compute the inverse static dielectric function matrix at the specified momentum vector q.
  * @return void
 */
 void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
@@ -2981,6 +2978,9 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
             this->eigveckqStack_.slice(i) = auxEigvec;
         }
         std::cout << "Done.\n" << std::flush;
+
+    double d = this->d;
+    bool is_d_finite = std::abs(d) > 1E-4;
         
     #pragma omp parallel for
     for (uint i = 0; i < nGs*(nGs+1)/2; i++){
@@ -2991,7 +2991,13 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q_aux);
+        std::complex<double> Chi = 0.0;
+        if (is_d_finite) {
+            Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q_aux, d);
+        }
+        else {
+            Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q_aux);
+        }
 
         double potentialg = std::sqrt(coulomb_2D_FT(q_aux + G))*std::sqrt(coulomb_2D_FT(q_aux + G2));
         double kroneckerdelta = g == g2? 1 : 0;
