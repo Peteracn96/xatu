@@ -605,6 +605,7 @@ void ExcitonTB::setGcutoff(double Gcutoff){
         this->trunreciprocalLattice_.submat(0, 0, nGs_aux - 1, 2) = reciprocalLattice_old; // When increasing the G cutoff, conserves the order of the G vectors
     }
 
+    std::cout << "Updated reciprocal lattice:" << std::endl;
     printReciprocalLattice();
 }
 
@@ -1812,8 +1813,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         uint odd = Ncells % 2;
         uint nq = odd == 1 ? Ncells * (Ncells - odd) / 2 + (Ncells - odd) / 2 + 1 : (2 * Ncells - 1) + (Ncells - 1) * (Ncells - 2) / 2 + Ncells / 2 + 1; // Only half of the BZ
 
-        std::cout << "Number of G vectors included in the calculation: " << nGs << std::endl;
-        printReciprocalLattice();
+        std::cout << "\nNumber of G vectors included in the calculation: " << nGs << std::endl;
 
         this->setq_points_list(system->kpoints); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
         uint Nqpoints = this->qpoints_list_.n_rows;
@@ -2208,8 +2208,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
             }
         }
 
-        printReciprocalLattice();
-
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
         vec auxEigVal(basisdim);
@@ -2352,8 +2350,6 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
             }
         }
 
-        printReciprocalLattice();
-
         for (uint iq = 0; iq < Nqpoints; iq++)
         {
             arma::rowvec q = q_points.row(iq);
@@ -2454,8 +2450,6 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
     if(mode == "reciprocalspace"){
 
-        printReciprocalLattice();
-
         std::complex<double> Chi;
 
         arma::rowvec q = this->q_;
@@ -2524,10 +2518,6 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     uint nGs = ReciprocalVectors.n_rows;
     std::string to_continue = "_";
-
-    printReciprocalLattice();
-
-    //continueprompt("The number of reciprocal vectors included is: " + std::to_string(nGs) + ". Do you wish to procceed?[y/n]\n");
 
     std::string filename_dielectric = label + "_invepsilon.dat";
     FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
