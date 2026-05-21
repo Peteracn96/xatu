@@ -2121,6 +2121,15 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * Chi;
                     this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
                 }
+
+                int nq_count_aux = nq_count + 1;
+                double percentage_aux = 2*(double)nq_count_aux/nq*100.0;
+                double percentage = 2*(double)nq_count/nq*100.0;
+                
+                if (((int) percentage_aux != (int) percentage) && ((int) percentage) % 5 == 0) {
+                    std::cout << (int) percentage << "%" << std::endl;
+                }
+                nq_count++;      
             }
         }
     }
