@@ -249,9 +249,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void computesingleInverseDielectricMatrix(std::string);
         void PolarizabilityMesh();
         void compute_2D_DielectricMatrix();
-        void compute_quasi2D_DielectricMatrix();
         void compute_2D_DielectricMatrix(std::string);
-        void compute_quasi2D_DielectricMatrix(std::string);
         void compute_ScreenedPotential_regularization(bool);
         void compute_2D_PolarizabilityMatrix(std::string);
         void invertDielectricMatrix();
