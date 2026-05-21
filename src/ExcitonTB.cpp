@@ -720,6 +720,15 @@ void ExcitonTB::setPercentage(double percentage){
     this->percentage_ = percentage;
 }
 
+/**
+ * Sets the thickness of the 2D system
+ * @param d Thickness
+ * @return void
+*/
+void ExcitonTB::setthickness(double d){
+    this->d_ = d;
+}
+
 /* ------------------------------ Getters ------------------------------ */
 int ExcitonTB::getNGs() const {
 

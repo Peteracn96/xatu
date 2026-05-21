@@ -181,6 +181,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setTrunLattice(int,double);
         void setq_points_list(arma::mat);
         void setPercentage(double);
+        void setthickness(double);
 
         // Getters
         int getNGs() const;
