@@ -66,7 +66,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         int Nqpoints = 1;   // Number of q points to compute the dielectric function at
         double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
         double slope_perp_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0 along the direction perpendicular for slope_
-        uint ncell_aux_ = 11; // Number of unit cells used to compute the dielectric function
+        double d_ = 1.0; // Effective thickness of the 2D system
+        uint ncell_aux_ = 10; // Number of unit cells used to compute the dielectric function
         uint nk_aux_ = ncell_aux_*ncell_aux_; // Number of k points used to compute the dielectric function
         uint g_s_ = 1; // Spin degeneracy
         arma::mat kpoints_aux_; // Auxiliar coarser BZ mesh to compute the dielectric function
