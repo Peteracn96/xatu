@@ -2631,7 +2631,6 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
     arma::rowvec q_aux = this->q_;
 
-    //int iq = system_->findEquivalentPointBZ(this->q_, this->ncell);//system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell); // this has to be changed after when I find the time
     std::cout << "Computing inverse of dielectric matrix at momentum: q = " << this->q_ << std::endl;  
     arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
     arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -2652,7 +2651,6 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     arma::cx_mat auxEigvec(basisdim, basisdim);
     int nk = (int) this->nk_aux;
 
-    // If the eigvalkqStack_ and eigveckqStack_ are empty, reshape them
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty())
     {
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
@@ -2751,12 +2749,11 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
         return;
     }
 
-    // Calculates the head element of the dielectric matrix at q = 0 infinitesimal
+    // Calculates the head element of the dielectric matrix at q = q_0
 
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
 
-    // If the eigvalkqStack_ and eigveckqStack_ are empty, reshape them
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty())
     {
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
