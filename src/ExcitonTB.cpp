@@ -897,11 +897,8 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     }
 
     std::complex<double> potential = 0;
-    double eps = 1E-12; // arma::norm(system->reciprocalLattice.row(0))/totalCells;
-
+    double eps = 1E-12;
     double qnorm = arma::norm(q);
-    arma::rowvec G = this->trunreciprocalLattice_.row(g);
-    arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
 
     if (qnorm < eps && g == 0 && g2 == 0){
         potential = this->W00_at_0_;
@@ -913,7 +910,17 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     else
     {
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        potential = std::sqrt(coulomb_2D_FT(q + G) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * coulomb_2D_FT(q + G2));
+        double vc_average = 1.0;
+        double d = this->d_;
+
+        arma::rowvec G = this->trunreciprocalLattice_.row(g);
+        arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
+        
+        if (d > 1E-4) {                        
+            vc_average = 2*std::sqrt(std::exp(-arma::norm(q + G)*d) - 1 + d*arma::norm(q+G))*std::sqrt(std::exp(-arma::norm(q + G2)*d) - 1 + d*arma::norm(q+G2))/(arma::norm(q + G)*arma::norm(q + G2)*d*d);
+        }
+
+        potential = vc_average * std::sqrt(coulomb_2D_FT(q + G) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * coulomb_2D_FT(q + G2));
     }
 
     return potential;
