@@ -1813,7 +1813,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         uint odd = Ncells % 2;
         uint nq = odd == 1 ? Ncells * (Ncells - odd) / 2 + (Ncells - odd) / 2 + 1 : (2 * Ncells - 1) + (Ncells - 1) * (Ncells - 2) / 2 + Ncells / 2 + 1; // Only half of the BZ
 
-        std::cout << "\nNumber of G vectors included in the calculation: " << nGs << std::endl;
+        std::cout << "\nNumber of G vectors included in the calculation of the screening: " << nGs << std::endl;
 
         this->setq_points_list(system->kpoints); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
         uint Nqpoints = this->qpoints_list_.n_rows;
@@ -1823,7 +1823,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         uint Nktotal = system->nk;
 
         q_points = this->qpoints_list_; 
-        
+        uint nq_count = 0;
         uint basisdim = system->basisdim;
 
         double d = this->d;
@@ -1875,7 +1875,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
         }
 
-        std::cout << "\nDone. \nComputing dielectric matrix in the BZ mesh... \n" << std::flush;
+        std::cout << "\nDone. \nCalculation of the dielectric matrix in the BZ mesh at... \n" << std::flush;
 
         arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -1945,8 +1945,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             }
         }
 
-        if (odd == 0){
-            std::cout << " (Number of k points is even, computing the dielectric matrix at the non-centrosymmetric part of the BZ..." << std::endl;
+        if (odd == 0){            
             uint iq_test = 0;
             arma::rowvec q_test = q_points.row(iq_test);            
             
@@ -1987,12 +1986,14 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * Chi;
                     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
                 }
+                nq_count++;
             }
-
-            std::cout << "\ncomputing the dielectric matrix at the centrosymmetric part of the BZ..." << std::endl;
 
             uint iq_i = (2 * Ncells - 1);
             uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
+            
+            double percentage = 0.05;
+            int percentage_count = percentage*nq/2;
             for (uint ik = 0; ik < ik_f; ik++)
             {
                 uint iq = indecesqg.row(iq_i*nGs*(nGs + 1)/2 + ik*nGs*(nGs + 1)/2)(0); // indecesqg.row(i_aux)(0);
@@ -2053,6 +2054,15 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * Chi;
                     this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
                 }
+                
+                int nq_count_aux = nq_count + 1;
+                double percentage_aux = 2*(double)nq_count_aux/nq*100.0;
+                double percentage = 2*(double)nq_count/nq*100.0;
+                
+                if (((int) percentage_aux != (int) percentage) && ((int) percentage) % 5 == 0) {
+                    std::cout << (int) percentage << "%" << std::endl;
+                }
+                nq_count++;                                
             }
         }
         
