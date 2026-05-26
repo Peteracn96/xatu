@@ -158,6 +158,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         ExcitonTB(std::shared_ptr<SystemTB>, int ncell = 20, const arma::ivec& bands = {0, 1}, 
                  const arma::rowvec& parameters = {1, 5, 1, 1, 1}, const arma::rowvec& Q = {0., 0., 0.});
 
+        // Specify number of bands participating (int)
+        ExcitonTB(const SystemConfiguration&, int ncell, int nbands, int nrmbands,
+                  const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const double Gc_exciton);
+
         // ~ExcitonTB();
 
         // Setters
@@ -209,7 +213,7 @@ class ExcitonTB : public Exciton<SystemTB> {
                                                        std::string, int nrcells = 15);
         std::complex<double> blochCoherenceFactor(const arma::cx_vec&, const arma::cx_vec&, 
                                                   const arma::rowvec&, const arma::rowvec&,
-                                                  const arma::rowvec&) const;
+                                                  const arma::rowvec&);
         std::complex<double> blochCoherenceFactor(const arma::cx_vec &, const arma::cx_vec &,
                                                   const arma::rowvec &, const arma::rowvec &,
                                                   const arma::rowvec &, const double) const;

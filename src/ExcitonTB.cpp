@@ -793,7 +793,7 @@ int ExcitonTB::getNGs() const {
  * @param X x --- Argument of H0(x) ( x ò 0 )
  * @param SH0 SH0 --- H0(x). The return value is written to the direction of the pointer.
 */
-void ExcitonTB::STVH0(double X, double *SH0) const {
+void ExcitonTB::STVH0(double X, double *SH0) {
     double A0,BY0,P0,Q0,R,S,T,T2,TA0;
 	int K, KM;
 
@@ -833,7 +833,7 @@ void ExcitonTB::STVH0(double X, double *SH0) const {
  * @param r Distance at which we evaluate the potential.
  * @return Value of Keldysh potential, V(r).
  */
-double ExcitonTB::keldysh(double r){
+double ExcitonTB::keldysh(arma::rowvec r){
     double eps_bar = (eps_m + eps_s)/2;
     double SH0;
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
@@ -863,7 +863,7 @@ double ExcitonTB::keldysh(double r){
  * @param regularization Regularization distance to remove divergence at r=0.
  * @return Value of Coulomb potential, V(r).
  */
-double ExcitonTB::coulomb(double r){
+double ExcitonTB::coulomb(arma::rowvec r){
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
     double R = abs(arma::norm(r));
     if (R > cutoff){
@@ -878,7 +878,7 @@ double ExcitonTB::coulomb(double r){
  * @return Pointer to function representing the potential.
  */
 
- const potptr ExcitonTB::selectPotential(std::string potential){
+potptr ExcitonTB::selectPotential(std::string potential){
     if(potential == "keldysh"){
         return &ExcitonTB::keldysh;
     }
@@ -1183,7 +1183,12 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-        term += Ic*conj(Iv)*keldyshFT(k - k2 + G);
+                term += conj(Ic)*rpaFT(ig, ig2, k_eff)*Iv;
+            }
+        }       
+    } else {
+        std::cout << "Potential not valid" << std::endl;
+        exit(1);
     }
 
     return term/((std::complex<double>)totalCells);
@@ -1200,16 +1205,23 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
  */
 std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1, const arma::cx_vec& coefs2,
                                                     const arma::rowvec& k1, const arma::rowvec& k2,
-                                                    const arma::rowvec& G) const {
+                                                    const arma::rowvec& G){
 
     std::complex<double> imag(0, 1);
     arma::cx_vec coefs = arma::conj(coefs1) % coefs2;
     arma::cx_vec phases = arma::ones<arma::cx_vec>(system->basisdim);
+
+    int index_min = 0;
+    int index_max = -1;
+
     for(int i = 0; i < system->natoms; i++){
         int species = system->motif.row(i)(3);
-        arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2);
-        phases.subvec(i*system->orbitals(species), (i+1)*system->orbitals(species) - 1) *= 
-        exp(imag*arma::dot(k1 - k2 + G, atomPosition));
+        arma::rowvec atomPosition = system->motif.row(i).subvec(0, 2); 
+
+        index_max += system->orbitals(species);
+        phases.subvec(index_min, index_max) *= exp(-imag*arma::dot(k1 - k2 + G, atomPosition));
+
+        index_min = index_max + 1;
     }
 
     std::complex<double> factor = arma::dot(coefs, phases);
