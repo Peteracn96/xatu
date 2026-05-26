@@ -3856,9 +3856,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) {
                 }
                 fprintf(textfile, "\n");
             }
-        }
-
-        fprintf(textfile, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf", this->q0_(0), this->q0_(1), this->q0_(2), this->slope_, this->slope_perp_);
+        }        
     }
     
     fclose(textfile);
@@ -4024,26 +4022,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
             double Re_part = 0;
             double Im_part = 0;
             double aux;
-            column_counter = 0;
-
-            if (line_counter + 1 == total_lines) {
-                column_counter = 0;
-                while(ss >> aux) {   
-                    if (column_counter == 0) {
-                        this->q0_(0) = aux;
-                    } else if (column_counter == 1) {
-                        this->q0_(1) = aux;
-                    } else if (column_counter == 2) {
-                        this->q0_(2) = aux;
-                    } else if (column_counter == 3) {
-                        this->slope_ = aux;
-                    } else if (column_counter == 4) {
-                        this->slope_perp_= aux;
-                    }
-                    column_counter++;
-                }
-                break;
-            }
+            column_counter = 0;           
 
             while(ss >> aux) {   
                 if (column_counter%2 == 0) {
@@ -4059,10 +4038,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
             if (line_counter%ngs == 0){
                 k_counter++;
             } 
-        }
-
-        double q0_norm = arma::norm(this->q0_);
-        this->W00_at_0_ = (2 + 0.5*(this->slope_ + this->slope_perp_)*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
+        }        
     }
 
     std::cout << "Inverse of dielectric matrix read from file with success." << std::endl;
