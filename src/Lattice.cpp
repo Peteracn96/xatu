@@ -453,4 +453,3 @@ arma::rowvec Lattice::rotateC3(const arma::rowvec& position){
 
 
 }
-
