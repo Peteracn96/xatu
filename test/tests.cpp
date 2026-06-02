@@ -1061,14 +1061,17 @@ TEST(ScreeningParsingTest, ScreeningParsing){
     arma::ivec expectedvectors = arma::ivec({0, 0});
     arma::rowvec expectedmomentum = {0.2, 0., 0.};
 
-    REQUIRE(config.screeningInfo.ncell_aux == expectedNcell_aux);
-    REQUIRE(config.screeningInfo.nvbands == expected_valence_bands);
-    REQUIRE(config.screeningInfo.ncbands == expected_conduction_bands);
-    REQUIRE(config.screeningInfo.spin == expectedspin);
-    REQUIRE(config.screeningInfo.isotropic == expectedisotropic);
-    REQUIRE(config.screeningInfo.Gcutoff == expectedGcutoff);
-    REQUIRE((config.screeningInfo.Gs(0) == expectedvectors(0) && config.screeningInfo.Gs(1) == expectedvectors(1)));
-    REQUIRE((config.screeningInfo.q(0) == expectedmomentum(0) && config.screeningInfo.q(1) == expectedmomentum(1) && config.screeningInfo.q(2) == expectedmomentum(2)));
+    EXPECT_EQ(config.screeningInfo.ncell_aux, expectedNcell_aux);
+    EXPECT_EQ(config.screeningInfo.nvbands, expected_valence_bands);
+    EXPECT_EQ(config.screeningInfo.ncbands, expected_conduction_bands);
+    EXPECT_EQ(config.screeningInfo.spin, expectedspin);
+    EXPECT_EQ(config.screeningInfo.isotropic, expectedisotropic);
+    EXPECT_EQ(config.screeningInfo.Gcutoff, expectedGcutoff);
+    EXPECT_EQ(config.screeningInfo.Gs(0), expectedvectors(0));
+    EXPECT_EQ(config.screeningInfo.Gs(1), expectedvectors(1));
+    EXPECT_EQ(config.screeningInfo.q(0), expectedmomentum(0));
+    EXPECT_EQ(config.screeningInfo.q(1), expectedmomentum(1));
+    EXPECT_EQ(config.screeningInfo.q(2), expectedmomentum(2));
 
     std::cout.clear();
     std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;
@@ -1083,26 +1086,29 @@ TEST(hBNScreeningTest, hBNDFTScreening){
     std::string modelfile = "../examples/material_models/DFT/hBN_base_HSE06.outp";
     xatu::CRYSTALConfiguration config = xatu::CRYSTALConfiguration(modelfile, 100);
 
+    int ncell = 20;
+
     std::string excitonfile = "../examples/excitonconfig/hBN_reciprocal.txt";
     xatu::ExcitonConfiguration excitonconfig = xatu::ExcitonConfiguration(excitonfile);
 
     std::string screeningfile = "../examples/screeningconfig/hBN_DFT_screening.txt";
     xatu::ScreeningConfiguration screeningconfig = xatu::ScreeningConfiguration(screeningfile);
 
-    xatu::ExcitonTB exciton = xatu::ExcitonTB(config, excitonconfig, screeningconfig);
+    xatu::ExcitonTB exciton = xatu::ExcitonTB(config, ncell, 1, 0, {1, 1, 10});
+    exciton.initializeScreeningAttributes(screeningconfig);
     
     exciton.system->setAU(true);
     exciton.brillouinZoneMesh(excitonconfig.excitonInfo.ncell);
     exciton.initializeHamiltonian();
     
     double expectedGcutoff = 3.0;
-    REQUIRE(excitonconfig.excitonInfo.Gc_ReciprocalVectors == expectedGcutoff);
+    EXPECT_EQ(excitonconfig.excitonInfo.Gc_ReciprocalVectors, expectedGcutoff);
 
-    std::complex<double> expectedepsilon = 2.0014619240;
+    std::complex<double> expectedepsilon = 2.0014566256;
 
     std::complex<double> epsilon = exciton.computesingleDielectricFunctionMatrixElement();
 
-    REQUIRE_THAT(std::real(epsilon), Catch::Matchers::WithinAbs(std::real(expectedepsilon), 1E-4));
+    EXPECT_NEAR(std::real(epsilon), std::real(expectedepsilon), 1E-4);
 
     std::cout.clear();
     std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;

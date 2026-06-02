@@ -2897,8 +2897,6 @@ void ExcitonTB::invertDielectricMatrix(){
 */
 std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
-    std::complex<double> epsilon = 0.0;
-
     if(mode == "realspace"){
         std::cout << "Numerical screening in real space not implemented. Terminating." << std::endl;
         std::exit(0);
@@ -2940,18 +2938,18 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         std::complex<double> kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1. : 0.;
 
-        std::complex<long double> epsilon =  kroneckerdelta - potential*Chi;
+        std::complex<double> epsilon =  kroneckerdelta - potential*Chi;
 
         double d = this->d;
 
-        std::complex<long double> epsilon_Q2D =  kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(q, g, g2, d);
+        std::complex<double> epsilon_Q2D =  kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(q, g, g2, d);
 
         std::cout << "\nepsilon_2D(q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
 
         std::cout << "\nepsilon_Q2D(d = " << d << ") = " << std::setprecision(17) << std::real(epsilon_Q2D) << " + i" << std::imag(epsilon_Q2D) << std::endl;
-    }
-
-    return epsilon;
+    
+        return epsilon;
+    }    
 }
 
 /**
