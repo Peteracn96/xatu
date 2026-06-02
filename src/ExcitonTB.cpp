@@ -136,11 +136,7 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
 
             this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gc_exciton_);
 
-            this->nReciprocalVectors_ = this->trunreciprocalLattice_.n_rows;
-
-            if (this->nReciprocalVectors_ > (int)this->trunreciprocalLattice_.n_rows){
-                throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
-            }
+            this->nReciprocalVectors_ = this->trunreciprocalLattice_.n_rows;            
         }
     } else if (this->mode == "realspace"){
         std::cout << "Doing nothing for now\n";
@@ -278,7 +274,9 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         uint ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
         if (ngs < (uint) this->nReciprocalVectors) {
-            throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the screening (" + std::to_string(ngs) + ") may not be less than the number of vectors included for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") .");
+            std::cout << "Warning: Number of reciprocal lattice vectors for the screening (" + std::to_string(ngs) + ") may not be less than the number of vectors included for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") . Defaulting the exciton G cutoff to the screening G cutoff." << std::endl;
+            this->Gc_exciton_ = this->Gcutoff_;
+            this->nReciprocalVectors_ = ngs;
         }
 
         if (cfg.screeningInfo.function == "dielectric" || cfg.screeningInfo.function == "polarizability"){
@@ -409,7 +407,8 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
     this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gcutoff_);
 
     if (this->nReciprocalVectors_ > (int) this->trunreciprocalLattice_.n_rows) {
-        throw std::invalid_argument("constructor ExcitonTB(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
+        std::cout << "Warning: Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + "). Defaulting the exciton G cutoff to the screening G cutoff." << std::endl;
+        this->Gc_exciton_ = this->Gcutoff_;
     }
 };
 
