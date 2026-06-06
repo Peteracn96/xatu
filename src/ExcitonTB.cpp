@@ -2960,7 +2960,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     auto start = high_resolution_clock::now();
 
     if(mode == "realspace"){
-        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+        std::cout << "Real space dielectric function not implemented. Exiting." << std::endl;
 
         std::exit(0);
     }
