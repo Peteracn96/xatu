@@ -19,6 +19,12 @@ Xatu (_eXcitons from ATomistic calcUlations_) is a program and library designed 
 The theory behind the code plus details about the implementation and some usage examples can be found in our paper [Efficient computation of optical excitations in two-dimensional materials with the Xatu code](https://doi.org/10.1016/j.cpc.2023.109001). If you find 
 our paper or the code useful, please consider citing us.
 
+The new version of the code computes the exciton states without the need of any external model parameters through a 2D implementation of the microscopic dielectric function within the random-phase approximation (RPA). The RPA macroscopic dielectric function faithfully reproduces that from first-principles calculations. Both strict 2D or quasi-2D calculations can be used to compute the dielectric function and the excitons. The theory behind this new version can be found in the paper [Microscopic screening theory for excitons in two-dimensional materials: A bridge between effective models and _ab initio_ descriptions](https://arxiv.org/abs/2603.10966). If you find the paper or the code useful, please consider citing it.
+
+<p align="center">
+  <img src="epsilon_vs_q_hBN.jpg" width="90%" height="90%">
+</p>
+
 ## Installation
 Xatu is built upon the Armadillo C++ library for linear algebra, which is also based on the standard libraries por linear algebra, namely BLAS, LAPACK and ARPACK.
 ### Ubuntu 22.04 LTS native and WSL
