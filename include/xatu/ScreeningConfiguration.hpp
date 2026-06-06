@@ -44,7 +44,7 @@ class ScreeningConfiguration : public ConfigurationBase{
         // Thickness of the 2D system
         double d = 0.0;
         // Is system isotropic
-        bool isotropic = true;
+        bool isotropic = false;
     };
 
     public:
