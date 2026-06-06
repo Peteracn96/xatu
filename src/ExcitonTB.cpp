@@ -3098,6 +3098,16 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
         return;
     }
 
+    if (this->potential_ == "coulomb"){
+
+        this->W00_at_0_ = 2 * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
+
+        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV " << std::endl;
+
+        std::cout << "Done.\n" << std::endl;
+        return;
+    }
+
     if (this->potential_ == "keldysh"){
 
         this->W00_at_0_ = (2 + this->r0*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
