@@ -3120,23 +3120,37 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
     // Calculates the head element of the dielectric matrix at q = q_0
 
+    arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
+    arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+    arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
+
+    arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
+    
+    int i = 0;
+    for (uint g = 0; g < nGs; g++){
+        for (uint g2 = g; g2 < nGs; g2++){
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
+
     vec auxEigVal(basisdim);
-    arma::cx_mat auxEigvec(basisdim, basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);    
 
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty())
     {
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
     }
-    else if ((this->eigveckqStack_.n_slices != nk || this->eigvalkqStack_.n_rows != basisdim || this->eigvalkqStack_.n_cols != basisdim) || (this->eigvalKQStack_.n_rows != basisdim || this->eigvalKQStack_.n_cols != nk))
+    else if (((int) this->eigveckqStack_.n_slices != nk || (uint) this->eigvalkqStack_.n_rows != basisdim || (uint) this->eigvalkqStack_.n_cols != basisdim) || ((uint) this->eigvalKQStack_.n_rows != basisdim || (int) this->eigvalKQStack_.n_cols != nk))
     {
         this->eigveckqStack_.reshape(basisdim, basisdim, nk);
         this->eigvalkqStack_.reshape(basisdim, nk);
     }
 
-    std::cout << "Diagonalizing H(k+q0) for every point k... " << std::flush;
-
-    for (uint i = 0; i < nk; i++)
+    std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
+    for (uint i = 0; i < (uint) nk; i++)
     {
         arma::rowvec kq = this->kpoints_aux.row(i) + q0;
         system->solveBands(kq, auxEigVal, auxEigvec);
@@ -3144,14 +3158,38 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
         this->eigvalkqStack_.col(i) = auxEigVal;
         this->eigveckqStack_.slice(i) = auxEigvec;
     }
+    std::cout << "Done.\n" << std::flush;
 
-    std::cout << "done, " << std::flush;
+    double d = this->d;
+    bool is_d_finite = std::abs(d) > 1E-4;
+        
+    #pragma omp parallel for
+    for (uint i = 0; i < nGs*(nGs+1)/2; i++){
 
-    std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, null_vector, q0);
+        int g = indecesg.row(i)(0);
+        int g2 = indecesg.row(i)(1);
 
-    double potentialg = coulomb_2D_FT(null_vector + q0);
+        arma::rowvec G = ReciprocalVectors.row(g);                
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-    std::complex<double> head_element = 1.0 - potentialg*Chi;
+        std::complex<double> Chi = 0.0;
+        if (is_d_finite) {
+            Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q0, d);
+        }
+        else {
+            Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0);
+        }
+
+        double potentialg = std::sqrt(coulomb_2D_FT(q0 + G))*std::sqrt(coulomb_2D_FT(q0 + G2));
+        double kroneckerdelta = g == g2? 1 : 0;
+        
+        dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
+    }
+
+    auxvecsol = arma::solve(dielectric_matrix,auxvec);
+
+    std::complex<double> head_element = 1.0/auxvecsol.row(0)(0);
 
     double Re_head_element = std::real(head_element);
     double slope = (Re_head_element - 1.)/q0_norm;
@@ -3163,8 +3201,8 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
         arma::rowvec q0_perpendicular = {-q0(1), q0(0), 0};
 
-        std::cout << "diagonalizing H(k+q0_perpendicular) for every point k... " << std::flush;
-        for (uint i = 0; i < nk; i++)
+        std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
+        for (uint i = 0; i < (uint) nk; i++)
         {
             arma::rowvec kq = this->kpoints_aux.row(i) + q0_perpendicular;
             system->solveBands(kq, auxEigVal, auxEigvec);
@@ -3172,13 +3210,35 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
             this->eigvalkqStack_.col(i) = auxEigVal;
             this->eigveckqStack_.slice(i) = auxEigvec;
         }
-        std::cout << "done, finishing computing the regularization... " << std::flush;
+        std::cout << "Done.\n" << std::flush;        
+            
+        #pragma omp parallel for
+        for (uint i = 0; i < nGs*(nGs+1)/2; i++){
 
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, null_vector, q0_perpendicular);
+            int g = indecesg.row(i)(0);
+            int g2 = indecesg.row(i)(1);
 
-        double potentialg = coulomb_2D_FT(null_vector + q0_perpendicular);
+            arma::rowvec G = ReciprocalVectors.row(g);                
+            arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        std::complex<double> head_element = 1.0 - potentialg * Chi;
+            std::complex<double> Chi = 0.0;
+            if (is_d_finite) {
+                Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular, d);
+            }
+            else {
+                Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular);
+            }
+
+            double potentialg = std::sqrt(coulomb_2D_FT(q0_perpendicular + G))*std::sqrt(coulomb_2D_FT(q0_perpendicular + G2));
+            double kroneckerdelta = g == g2? 1 : 0;
+            
+            dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+            dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
+        }
+
+        auxvecsol = arma::solve(dielectric_matrix,auxvec);
+
+        std::complex<double> head_element = 1.0/auxvecsol.row(0)(0);
 
         Re_head_element_perp = std::real(head_element);
         this->slope_perp_ = (Re_head_element_perp - 1.) / q0_norm;
