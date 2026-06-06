@@ -22,7 +22,7 @@ our paper or the code useful, please consider citing us.
 The new version of the code computes the exciton states without the need of any external model parameters through a 2D implementation of the microscopic dielectric function within the random-phase approximation (RPA). The RPA macroscopic dielectric function faithfully reproduces that from first-principles calculations. Both strict 2D or quasi-2D calculations can be used to compute the dielectric function and the excitons. The theory behind this new version can be found in the paper [Microscopic screening theory for excitons in two-dimensional materials: A bridge between effective models and _ab initio_ descriptions](https://arxiv.org/abs/2603.10966). If you find the paper or the code useful, please consider citing it.
 
 <p align="center">
-  <img src="epsilon_vs_q_hBN.jpg" width="90%" height="90%">
+  <img src="epsilon_vs_q_hBN.jpg" width="75%" height="75%">
 </p>
 
 ## Installation
