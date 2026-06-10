@@ -7,7 +7,6 @@ docs/
 .vs/
 .vscode/
 examples/
-xatu_data
 *.txt
 data
 *.out
