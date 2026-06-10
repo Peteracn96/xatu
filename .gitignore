@@ -11,5 +11,4 @@ examples/
 *.out
 test
 *.txt
-*.dat
 Makefile
