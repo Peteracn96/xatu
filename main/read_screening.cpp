@@ -5,20 +5,7 @@
 
 using namespace std::chrono;
 
-
-double my_coulomb(double r) {
-    
-    double a = 0.000001;
-    double v_c_regularization =ec/(4E-10*PI*eps0*a);
-    
-    if (r < 1E-7){
-        //return 0;
-        return v_c_regularization;
-    }
-
-    return ec/(4E-10*PI*eps0*r);    
-    //return 1/r;
-}
+// run command: ./read_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_inv_dielectric_matrix_file>.dat
 
 int main(int argc, char* argv[]){
 

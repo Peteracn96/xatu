@@ -5,22 +5,7 @@
 
 using namespace std::chrono;
 
-
-double my_coulomb(double r) {
-    
-    double a = 0.000001;
-    double v_c_regularization =ec/(4E-10*PI*eps0*a);
-    
-    if (r < 1E-7){
-        //return 0;
-        return v_c_regularization;
-    }
-
-    return ec/(4E-10*PI*eps0*r);    
-    //return 1/r;
-}
-
-// command example: ./write_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_q_points_file>.dat
+// run command: ./write_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_q_points_file>.dat
 
 int main(int argc, char* argv[]){
 
@@ -75,7 +60,6 @@ int main(int argc, char* argv[]){
     exciton.initializeHamiltonian();    
 
     exciton.compute_2D_DielectricMatrix(q_points_file);
-    // exciton.compute_quasi2D_DielectricMatrix(q_points_file);
 
     size_t lastindex = q_points_file.find_last_of("."); 
     std::string rawname = q_points_file.substr(0, lastindex); 
