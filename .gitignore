@@ -14,5 +14,4 @@ data
 test
 *.txt
 *.dat
-data
 Makefile
