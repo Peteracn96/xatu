@@ -1146,7 +1146,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     uint g_index = 0;
 
-    uint firstGvector = reciprocalVectors.n_rows > 1 ? 1 : 0; // If the Gcutoff for the exciton is 0, then only G=G'=0 and G=G'=g enter in the sum, and there is no shift G->G-g nad G'->G'-g in the sum, as there is no sum
+    uint firstGvector = reciprocalVectors.n_rows > 1 ? 1 : 0; // If the Gcutoff for the exciton is 0, then only G=G'=0 and G=G'=g enter in the sum, and there is no shift G->G-g and G'->G'-g in the sum, as there is no sum
     if (this->Gc_exciton_ < arma::norm(reciprocalVectors.row(firstGvector))){
         g_index = this->fetchReciprocalLatticeVector(g);
         g = null_vector;
@@ -3069,7 +3069,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
 /**
  * Method to compute the regularization of the screened potential W_00(q) at q = 0
- * @details Computes numerically the head element of the dielectric matrix at q = 0
+ * @details Computes numerically the head element of the inverse dielectric matrix at q = 0
  */
 void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropic)
 {
