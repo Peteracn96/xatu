@@ -192,7 +192,7 @@ int main(int argc, char* argv[]){
 
         } else if (screeningConfig->screeningInfo.function == "exciton"){
             
-            std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
+            std::cout << "Proceeding with computation of the permittivity matrix..." << std::endl;
 
             if (bulkExciton.mode == "reciprocalspace")
             {
