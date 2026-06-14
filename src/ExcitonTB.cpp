@@ -3156,7 +3156,6 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
         this->eigvalkqStack_.col(i) = auxEigVal;
         this->eigveckqStack_.slice(i) = auxEigvec;
     }
-    std::cout << "Done.\n" << std::flush;
 
     double d = this->d;
     bool is_d_finite = std::abs(d) > 1E-4;
