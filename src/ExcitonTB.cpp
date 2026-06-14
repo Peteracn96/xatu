@@ -5449,7 +5449,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
         int total_lines = line_counter;
 
-        int read_nqs = (line_counter-1)/ngs; // Last line stores info for W_00(0) regularization
+        int read_nqs = line_counter/ngs; // Last line stores info for W_00(0) regularization
 
         if (nqs != read_nqs) {
             std::cout << "The number of k points read from data file  (" + std::to_string(read_nqs) + ")  and from the exciton configuration file (" + std::to_string(nqs) + ") do not coincide!\n The exciton can not be computed with the provided screening data file. Terminating." << std::endl;
