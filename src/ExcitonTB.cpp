@@ -3208,8 +3208,8 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
             this->eigvalkqStack_.col(i) = auxEigVal;
             this->eigveckqStack_.slice(i) = auxEigvec;
         }
-        std::cout << "Done.\n" << std::flush;        
-            
+
+
         #pragma omp parallel for
         for (uint i = 0; i < nGs*(nGs+1)/2; i++){
 
@@ -3246,7 +3246,6 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
     std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
-    std::cout << "regularization computed." << std::endl;
 }
 
 /**
