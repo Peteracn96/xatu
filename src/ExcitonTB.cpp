@@ -973,7 +973,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
             vc_average = 2*std::sqrt(std::exp(-arma::norm(q + G)*d) - 1 + d*arma::norm(q+G))*std::sqrt(std::exp(-arma::norm(q + G2)*d) - 1 + d*arma::norm(q+G2))/(arma::norm(q + G)*arma::norm(q + G2)*d*d);
         }
 
-        potential = vc_average * std::sqrt(coulomb_2D_FT(q + G) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * coulomb_2D_FT(q + G2));
+        potential = vc_average * std::sqrt(coulomb_2D_FT(q + G)) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * std::sqrt(coulomb_2D_FT(q + G2));
     }
 
     return potential;
