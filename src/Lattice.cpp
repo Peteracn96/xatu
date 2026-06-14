@@ -341,14 +341,14 @@ arma::mat Lattice::generateCombinations(int nvalues, int ndim, bool centered){
 */
 arma::imat Lattice::generateCombinationsGcutoff(double Gc, int ndim){
 	
-	//Code to have as Gcutoff a norm of a G, and include all G's such that |G| <= Gcutoff_
+	// Gcutoff is the norm of a certain G-vector, and include all G-vectors such that |G| <= Gcutoff
 
 	double normG1 = arma::norm(reciprocalLattice.row(0));
 	double normG2 = arma::norm(reciprocalLattice.row(1));
 	//double normG3 = arma::norm(reciprocalLattice.row(2));
 
 	//For now implements only 2D systems
-	int n_max = 4*std::ceil(Gc/normG1); //higher factor to ensure that all the G vectos with G<|Gc| are included
+	int n_max = 4*std::ceil(Gc/normG1); // scaling factor to ensure that all the G-vectos with |G| <= Gc are included
 	int m_max = 4*std::ceil(Gc/normG2);
 
 	int ncombinations = (2*n_max + 1)*(2*m_max + 1);
