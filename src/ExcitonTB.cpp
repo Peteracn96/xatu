@@ -4054,7 +4054,7 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
     fclose(textfile);
 }
 
-/* Method to read the inverse of the dielectric matrix from a pre-existent file.
+/* Method to read the inverse of the dielectric matrix from a pre-existent one stored in a file.
  * @return void 
  */
 void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
