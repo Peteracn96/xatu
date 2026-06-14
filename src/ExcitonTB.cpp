@@ -1182,7 +1182,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-                term += conj(Ic)*rpaFT(ig, ig2, k_eff)*Iv;
+                term += conj(Ic)*this->rpaFT(ig, ig2, k_eff)*Iv;
             }
         }       
     } else {
