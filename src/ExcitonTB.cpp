@@ -64,7 +64,7 @@ void ExcitonTB::initializeExcitonAttributes(int ncell, const arma::ivec& bands,
     } else {
         this->rz_ = 0.5 * (this->r0_ + this->ry_);
     }
-    
+
     this->cutoff_     = ncell/2.5; // Default value, seems to preserve crystal point group
     if(r0 == 0){
         throw std::invalid_argument("Error: r0 must be non-zero");
@@ -136,12 +136,11 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
 
             this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gc_exciton_);
 
-            this->nReciprocalVectors_ = this->trunreciprocalLattice_.n_rows;            
+            this->nReciprocalVectors_ = this->trunreciprocalLattice_.n_rows;
         }
     } else if (this->mode == "realspace"){
         std::cout << "Doing nothing for now\n";
     }
-    
 }
 
 /*
@@ -165,7 +164,6 @@ void ExcitonTB::verifypotential(){
  * Method to set the screening attributes of an exciton object from a ScreeningConfiguration object.
  * @details Overload of the method to use a configuration object. Based on the parametric method.
  * @param cfg ScreeningConfiguration object from parsed file.
- * @param mode Real space or reciprocal space mode
  * @return void
  */
 void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg){
@@ -4077,7 +4075,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
     std::cout << "Reading inverse of dielectric matrix from file: " << filename_screening << std::endl;
 
     if (this->mode == "realspace"){        
-        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
+        std::cout << "Exciton computed with real space screening not implemented. Terminating." << std::endl;
         exit(0);
     }
 
