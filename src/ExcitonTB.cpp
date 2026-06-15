@@ -3028,7 +3028,9 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         std::cout << "\nepsilon_Q2D(d = " << d << ") = " << std::setprecision(17) << std::real(epsilon_Q2D) << " + i" << std::imag(epsilon_Q2D) << std::endl;
     
         return epsilon;
-    }    
+    }  
+    
+    return 0.0;
 }
 
 /**
@@ -3223,7 +3225,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
     }
-    else if (((int) this->eigveckqStack_.n_slices != nk || (uint) this->eigvalkqStack_.n_rows != basisdim || (uint) this->eigvalkqStack_.n_cols != basisdim) || ((uint) this->eigvalKQStack_.n_rows != basisdim || (int) this->eigvalKQStack_.n_cols != nk))
+    else if ((this->eigveckqStack_.n_slices != nk || (uint) this->eigvalkqStack_.n_rows != basisdim || (uint) this->eigvalkqStack_.n_cols != basisdim) || ((uint) this->eigvalKQStack_.n_rows != basisdim || this->eigvalKQStack_.n_cols != nk))
     {
         this->eigveckqStack_.reshape(basisdim, basisdim, nk);
         this->eigvalkqStack_.reshape(basisdim, nk);
@@ -4189,8 +4191,6 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
         }
 
         file.clear(); // clear the error state
-
-        int total_lines = line_counter;
 
         int read_nqs = line_counter/ngs;
 
