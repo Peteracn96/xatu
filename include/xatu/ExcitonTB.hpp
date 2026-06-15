@@ -155,7 +155,7 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         // Initialize exciton passing directly a System object instead of a screening
         ExcitonTB(const SystemConfiguration&, int ncell, int nbands, int nrmbands,
-                  const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const double Gc_exciton);
+                  const arma::rowvec& parameters, const arma::rowvec& Q, const uint ncell_aux, const uint nvbands, const uint ncbands, const double Gcutoff, const double Gc_exciton, const bool spin = true, const bool isotropic = false, const double d = 0.0);
 
         // ~ExcitonTB();
 

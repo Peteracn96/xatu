@@ -381,7 +381,7 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
  * @param Q Center-of-mass momentum.
  */
 ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, int nrmbands,
-                     const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const double Gc_exciton) : ExcitonTB(config, ncell, {}, parameters, Q)
+                     const arma::rowvec& parameters, const arma::rowvec& Q, const uint ncell_aux, const uint nvbands, const uint ncbands, const double Gcutoff, const double Gc_exciton, const bool spin, const bool isotropic, const double d) : ExcitonTB(config, ncell, {}, parameters, Q)
 {
     if (2 * nbands > system->basisdim)
     {
@@ -401,11 +401,48 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
     this->mode_ = "reciprocalspace";
     this->nReciprocalVectors_ = system_->truncateReciprocalSupercell(this->Gc_exciton_).n_rows;
     this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gcutoff_);
-
+    this->isscreeningset = true;
+    
     if (this->nReciprocalVectors_ > (int) this->trunreciprocalLattice_.n_rows) {
         std::cout << "Warning: Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + "). Defaulting the exciton G cutoff to the screening G cutoff." << std::endl;
         this->Gc_exciton_ = this->Gcutoff_;
     }
+
+    uint totalvbands = system->fermiLevel + 1;
+    uint totalcbands = (uint)system->basisdim - totalvbands;
+
+    if (nvbands > totalvbands  || ncbands > totalcbands){
+        std::cout << "Number of included bands cannot be higher than the number of material bands" << std::endl;
+        std::cout << "Number of total valence bands = " << totalvbands<< std::endl;
+        std::cout << "Number of total conduction bands = " << totalcbands << std::endl;
+    
+        exit(1);
+    }
+
+    if (nvbands + ncbands > (uint)system->basisdim){
+        std::cout << "Error: Number of bands cannot be higher than actual material" << std::endl;
+        std::cout << "Total number of bands is " << system->basisdim << std::endl;
+        exit(1);
+    }
+
+    this->nvalencebands_ = nvbands;
+    this->nconductionbands_ = ncbands;
+
+    if (spin) {
+        this->g_s = 1;
+    } else {
+        this->g_s = 2;
+    }
+
+    this->isotropic_ = isotropic;
+    this->d_ = d;
+
+    uint basisdim = system_->basisdim;
+    this->ncell_aux_ = ncell_aux;
+    uint nk_aux = pow(ncell_aux, 2);
+    this->nk_aux_ = nk_aux; 
+    this->eigveckStack_  = arma::cx_cube(basisdim, basisdim, nk_aux); // For the dielectric function
+    this->eigvalkStack_  = arma::mat(basisdim, nk_aux);
 };
 
 /**
@@ -1503,9 +1540,32 @@ void ExcitonTB::initializeResultsH0(){
         std::cout << "Done\n" << std::endl;
     }
 
-    if (isscreeningset == true){
+    if (this->mode == "reciprocalspace" && this->isscreeningset == true){
+
+        if (this->kpoints_aux.is_empty()) {
+            std::cout << "Creating the coarser BZ mesh. " << std::flush;
+
+            int ndim = 2;
+            arma::mat kpoints(pow(ncell_aux, ndim), 3);
+            arma::mat combinations = system->generateCombinations(ncell_aux, ndim);
+            if (ncell_aux % 2 == 1)
+            {
+                combinations += 1. / 2;
+            }
+
+            for (uint i = 0; i < nk_aux; i++)
+            {
+                arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+                for (int j = 0; j < ndim; j++)
+                {
+                    kpoint += (2 * combinations.row(i)(j) - ncell_aux) / (2 * ncell_aux) * system->reciprocalLattice_.row(j);
+                }
+                kpoints.row(i) = kpoint;
+            }
+            this->kpoints_aux_ = kpoints;            
+        }
        
-        std::cout << "Diagonalizing H0(k) for all k points in the coarser BZ mesh, and storing data in dielectric function's stack... " << std::flush;
+        std::cout << "Diagonalizing H0(k) for all k points in the coarser BZ mesh... " << std::flush;
         
         for (uint i = 0; i < nk_aux; i++){
             arma::rowvec k = this->kpoints_aux.row(i);
@@ -1573,9 +1633,32 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     }
 
     uint nk = this->nk_aux;
-    arma::mat k_points = this->kpoints_aux;
+    
+    if (this->kpoints_aux.is_empty()) {
+        std::cout << "Creating the coarser BZ mesh... " << std::flush;
 
-    int nvbands = valencebands.size();
+        int ndim = 2;
+        arma::mat kpoints(pow(ncell_aux, ndim), 3);
+        arma::mat combinations = system->generateCombinations(ncell_aux, ndim);
+        if (ncell_aux % 2 == 1)
+        {
+            combinations += 1. / 2;
+        }
+
+        for (uint i = 0; i < nk_aux; i++)
+        {
+            arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+            for (int j = 0; j < ndim; j++)
+            {
+                kpoint += (2 * combinations.row(i)(j) - ncell_aux) / (2 * ncell_aux) * system->reciprocalLattice_.row(j);
+            }
+            kpoints.row(i) = kpoint;
+        }
+        this->kpoints_aux_ = kpoints;            
+    }
+    arma::mat k_points = this->kpoints_aux_;
+
+    int nvbands = system->fermiLevel + 1;
 
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
@@ -1590,7 +1673,6 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
-
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
@@ -2974,8 +3056,32 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
 
         uint nk = this->nk_aux;
+        uint nk_aux = this->nk_aux;
         int basisdim = system->basisdim;
-        arma::mat k_points = this->kpoints_aux;     
+
+        if (this->kpoints_aux.is_empty()) {
+            std::cout << "Creating the coarser BZ mesh... " << std::flush;
+
+            uint ndim = 2;
+            arma::mat kpoints(pow(ncell_aux, ndim), 3);
+            arma::mat combinations = system->generateCombinations(ncell_aux, ndim);
+            if (ncell_aux % 2 == 1)
+            {
+                combinations += 1. / 2;
+            }
+
+            for (uint i = 0; i < nk_aux; i++)
+            {
+                arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+                for (uint j = 0; j < ndim; j++)
+                {
+                    kpoint += (2 * combinations.row(i)(j) - ncell_aux) / (2 * ncell_aux) * system->reciprocalLattice_.row(j);
+                }
+                kpoints.row(i) = kpoint;
+            }
+            this->kpoints_aux_ = kpoints;
+        }    
+        arma::mat k_points = this->kpoints_aux_;
 
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
