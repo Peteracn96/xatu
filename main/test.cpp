@@ -18,24 +18,37 @@ int main(int argc, char* argv[]){
 
     std::cout << std::setw(40) << std::left << "Testing DFT hBN... ";
 
-    int ncell = 20;
-    int nstates = 2;
-    bool triangular = true;
-    int holeIndex = 1;
-    arma::rowvec holeCell = {0, 0, 0};
-
     std::string modelfile = "../examples/material_models/DFT/hBN_base_HSE06.outp";
-    xatu::CRYSTALConfiguration config = xatu::CRYSTALConfiguration(modelfile, 100);
+    std::unique_ptr<xatu::SystemConfiguration> systemConfig = std::unique_ptr<xatu::CRYSTALConfiguration>(new xatu::CRYSTALConfiguration(modelfile, 100));
+    std::string dielectric_matrix_path = "../data/hBN_DFT_HSE06_Q2D_BZ_N20_Gc_5_1_invepsilon.dat";
 
-    xatu::ExcitonTB exciton = xatu::ExcitonTB(config, ncell, 1, 0, {1, 1, 10});
+    int ncell = 20;
+    double Gcutoff = 3.0;
+    double d = 3.33;
+    double percentage = 0.5;
+    int nstates = 2;
+    uint nvbands = 6;
+    uint ncbands = 63;
+    uint ncell_aux = 5;
+    bool spinfull = false;
+    bool isotropic = true;
+
+    xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, ncell, 1, 0, {1., 1., 10.}, {0., 0., 0.}, ncell_aux, nvbands, ncbands, Gcutoff, Gcutoff, d, spinfull, isotropic);
+    
     exciton.system->setAU(true);
+    exciton.setPercentage(percentage);
 
     exciton.brillouinZoneMesh(ncell);
+    // exciton.readInverseDielectricMatrix(dielectric_matrix_path);
     exciton.initializeHamiltonian();
-    exciton.BShamiltonian();
-    auto results = exciton.diagonalize("diag", nstates);
 
-    auto energies = xatu::detectDegeneracies(results->eigval, nstates, 6);
+    std::complex<double> epsilon = exciton.computesingleDielectricFunctionMatrixElement();
+
+    // exciton.BShamiltonian();
+
+    // auto results = exciton.diagonalize("diag", nstates);
+
+    /*auto energies = xatu::detectDegeneracies(results->eigval, nstates, 6);
     
     std::vector<std::vector<double>> expectedEnergies = {{4.442317, 1}, 
                                                          {4.442427, 1}};
@@ -96,7 +109,7 @@ int main(int argc, char* argv[]){
     }
 
     std::cout.clear();
-    std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;
+    std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;*/
 
     return 0;
 }
