@@ -38,7 +38,7 @@ class ExcitonConfiguration : public ConfigurationBase{
         double ry;
         // Screening length
         double rz;
-        // Thickness of layer
+        // Thickness of the 2D system
         double d;
         // Calculation mode (either 'realspace' or 'reciprocalspace')
         std::string mode = "realspace";

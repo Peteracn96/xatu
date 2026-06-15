@@ -738,7 +738,7 @@ void ExcitonTB::setPercentage(double percentage){
  * @param d Thickness
  * @return void
 */
-void ExcitonTB::setthickness(double d){
+void ExcitonTB::setThickness(double d){
     this->d_ = d;
 }
 
@@ -753,6 +753,119 @@ int ExcitonTB::getNGs() const {
     return this->trunreciprocalLattice_.n_rows;
 }
 
+/**
+ * Gets the thickness of the 2D system
+ * @return Thickness
+ */
+double ExcitonTB::getThickness() const {
+    return this->d_;
+}
+
+arma::cx_cube ExcitonTB::getChiMatrix() const {
+
+    uint nks_expected = this->ncell_ * this->ncell_;
+    uint nks_matrix = this->Invepsilonmatrix_.n_slices;
+
+    if(nks_expected != nks_matrix){
+        std::cout << "Warning: Number of k points for the polarizability matrix (" << nks_matrix << ") does not match the size of the BZ (" << nks_expected << ")." << std::endl;
+    }
+    
+    return this->Chimatrix_;
+}
+
+std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getPolarizabilityMatrix_as_vector() const {
+
+    uint nks_BZ = this->ncell_ * this->ncell_;
+    uint nqs = 0;
+    uint nks_matrix = 0;
+    uint ngs = 0;
+        
+    if (this->Chimatrix_.is_empty()) {
+        std::cout << "Polarizability matrix is empty. Returning empty vector." << std::endl;
+        return std::vector<std::vector<std::vector<std::complex<double>>>>();
+    } else {
+        nks_matrix = this->Chimatrix_.n_slices;
+        ngs = this->Chimatrix_.slice(0).n_rows;
+    }
+    
+    if (this->qpoints_list_.is_empty()) {
+        std::cout << "Warning: List of q points is not defined. Polarizability matrix will still be returned." << std::endl;
+    } else {
+        nqs = this->qpoints_list_.n_rows;
+            for (int iq = 0; iq < nqs; iq++) {
+            arma::rowvec q_point = this->qpoints_list_.row(iq);
+            arma::rowvec k_point = system->meshBZ.row(iq);
+            if (arma::norm(q_point - k_point) > 1e-6) {
+                std::cout << "Warning: List of q points does not coincide with the BZ mesh. Polarizability matrix will still be returned." << std::endl;
+                break;
+            }
+        }
+    }
+    
+    std::vector<std::vector<std::complex<double>>> null_matrix = std::vector<std::vector<std::complex<double>>>(ngs, std::vector<std::complex<double>>(ngs, std::complex<double>(0.0, 0.0)));
+
+    std::vector<std::vector<std::vector<std::complex<double>>>> Chimatrix_as_vector;
+    Chimatrix_as_vector.resize(nks_matrix);
+    
+    for (uint ik = 0; ik < nks_matrix; ik++) {
+        arma::cx_mat inv_epsilon_at_ik = this->Chimatrix_.slice(ik);
+        Chimatrix_as_vector[ik] = arma::conv_to<std::vector<std::vector<std::complex<double>>>>::from(inv_epsilon_at_ik);
+    }
+    
+    return Chimatrix_as_vector;
+}
+
+arma::cx_cube ExcitonTB::getInverseDielectricMatrix() const {
+
+    uint nks_expected = this->ncell_ * this->ncell_;
+    uint nks_matrix = this->Invepsilonmatrix_.n_slices;
+
+    if(nks_expected != nks_matrix){
+        std::cout << "Warning: Number of k points for the inverse dielectric matrix (" << nks_matrix << ") does not match the size of the BZ (" << nks_expected << ")." << std::endl;
+    }
+    
+    return this->Invepsilonmatrix_;
+}
+
+std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getInverseDielectricMatrix_as_vector() const {
+
+    uint nks_BZ = this->ncell_ * this->ncell_;
+    uint nqs = 0;
+    uint nks_matrix = 0;
+    uint ngs = 0;
+        
+    if (this->Invepsilonmatrix_.is_empty()) {
+        std::cout << "Inverse dielectric matrix is empty. Returning empty vector." << std::endl;
+        return std::vector<std::vector<std::vector<std::complex<double>>>>();
+    } else {
+        nks_matrix = this->Invepsilonmatrix_.n_slices;
+        ngs = this->Invepsilonmatrix_.slice(0).n_rows;
+    }
+    
+    if (this->qpoints_list_.is_empty()) {
+        std::cout << "Warning: List of q points is not defined. Inverse dielectric matrix will still be returned." << std::endl;
+    } else {
+        nqs = this->qpoints_list_.n_rows;
+            for (int iq = 0; iq < nqs; iq++) {
+            arma::rowvec q_point = this->qpoints_list_.row(iq);
+            arma::rowvec k_point = system->meshBZ.row(iq);
+            if (arma::norm(q_point - k_point) > 1e-6) {
+                std::cout << "Warning: List of q points does not coincide with the BZ mesh. Inverse dielectric matrix will still be returned." << std::endl;
+                break;
+            }
+        }
+    }
+
+    std::vector<std::vector<std::vector<std::complex<double>>>> Invepsilonmatrix_as_vector;
+    Invepsilonmatrix_as_vector.resize(nks_matrix);
+    
+    for (uint ik = 0; ik < nks_matrix; ik++) {
+        arma::cx_mat inv_epsilon_at_ik = this->Invepsilonmatrix_.slice(ik);
+        Invepsilonmatrix_as_vector[ik] = arma::conv_to<std::vector<std::vector<std::complex<double>>>>::from(inv_epsilon_at_ik);
+    }
+    
+    return Invepsilonmatrix_as_vector;
+}
 
 /*---------------------------------------- Potentials ----------------------------------------*/
 
@@ -1197,13 +1310,13 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1,
 
 
 /**
- * Calculation of Bloch coherence factor taking into account the monolayer's finite thickness d
+ * Calculation of Bloch coherence factor taking into account the material's finite thickness d
  * @param coefs1 Vector of eigenstate |n,k>.
  * @param coefs2 Vector of eigenstate |n',k'>.
  * @param k1 kpoint k.
  * @param k2 kpoint k'.
  * @param G Reciprocal lattice vector used to compute the coherence factor.
- * @param d Monolayer thickness.
+ * @param d 2D material thickness.
  * @return Bloch coherence factor I = <n'k'| e^{-i(q + G).r} |nk> evaluated at G for states |nk>, |n'k'>, for finite thickness.
  */
 std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec &coefs1, const arma::cx_vec &coefs2,
@@ -3904,7 +4017,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) {
 
     if (this->mode == "reciprocalspace"){
 
-        uint ngs = this->epsilonmatrix_.slice(0).n_rows;         // The number of G vectors can in general be different from the number of generated G vectors
+        uint ngs = this->epsilonmatrix_.slice(0).n_rows; // The number of G vectors can in general be different from the number of generated G vectors
         uint nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         if (ngs == 0 || nqs == 0){

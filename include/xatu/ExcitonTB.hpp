@@ -177,10 +177,15 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setTrunLattice(int,double);
         void setq_points_list(arma::mat);
         void setPercentage(double);
-        void setthickness(double);
+        void setThickness(double);
 
         // Getters
         int getNGs() const;
+        double getThickness() const;
+        arma::cx_cube getChiMatrix() const;
+        arma::cx_cube getInverseDielectricMatrix() const;
+        std::vector<std::vector<std::vector<std::complex<double>>>> getPolarizabilityMatrix_as_vector() const;
+        std::vector<std::vector<std::vector<std::complex<double>>>> getInverseDielectricMatrix_as_vector() const;
 
     private:
         // Potentials
