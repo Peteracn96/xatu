@@ -775,7 +775,6 @@ arma::cx_cube ExcitonTB::getChiMatrix() const {
 
 std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getPolarizabilityMatrix_as_vector() const {
 
-    uint nks_BZ = this->ncell_ * this->ncell_;
     uint nqs = 0;
     uint nks_matrix = 0;
     uint ngs = 0;
@@ -792,7 +791,7 @@ std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getPolari
         std::cout << "Warning: List of q points is not defined. Polarizability matrix will still be returned." << std::endl;
     } else {
         nqs = this->qpoints_list_.n_rows;
-            for (int iq = 0; iq < nqs; iq++) {
+            for (uint iq = 0; iq < nqs; iq++) {
             arma::rowvec q_point = this->qpoints_list_.row(iq);
             arma::rowvec k_point = system->meshBZ.row(iq);
             if (arma::norm(q_point - k_point) > 1e-6) {
@@ -809,6 +808,7 @@ std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getPolari
     
     for (uint ik = 0; ik < nks_matrix; ik++) {
         arma::cx_mat inv_epsilon_at_ik = this->Chimatrix_.slice(ik);
+        Chimatrix_as_vector[ik].resize(ngs);
         Chimatrix_as_vector[ik] = arma::conv_to<std::vector<std::vector<std::complex<double>>>>::from(inv_epsilon_at_ik);
     }
     
@@ -829,7 +829,6 @@ arma::cx_cube ExcitonTB::getInverseDielectricMatrix() const {
 
 std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getInverseDielectricMatrix_as_vector() const {
 
-    uint nks_BZ = this->ncell_ * this->ncell_;
     uint nqs = 0;
     uint nks_matrix = 0;
     uint ngs = 0;
@@ -846,7 +845,7 @@ std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getInvers
         std::cout << "Warning: List of q points is not defined. Inverse dielectric matrix will still be returned." << std::endl;
     } else {
         nqs = this->qpoints_list_.n_rows;
-            for (int iq = 0; iq < nqs; iq++) {
+            for (uint iq = 0; iq < nqs; iq++) {
             arma::rowvec q_point = this->qpoints_list_.row(iq);
             arma::rowvec k_point = system->meshBZ.row(iq);
             if (arma::norm(q_point - k_point) > 1e-6) {
@@ -861,6 +860,7 @@ std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getInvers
     
     for (uint ik = 0; ik < nks_matrix; ik++) {
         arma::cx_mat inv_epsilon_at_ik = this->Invepsilonmatrix_.slice(ik);
+        Invepsilonmatrix_as_vector[ik].resize(ngs);
         Invepsilonmatrix_as_vector[ik] = arma::conv_to<std::vector<std::vector<std::complex<double>>>>::from(inv_epsilon_at_ik);
     }
     
@@ -1713,13 +1713,11 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     uint nk = this->nk_aux;
 
     int nvbands = valencebands.size();
-    int ncbands = conductionbands.size();
 
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
 
     int upperindexcband = nvbands + ncbandsincluded - 1;
-    int lowerindexvbands = nvbands - nvbandsincluded;
 
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
@@ -2119,7 +2117,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
             
             double percentage = 0.05;
-            int percentage_count = percentage*nq/2;
             for (uint ik = 0; ik < ik_f; ik++)
             {
                 uint iq = indecesqg.row(iq_i*nGs*(nGs + 1)/2 + ik*nGs*(nGs + 1)/2)(0); // indecesqg.row(i_aux)(0);
@@ -2341,7 +2338,6 @@ void ExcitonTB::augment_2D_DielectricMatrix(double Gcutoff){
         arma::cx_cube dielectricmatrix_provided = this->epsilonmatrix_;
 
         uint nGs_existing = this->Invepsilonmatrix_.slice(0).n_rows;
-        double Gcutoff_existing = this->Gcutoff_;   
          
         setGcutoff(Gcutoff);        
 
@@ -2485,17 +2481,10 @@ void ExcitonTB::augment_2D_DielectricMatrix(double Gcutoff){
             }
         }
 
-        double percentage = 0;
-        double percentage_aux = 0;
-        uint nq_count = 0;
-
         if (odd == 0){
 
             uint iq_test = 0;
             arma::rowvec q_test = q_points.row(iq_test);
-
-            double percentage = 0;
-            double percentage_aux = 0;
             
             for (uint ik = 0; ik < (2 * Ncells - 1); ik++)
             {
