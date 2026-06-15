@@ -5,7 +5,7 @@
 
 using namespace std::chrono;
 
-// run command: ./read_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_inv_dielectric_matrix_file>.dat
+// run command: ./read_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_reciprocal.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_inv_dielectric_matrix_file>.dat
 
 int main(int argc, char* argv[]){
 
