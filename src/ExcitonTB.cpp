@@ -1142,11 +1142,8 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
 
     arma::rowvec g = k_dif - k_eff;
 
-    uint g_index = 0;
-
-    uint firstGvector = reciprocalVectors.n_rows > 1 ? 1 : 0; // If the Gcutoff for the exciton is 0, then only G=G'=0 and G=G'=g enter in the sum, and there is no shift G->G-g and G'->G'-g in the sum, as there is no sum
-    if (this->Gc_exciton_ < arma::norm(reciprocalVectors.row(firstGvector))){
-        // g_index = this->fetchReciprocalLatticeVector(g);
+    // If the Gcutoff for the exciton is 0, then only G=G'=0 and G=G'=g enter in the sum, and there is no shift G->G-g and G'->G'-g in the sum, as there is no sum    
+    if (this->Gc_exciton_ < 1E-6){        
         g = null_vector;
     }
 
@@ -1180,7 +1177,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-                term += conj(Ic)*this->rpaFT(ig + g_index, ig2 + g_index, k_eff)*Iv;
+                term += conj(Ic)*this->rpaFT(ig, ig2, k_eff)*Iv;
             }
         }       
     } else {
