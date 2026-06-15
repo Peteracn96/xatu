@@ -55,13 +55,11 @@ class ExcitonTB : public Exciton<SystemTB> {
         
         // Internals for dielectric function
         std::string function_;
-        arma::ivec Gs_;
-        arma::rowvec q_;
+        arma::ivec Gs_ = {0, 0};
+        arma::rowvec q_ = {0.2, 0., 0.};
         uint nGs;
-        double Gcutoff_ = 0;
-        int Nqpoints = 1;   // Number of q points to compute the dielectric function at
-        double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
-        double slope_perp_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0 along the direction perpendicular for slope_
+        double Gcutoff_ = 3.0;
+        int Nqpoints = 1;   // Number of q points to compute the dielectric function at        
         double d_ = 0.0; // Effective thickness of the 2D system
         uint ncell_aux_ = 10; // Number of unit cells used to compute the dielectric function
         uint nk_aux_ = ncell_aux_*ncell_aux_; // Number of k points used to compute the dielectric function

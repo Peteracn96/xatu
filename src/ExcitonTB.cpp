@@ -398,7 +398,7 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
     this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
     this->Gcutoff_ = Gcutoff;
     this->Gc_exciton_ = Gc_exciton;
-
+    this->mode_ = "reciprocalspace";
     this->nReciprocalVectors_ = system_->truncateReciprocalSupercell(this->Gc_exciton_).n_rows;
     this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gcutoff_);
 
@@ -1632,11 +1632,6 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
 
     polarfile.close();
 
-    for(uint i = 0; i < this->trunreciprocalLattice_.n_rows; i++){
-        auto G = this->trunreciprocalLattice_.row(i);
-        std::cout << "G(" << i << ") = (" << G(0) << ", " << G(1) << ", " << G(2) << "), |G| = " << arma::norm(G) << std::endl;  
-    }
-
     std::cout << "The value of the polarizability is = " << g_s*term_aux/((std::complex<double>)nk) << std::endl;
 
     return g_s*term_aux/((std::complex<double>)nk);
@@ -2116,7 +2111,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             uint iq_i = (2 * Ncells - 1);
             uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
             
-            double percentage = 0.05;
             for (uint ik = 0; ik < ik_f; ik++)
             {
                 uint iq = indecesqg.row(iq_i*nGs*(nGs + 1)/2 + ik*nGs*(nGs + 1)/2)(0); // indecesqg.row(i_aux)(0);
@@ -3262,9 +3256,6 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     std::complex<double> head_element = 1.0/auxvecsol.row(0)(0);
 
     double Re_head_element = std::real(head_element);
-    double slope = (Re_head_element - 1.)/q0_norm;
-    this->slope_ = slope;
-
     double Re_head_element_perp = Re_head_element;
 
     if (!is_system_isotropic) { // If system is anisotropic, repeat the calculation for a vector perpendicular to q0 with same norm
@@ -3310,10 +3301,7 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
         std::complex<double> head_element = 1.0/auxvecsol.row(0)(0);
 
-        Re_head_element_perp = std::real(head_element);
-        this->slope_perp_ = (Re_head_element_perp - 1.) / q0_norm;
-    } else {
-        this->slope_perp_ = this->slope_;
+        Re_head_element_perp = std::real(head_element);       
     }
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
