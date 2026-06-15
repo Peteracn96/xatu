@@ -381,7 +381,7 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
  * @param Q Center-of-mass momentum.
  */
 ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, int nrmbands,
-                     const arma::rowvec& parameters, const arma::rowvec& Q, const uint ncell_aux, const uint nvbands, const uint ncbands, const double Gcutoff, const double Gc_exciton, const bool spin, const bool isotropic, const double d) : ExcitonTB(config, ncell, {}, parameters, Q)
+                     const arma::rowvec& parameters, const arma::rowvec& Q, const uint ncell_aux, const uint nvbands, const uint ncbands, const double Gcutoff, const double Gc_exciton, const double d, const bool spin, const bool isotropic) : ExcitonTB(config, ncell, {}, parameters, Q)
 {
     if (2 * nbands > system->basisdim)
     {
@@ -1727,11 +1727,11 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
  * @param q Momentum vector q
  * @return Polarizability
 */
-inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q) {
+inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& q, const arma::rowvec& G, const arma::rowvec& G2) {
 
     uint nk = this->nk_aux;
 
-    int nvbands = valencebands.size();
+    int nvbands = system->fermiLevel + 1;
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
     int upperindexcband = nvbands + ncbandsincluded - 1;
@@ -1785,11 +1785,11 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
  * @param d Thickness of the 2D system
  * @return Polarizability
 */
-inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q, const double d) {
+inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& q, const arma::rowvec& G, const arma::rowvec& G2, const double d) {
 
     uint nk = this->nk_aux;
 
-    int nvbands = valencebands.size();
+    int nvbands = system->fermiLevel + 1;
 
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
@@ -1845,7 +1845,6 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
 
 
                 term_aux += IvcG_d*std::conj(IvcG2_d) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
-                
                 term_aux_2 += IcvG_d*std::conj(IcvG2_d)  / (eigvalkStack_.col(ik)(ic) - eigvalkqStack_.col(ik)(iv));
             }
         }
@@ -1868,7 +1867,7 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
 
     const double potential = coulomb_2D_FT(q + G)*coulomb_2D_FT(q + G2);
 
-    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,q);
+    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(q,G,G2);
             
     return epsilon;
 }
@@ -1888,7 +1887,7 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    std::complex<double> epsilon = kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+    std::complex<double> epsilon = kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
 
     return epsilon;
 }
@@ -2170,10 +2169,10 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     std::complex<double> Chi = 0.0;
                     
                     if (is_d_finite) {
-                        Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
                     }
                     else {
-                        Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
                     }
 
                     double potentialg =  std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));
@@ -2228,10 +2227,10 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     std::complex<double> Chi = 0.0;
 
                     if (is_d_finite) {
-                        Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
                     }
                     else {
-                        Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
                     }
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
@@ -2294,10 +2293,10 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     std::complex<double> Chi = 0.0;
 
                     if (is_d_finite) {
-                        Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
                     }
                     else {
-                        Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
                     }
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
@@ -2582,10 +2581,10 @@ void ExcitonTB::augment_2D_DielectricMatrix(double Gcutoff){
                     std::complex<double> Chi = 0.0;
 
                     if (is_d_finite) {
-                        Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
                     }
                     else {
-                        Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
                     }                        
                     double potentialg =  std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));                    
 
@@ -2635,10 +2634,10 @@ void ExcitonTB::augment_2D_DielectricMatrix(double Gcutoff){
 
                     std::complex<double> Chi = 0.0;
                     if (is_d_finite) {
-                        Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
                     }
                     else {
-                        Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
                     }        
                     
                     double potentialg  = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));
@@ -2686,10 +2685,10 @@ void ExcitonTB::augment_2D_DielectricMatrix(double Gcutoff){
 
                     std::complex<double> Chi = 0.0;
                     if (is_d_finite) {
-                        Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
                     }
                     else {
-                        Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
                     }
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
@@ -2837,10 +2836,10 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 std::complex<double> Chi = 0.0;
 
                 if (is_d_finite) {
-                    Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                    Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
                 }
                 else {
-                    Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                    Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
                 }
                 
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
@@ -2973,7 +2972,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
                 arma::rowvec G = ReciprocalVectors.row(g);
                 arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-                std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
 
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                 this->Chimatrix_.slice(iq).row(g2)(g) = Chi;
@@ -3208,10 +3207,10 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
         std::complex<double> Chi = 0.0;
         if (is_d_finite) {
-            Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q_aux, d);
+            Chi = compute_quasi2D_PolarizabilityMatrixElement(q_aux, G, G2, d);
         }
         else {
-            Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q_aux);
+            Chi = compute_2D_PolarizabilityMatrixElement(q_aux, G, G2);
         }
 
         double potentialg = std::sqrt(coulomb_2D_FT(q_aux + G))*std::sqrt(coulomb_2D_FT(q_aux + G2));
@@ -3344,10 +3343,10 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
         std::complex<double> Chi = 0.0;
         if (is_d_finite) {
-            Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q0, d);
+            Chi = compute_quasi2D_PolarizabilityMatrixElement(q0, G, G2, d);
         }
         else {
-            Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0);
+            Chi = compute_2D_PolarizabilityMatrixElement(q0, G, G2);
         }
 
         double potentialg = std::sqrt(coulomb_2D_FT(q0 + G))*std::sqrt(coulomb_2D_FT(q0 + G2));
@@ -3390,10 +3389,10 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
             std::complex<double> Chi = 0.0;
             if (is_d_finite) {
-                Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular, d);
+                Chi = compute_quasi2D_PolarizabilityMatrixElement(q0_perpendicular, G, G2, d);
             }
             else {
-                Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular);
+                Chi = compute_2D_PolarizabilityMatrixElement(q0_perpendicular, G, G2);
             }
 
             double potentialg = std::sqrt(coulomb_2D_FT(q0_perpendicular + G))*std::sqrt(coulomb_2D_FT(q0_perpendicular + G2));
