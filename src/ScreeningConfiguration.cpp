@@ -64,11 +64,6 @@ void ScreeningConfiguration::parseContent(){
         else if(arg == "function"){
             screeningInfo.function = parseWord(content[0]);
         }
-        else if(arg == "motif.vectors"){
-            std::vector<int> ts = parseLine<int>(content[0]);
-            screeningInfo.ts(0) = ts[0];
-            screeningInfo.ts(1) = ts[1];
-        }
         else if(arg == "gcutoff"){
             screeningInfo.Gcutoff = parseScalar<double>(content[0]);
         }
@@ -115,9 +110,6 @@ void ScreeningConfiguration::checkContentCoherence(){
     }
     if(screeningInfo.function != "dielectric" && screeningInfo.function != "polarizability" && screeningInfo.function != "inversedielectric" && screeningInfo.function != "exciton"){
         throw std::logic_error("'function' must be 'dielectric', 'polarizability', 'inversedielectric' or 'exciton'");
-    }
-    if(screeningInfo.ts(0) < 0 || screeningInfo.ts(1) < 0){
-        throw std::invalid_argument("The index of the motif vectors can not be negative! Must be zero or positive integer.");
     }
     if(screeningInfo.Gs(0) < 0 || screeningInfo.Gs(1) < 0){
         throw std::invalid_argument("The indeces of the vectors must be zero or a positive integer.");

@@ -172,14 +172,12 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::rowvec q            = cfg.screeningInfo.q;
     arma::ivec gs             = cfg.screeningInfo.Gs;
     std::string function      = cfg.screeningInfo.function;
-    arma::ivec ts             = cfg.screeningInfo.ts;
     uint ncell_aux            = cfg.screeningInfo.ncell_aux;
     bool model_has_spin       = cfg.screeningInfo.spin;
     bool isotropic            = cfg.screeningInfo.isotropic;
     double Gcutoff            = cfg.screeningInfo.Gcutoff;
     double d                  = cfg.screeningInfo.d;
 
-    this->ts_ = ts;    
     this->isscreeningset      = true;
     this->function_           = function;
     this->ncell_aux_          = ncell_aux;
@@ -673,32 +671,6 @@ void ExcitonTB::setVectors(int index1, int index2){
         throw std::invalid_argument("setVectors(int,int): Both vectors must have a positive index");
     }
     setVectors(arma::ivec({index1, index2}));
-}
-
-/**
- * Sets the motif vectors where the polarizability will be computed at.
- * @details Receives as argument an arma::ivec object.
- * @param indeces_vec Vector containing the two indices.
- * @return void
-*/
-void ExcitonTB::setmotifVectors(arma::ivec indeces_vec){
-    if(indeces_vec(0) < 0 || indeces_vec(1)){
-        throw std::invalid_argument("setmotifVectors(arma::ivec): Both vectors must have a positive index");
-    }
-    this->ts_ = indeces_vec;
-}
-
-/**
- * Sets the motif vectors where the polarizability will be computed at.
- * @param index1 Index of the first vector.
- * @param index2 Index of the second vector.
- * @return void
-*/
-void ExcitonTB::setmotifVectors(int index1, int index2){
-    if(index1 < 0 || index2 < 0){
-        throw std::invalid_argument("setmotifVectors(int,int): Both vectors must have a positive index");
-    }
-    setmotifVectors(arma::ivec({index1, index2}));
 }
 
 /**

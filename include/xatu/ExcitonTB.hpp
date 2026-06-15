@@ -57,13 +57,12 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::string function_;
         arma::ivec Gs_;
         arma::rowvec q_;
-        arma::ivec ts_;
         uint nGs;
         double Gcutoff_ = 0;
         int Nqpoints = 1;   // Number of q points to compute the dielectric function at
         double slope_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0
         double slope_perp_ = 10; // Numerical slope of the inverse dielectric function head element at q = 0 along the direction perpendicular for slope_
-        double d_ = 1.0; // Effective thickness of the 2D system
+        double d_ = 0.0; // Effective thickness of the 2D system
         uint ncell_aux_ = 10; // Number of unit cells used to compute the dielectric function
         uint nk_aux_ = ncell_aux_*ncell_aux_; // Number of k points used to compute the dielectric function
         uint g_s_ = 1; // Spin degeneracy
@@ -81,8 +80,8 @@ class ExcitonTB : public Exciton<SystemTB> {
 
         double percentage_ = 0; // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
         double W00_at_0_ = 0.0;
-        arma::rowvec q0_ = {0.05, 0.0, 0.0};
-        bool isotropic_ = true; // Is system isotropic
+        arma::rowvec q0_ = {0.2, 0.0, 0.0};
+        bool isotropic_ = false; // Is system isotropic
 
     public:
         // Returns dielectric constant of embedding medium
@@ -105,8 +104,6 @@ class ExcitonTB : public Exciton<SystemTB> {
         const int& nReciprocalVectors = nReciprocalVectors_;
         // Return Gc cutoff for reciprocal lattice vectors to use in summations (mode="reciprocalspace")
         const double& Gc_exciton = Gc_exciton_;
-        // Return motif vectors where the real space dielectric function is computed at
-        const arma::ivec& ts = ts_;
         // Returns auxiliar coarser BZ mesh to compute the dielectric function
         arma::mat& kpoints_aux = kpoints_aux_;
         // Returns percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
@@ -175,8 +172,6 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setConductionBands(int);
         void setVectors(int,int);
         void setVectors(arma::ivec);
-        void setmotifVectors(int,int);
-        void setmotifVectors(arma::ivec);
         void setPotential(std::string);
         void setExchangePotential(std::string);
         void setTrunLattice(int,double);
