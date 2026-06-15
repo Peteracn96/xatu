@@ -23,7 +23,7 @@ int main(int argc, char* argv[]){
     std::string dielectric_matrix_path = "../data/hBN_DFT_HSE06_Q2D_BZ_N20_Gc_5_1_invepsilon.dat";
 
     int ncell = 20;
-    double Gcutoff = 3.0;
+    double Gcutoff = 5.1;
     double d = 3.33;
     double percentage = 0.5;
     int nstates = 2;
@@ -39,16 +39,22 @@ int main(int argc, char* argv[]){
     exciton.setPercentage(percentage);
 
     exciton.brillouinZoneMesh(ncell);
-    // exciton.readInverseDielectricMatrix(dielectric_matrix_path);
+    exciton.readInverseDielectricMatrix(dielectric_matrix_path);
     exciton.initializeHamiltonian();
 
-    std::complex<double> epsilon = exciton.computesingleDielectricFunctionMatrixElement();
+    // std::complex<double> epsilon = exciton.computesingleDielectricFunctionMatrixElement();
 
-    // exciton.BShamiltonian();
+    exciton.BShamiltonian();
 
-    // auto results = exciton.diagonalize("diag", nstates);
+    auto results = exciton.diagonalize("diag", nstates);
 
-    /*auto energies = xatu::detectDegeneracies(results->eigval, nstates, 6);
+    auto energies = xatu::detectDegeneracies(results->eigval, nstates, 6);
+
+    cout << "+---------------------------------------------------------------------------+" << endl;
+    cout << "|                                    Results                                |" << endl;
+    cout << "+---------------------------------------------------------------------------+" << endl;
+
+    xatu::printEnergies(results, nstates, 10);
     
     std::vector<std::vector<double>> expectedEnergies = {{4.442317, 1}, 
                                                          {4.442427, 1}};
@@ -61,7 +67,7 @@ int main(int argc, char* argv[]){
     }
 
     // Check reciprocal w.f.
-    int nbandsCombinations = exciton.conductionBands.n_elem * exciton.valenceBands.n_elem;
+    /*int nbandsCombinations = exciton.conductionBands.n_elem * exciton.valenceBands.n_elem;
     arma::cx_vec kwf = arma::zeros<arma::cx_vec>(exciton.system->kpoints.n_rows);
     for (int n = 0; n < nstates; n++){
         arma::cx_vec statecoefs = results->eigvec.col(n);
