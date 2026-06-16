@@ -16,3 +16,5 @@ false
 true
 # gcutoff
 3.0
+# thickness
+3.33
