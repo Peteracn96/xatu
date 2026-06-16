@@ -13,7 +13,7 @@ int main(int argc, char* argv[]){
     int n_args = 5;
 
     if (argc != n_args){
-		throw std::invalid_argument("Error: Two input files are expected");
+		throw std::invalid_argument("Error: Four input files are expected");
 	}
     else if (argc < n_args){
         throw std::invalid_argument("Error: At least two input file are required (system config, exciton config, screening config and screening data file).");

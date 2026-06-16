@@ -12,7 +12,7 @@ int main(int argc, char* argv[]){
     // Parse console stdin
 
     if (argc != 5){
-		throw std::invalid_argument("Error: 4 input files are expected");
+		throw std::invalid_argument("Error: Four input files are expected");
 	}
     else if (argc < 5){
         throw std::invalid_argument("Error: At least two input file are required (system config, exciton config, screening config and q points file).");
