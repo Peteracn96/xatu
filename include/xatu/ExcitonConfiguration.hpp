@@ -28,11 +28,17 @@ class ExcitonConfiguration : public ConfigurationBase{
         arma::rowvec shift;
         // Cutoff to be used 
         double cutoff;
+        // Bool true/false if Gcutoff was/was not found
+        bool Gcutoff_found = false;
         // Dielectric constants
         arma::vec eps = {};
         // Screening length
         double r0;
-        // Thickness of layer
+        // Screening length
+        double ry;
+        // Screening length
+        double rz;
+        // Thickness of the 2D system
         double d;
         // Calculation mode (either 'realspace' or 'reciprocalspace')
         std::string mode = "realspace";
@@ -40,19 +46,21 @@ class ExcitonConfiguration : public ConfigurationBase{
         bool exchange = false;
         // Scissor cut to correct the bandgap
         double scissor = 0.0;
-        // Number of reciprocal vectors to use in reciprocal space calculation
-        int nReciprocalVectors = 0;
+        // G cutoff for reciprocal vectors to use in reciprocal space calculation
+        double Gc_ReciprocalVectors = 0.0;
         // Potential to use in direct term
         std::string potential = "keldysh";
         // Potential to use in exchange if active
         std::string exchangePotential = "keldysh";
         // Regularization distance
         double regularization = 0.0;
+        // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
+        double percentage = 0.5;
     };
 
     public:
         configuration excitonInfo;
-        std::vector<std::string> supportedPotentials = {"keldysh", "coulomb"};
+        std::vector<std::string> supportedPotentials = {"keldysh", "coulomb", "rpa"};
     
     public:
         ExcitonConfiguration();

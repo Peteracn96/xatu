@@ -1,10 +1,14 @@
 build/
 bin/
 libxatu.a
-main/
 test/bin
 docs/
 .DS_store
 .vs/
 .vscode/
+examples/
+*.txt
+*.out
+test
+*.txt
 Makefile

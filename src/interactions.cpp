@@ -113,6 +113,28 @@ double keldyshFT(const arma::rowvec& q, double r0, double eps_s, double eps_m, d
 }
 
 /**
+ * Evaluates the RPA potential in reciprocal space.
+ * Implementation in progress, returns the same as keldyshFT
+ */
+double rpaFT(const arma::rowvec& q, double r0, double eps_s, double eps_m, double unitCellArea, int totalCells){
+
+    double potential = 0;
+    double eps_bar = (eps_m + eps_s)/2;
+
+    double qnorm = arma::norm(q);
+    double eps = 1E-8;
+    if (qnorm < eps){
+        potential = 0;
+    }
+    else{
+        potential = 1/(qnorm*(1 + r0*qnorm));
+    }
+    
+    potential = potential*ec*1E10/(2*eps0*eps_bar*unitCellArea*totalCells);
+    return potential;
+}
+
+/**
  * Coulomb potential in real space.
  * @param r Distance at which we evaluate the potential.
  * @param regularization Regularization distance to remove divergence at r=0.
