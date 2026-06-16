@@ -143,17 +143,11 @@ do iw=1,nw
   write(50,*) wp(iw)*27.211385d0, &
               -realpart(feps*sigma_w_sp(1,1,iw)), &
               -realpart(feps*sigma_w_sp(1,2,iw)), &
-              -aimag(feps*sigma_w_sp(1,2,iw)), &
               -realpart(feps*sigma_w_sp(1,3,iw)), &
-              -aimag(feps*sigma_w_sp(1,3,iw)), &
               -realpart(feps*sigma_w_sp(2,1,iw)), &
-              -aimag(feps*sigma_w_sp(2,1,iw)), &
               -realpart(feps*sigma_w_sp(2,2,iw)), &
-              -aimag(feps*sigma_w_sp(2,2,iw)), &
               -realpart(feps*sigma_w_sp(2,3,iw)), &
-              -aimag(feps*sigma_w_sp(2,3,iw)), &
               -realpart(feps*sigma_w_sp(3,1,iw)), &
-              -aimag(feps*sigma_w_sp(3,1,iw)), &
               -realpart(feps*sigma_w_sp(3,2,iw)), &
               -realpart(feps*sigma_w_sp(3,3,iw))
   write(60,*) wp(iw)*27.211385d0, &
