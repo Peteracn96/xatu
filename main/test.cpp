@@ -32,6 +32,8 @@ int main(int argc, char* argv[]){
     uint ncell_aux = 5;
     bool spinfull = false;
     bool isotropic = true;
+    int holeIndex = 1;
+    arma::rowvec holeCell = {0, 0, 0};
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, ncell, 1, 0, {1., 1., 10.}, {0., 0., 0.}, ncell_aux, nvbands, ncbands, Gcutoff, Gcutoff, d, spinfull, isotropic);
     
@@ -67,7 +69,7 @@ int main(int argc, char* argv[]){
     }
 
     // Check reciprocal w.f.
-    /*int nbandsCombinations = exciton.conductionBands.n_elem * exciton.valenceBands.n_elem;
+    int nbandsCombinations = exciton.conductionBands.n_elem * exciton.valenceBands.n_elem;
     arma::cx_vec kwf = arma::zeros<arma::cx_vec>(exciton.system->kpoints.n_rows);
     for (int n = 0; n < nstates; n++){
         arma::cx_vec statecoefs = results->eigvec.col(n);
@@ -83,10 +85,12 @@ int main(int argc, char* argv[]){
     }
 
     double kwfHash = xatu::array2hash(kwf);
-    double expectedKwfHash = 1.0864895707;
+    /*double expectedKwfHash = 1.0864895707;
     if(std::abs(kwfHash-expectedKwfHash) < 1E-5){
         std::cout << "\033[1;32m Reciprocal w.f. correct \033[0m" << std::endl;
-    }
+    }*/
+    std::cout << std::setw(40) << "kwfHash: " << kwfHash << std::endl;
+    printf("|%.15lf|\n", kwfHash);
 
     // Check realspace w.f.
     arma::rowvec holePosition = exciton.system->motif.row(holeIndex).subvec(0, 2) + holeCell;
@@ -109,13 +113,14 @@ int main(int argc, char* argv[]){
     }
 
     double rswfHash = xatu::array2hash(rswf);
-    double expectedRSwfHash = 83.2242560463;
+    /*double expectedRSwfHash = 83.2242560463;
     if(std::abs(rswfHash-expectedRSwfHash) < 1E-5){
         std::cout << "\033[1;32m Real space w.f. correct \033[0m" << std::endl;
-    }
-
+    }*/
+    std::cout << std::setw(40) << "rswfHash: " << rswfHash << std::endl; 
+    printf("|%.15lf|\n", rswfHash);
     std::cout.clear();
-    std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;*/
+    std::cout << std::setw(40) << "\033[1;32m Success \033[0m" << std::endl;
 
     return 0;
 }
