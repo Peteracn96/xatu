@@ -270,7 +270,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
         uint ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
         if (ngs < (uint) this->nReciprocalVectors) {
-            std::cout << "Warning: Number of reciprocal lattice vectors for the screening (" + std::to_string(ngs) + ") may not be less than the number of vectors included for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") . Defaulting the exciton G cutoff to the screening G cutoff." << std::endl;
+            std::cout << "Warning: Number of reciprocal lattice vectors for the screening (" + std::to_string(ngs) + ") may not be less than the number of vectors included for the exciton (" + std::to_string(this->nReciprocalVectors_) + "). Defaulting the exciton G cutoff to the screening G cutoff.\n" << std::endl;
             this->Gc_exciton_ = this->Gcutoff_;
             this->nReciprocalVectors_ = ngs;
         }
