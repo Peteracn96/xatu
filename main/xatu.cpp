@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
     std::vector<std::string> methods = {"diag", "davidson", "sparse"};
     TCLAP::ValuesConstraint<std::string> allowedMethods(methods);
     TCLAP::ValueArg<std::string> methodArg("m", "method", "Method to solve the Bethe-Salpeter equation.", false, "diag", &allowedMethods, cmd);
-    TCLAP::ValueArg<std::string> bandsArg("b", "bands", "Computes the bands of the system on the specified kpoints.", false, "dummy.txt", "Filename", cmd);
+    TCLAP::ValueArg<std::string> bandsArg("b", "bands", "Computes the bands of the system on the specified kpoints.", false, "kpoints.txt", "Filename", cmd);
     TCLAP::ValueArg<std::string> screeningArg("z", "screening", "Provides input parameters for computing the screening.", false, "model.screening", "Filename", cmd);
     TCLAP::UnlabeledValueArg<std::string> systemArg("systemfile", "System file", true, "system.txt", "filename", cmd);
     TCLAP::UnlabeledValueArg<std::string> excitonArg("excitonfile", "Exciton file", false, "exciton.txt", "filename", cmd);
