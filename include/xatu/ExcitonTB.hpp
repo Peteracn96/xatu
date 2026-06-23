@@ -54,6 +54,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         int nReciprocalVectors_ = 1;
         
         // Internals for dielectric function
+        double FermiEnergy_ = 0.0;
+        double temperature_ = 0.0;
         std::string function_;
         arma::ivec Gs_ = {0, 0};
         arma::rowvec q_ = {0.2, 0., 0.};
@@ -108,6 +110,10 @@ class ExcitonTB : public Exciton<SystemTB> {
         double& percentage = percentage_;
         // Returns whether system is isotropic
         bool& isotropic = isotropic_;
+        // Returns temperature of the system
+        double& temperature = temperature_;
+        // Returns Fermi energy of the system
+        double& FermiEnergy = FermiEnergy_;
 
         // Returns spin degeneracy
         uint& g_s = g_s_;
@@ -200,6 +206,8 @@ class ExcitonTB : public Exciton<SystemTB> {
         arma::cx_mat motifFTMatrix(const arma::rowvec&, const arma::mat&, potptr);
         arma::cx_mat extendMotifFT(const arma::cx_mat&);
 
+        double FermiDirac_occupation(double, double, double) const;
+
         // Interaction matrix elements
         std::complex<double> realSpaceInteractionTerm(const arma::cx_vec&, const arma::cx_vec&,
                                                       const arma::cx_vec&, const arma::cx_vec&,
@@ -234,6 +242,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> computesinglePolarizabilityMatrixElement(arma::rowvec &, arma::rowvec &, arma::rowvec &);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);        
         std::complex<double> compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, const double);
+        std::complex<double> compute_quasi2D_PolarizabilityMatrixElement(const double, const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, const double, const float);
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, const double);        
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         std::complex<double> compute_quasi2D_DielectricMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const double);

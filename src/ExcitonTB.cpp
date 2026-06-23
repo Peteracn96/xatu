@@ -1101,6 +1101,18 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
 }
 
 /**
+ * Evaluates the occupation number for a given energy.
+ * @param energy Energy of the state.
+ * @param fermiLevel Fermi level of the system.
+ * @param temperature Temperature of the system.
+ * @return Occupation number for the given energy.
+ */
+double ExcitonTB::FermiDirac_occupation(double energy, double fermiLevel, double temperature) const {
+    double exponent = (energy - fermiLevel) / temperature;
+    return 1.0 / (std::exp(exponent) + 1.0);
+}
+
+/**
  * Routine to compute the lattice Fourier transform with the potential displaced by some
  * vectors of the motif.
  * @param fAtomIndex Index of first atom of the motif.
@@ -1888,6 +1900,81 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
 }
 
 /**
+ * Method to compute the (G,G') matrix element of the dynamic Q2D polarizability at the specified momentum q.
+ * @details The Q2D polarizability computed has meaning only when multiplied by the Coulomb potential
+ * @param w Frequency w (eV)
+ * @param q Momentum vector q
+ * @param G Reciprocal lattice vector G
+ * @param G2 Reciprocal lattice vector G2
+ * @param d Thickness of the 2D system
+ * @param eta Broadening parameter (eV)
+ * @return Polarizability
+*/
+inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const double w, const arma::rowvec& q, const arma::rowvec& G, const arma::rowvec& G2, const double d, const float eta) {
+
+    uint nk = this->nk_aux;
+    std::complex<double> imag(0, eta);
+
+    uint nbands = system->basisdim;
+    double T = this->temperature;
+    double miu = this->FermiEnergy;
+
+    int nvbands = system->fermiLevel + 1;
+
+    int nvbandsincluded = this->nvalencebands_;
+    int ncbandsincluded = this->nconductionbands_;
+
+    int upperindexcband = nvbands + ncbandsincluded - 1;
+
+    arma::cx_vec coefskq, coefsk;
+
+    std::complex<double> term_aux = 0.;
+    std::complex<double> g_s = this->g_s; // Spin degeneracy
+
+    if (arma::norm(q) < 1E-7 && (arma::norm(G) < 1E-7 || arma::norm(G2) < 1E-7)){
+        return 0.;
+    }
+
+    if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {       
+        std::cout << "Bloch Hamiltonian has to be diagonalized at every k+q point before computing polarizability matrix elements. Terminating" << std::endl;
+        exit(0);
+    }
+
+    for (int n = 0; n < nbands; n++){        
+
+        for (int n2 = nvbands; n2 <= upperindexcband; n2++){
+
+            for (uint ik = 0; ik < nk; ik++){
+
+                double f_nk = FermiDirac_occupation(eigvalkStack_.col(ik)(n), miu, T);
+                double f_nkq = FermiDirac_occupation(eigvalkqStack_.col(ik)(n2), miu, T);
+
+                arma::rowvec k = this->kpoints_aux.row(ik);
+                arma::rowvec kq = k + q;
+        
+               // Using the atomic gauge
+                if(gauge == "atomic"){
+                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(n2), kq);
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(n), k);                                    
+                }
+                else{                            
+                    coefskq = eigveckqStack_.slice(ik).col(n2);
+                    coefsk = eigveckStack_.slice(ik).col(n);                    
+                }
+
+                std::complex<double> IG_d = blochCoherenceFactor(coefsk, coefskq, kq, k, G, d);
+                
+                std::complex<double> IG2_d = blochCoherenceFactor(coefsk, coefskq, kq, k, G2, d);                
+
+                term_aux += (f_nk - f_nkq)*IG_d*std::conj(IG2_d) / (w + eigvalkStack_.col(ik)(n) - eigvalkqStack_.col(ik)(n2) + imag);               
+            }
+        }
+    }
+
+    return g_s*term_aux/((std::complex<double>)nk);
+}
+
+/**
  * Method to compute the (G,G') static 2D polarizability in the BZ mesh.
  * @details Opens 'polarizability_mesh.dat' file and writes in it the values of the polarizability at each point in the BZ mesh
  * @return void
@@ -1987,10 +2074,6 @@ int ExcitonTB::fetchReciprocalLatticeVector(arma::rowvec G){
     return -1; // G not found
 }
 
-/**
- * Method to compute the static 2D dielectric matrix in the BZ mesh.
- * @return void
-*/
 void ExcitonTB::compute_2D_DielectricMatrix(){
 
     auto start = high_resolution_clock::now();
@@ -2327,31 +2410,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         }
     }
 
-    #pragma omp parallel for
-    for (uint ig = 0; ig < nGs_new_combinations; ig++)
-    {        
-        uint g  = indecesg.row(ig)(0);
-        uint g2 = indecesg.row(ig)(1);
-
-        arma::rowvec G = ReciprocalVectors.row(g);
-        arma::rowvec G2 = ReciprocalVectors.row(g2);
-        
-        uint negativeG = fetchReciprocalLatticeVector(-G);
-        uint negativeG2 = fetchReciprocalLatticeVector(-G2);
-        
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
-
-        this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
-        this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
-
-        double potentialg  = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
-        double potentialg2 = potentialg;
-    
-        double kroneckerdelta = g == g2 ? 1 : 0;
-
-        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * this->Chimatrix_.slice(iq).row(g)(g2);
-        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * this->Chimatrix_.slice(iq).row(g2)(g);       
-    }           
 
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
@@ -3126,8 +3184,6 @@ std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         std::complex<double> kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1. : 0.;
 
         std::complex<double> epsilon =  kroneckerdelta - potential*Chi;
-
-        double d = this->d;
 
         std::complex<double> epsilon_Q2D =  kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(q, g, g2, d);
 
