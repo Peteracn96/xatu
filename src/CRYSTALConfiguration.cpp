@@ -220,7 +220,7 @@ void CRYSTALConfiguration::parseAtoms(){
     std::vector<double> atom;
     std::map<std::string, int> chemical_species_to_index;
     std::vector<std::string> species;
-    arma::mat motif = arma::zeros(natoms, 5);
+    arma::mat motif = arma::zeros(natoms, 4);
 
     std::getline(m_file, line); // Parse asterisks
     for(int i = 0; i < natoms; i++){
@@ -237,7 +237,7 @@ void CRYSTALConfiguration::parseAtoms(){
         }
 
         int index = chemical_species_to_index[chemical_species];
-        atom = {x, y, z, (double)index, 0};
+        atom = {x, y, z, (double)index};
         motif.row(i) = arma::rowvec(atom);
     }
     this->motif = motif;

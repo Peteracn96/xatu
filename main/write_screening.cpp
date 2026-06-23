@@ -5,29 +5,14 @@
 
 using namespace std::chrono;
 
-
-double my_coulomb(double r) {
-    
-    double a = 0.000001;
-    double v_c_regularization =ec/(4E-10*PI*eps0*a);
-    
-    if (r < 1E-7){
-        //return 0;
-        return v_c_regularization;
-    }
-
-    return ec/(4E-10*PI*eps0*r);    
-    //return 1/r;
-}
-
-// command example: ./write_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt
+// run command: ./write_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_test.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_q_points_file>.dat
 
 int main(int argc, char* argv[]){
 
     // Parse console stdin
 
     if (argc != 5){
-		throw std::invalid_argument("Error: 4 input files are expected");
+		throw std::invalid_argument("Error: Four input files are expected");
 	}
     else if (argc < 5){
         throw std::invalid_argument("Error: At least two input file are required (system config, exciton config, screening config and q points file).");
@@ -72,43 +57,16 @@ int main(int argc, char* argv[]){
 
 
     exciton.brillouinZoneMesh(exciton.ncell);
-    exciton.initializeHamiltonian();
+    exciton.initializeHamiltonian();    
 
-    exciton.writeBZtofile();
-
-    const int array_size = 3;
-    double Gs_array[array_size] = {5.1,8,9};
+    exciton.compute_2D_DielectricMatrix(q_points_file);
 
     size_t lastindex = q_points_file.find_last_of("."); 
     std::string rawname = q_points_file.substr(0, lastindex); 
 
-    for (int gs = 0; gs < array_size; ++gs) {
+    exciton.invertDielectricMatrix();    
 
-	//     int nGs = nGs_array[gs];
-
-	//     exciton.setReciprocalVectors(nGs);
-
-    //     // Testing the code for RPA calculation
-    //     exciton.compute_2D_RPAInvDielectricMatrix("MoS2_TB_q_points_test.dat");
-
-    //     exciton.writeRPAPolarizabilityMatrix("MoS2_RPA_polarizability_" + std::to_string(nGs) + ".dat");
-
-    //     exciton.writeRPAInverseDielectricMatrix("MoS2_TB_RPA_screening_" + std::to_string(nGs) + ".dat");
-    
-        exciton.setGcutoff(Gs_array[gs]);
-
-        exciton.compute_quasi2D_DielectricMatrix(q_points_file);  
-
-        exciton.invertDielectricMatrix();
-
-        exciton.writeInverseDielectricMatrix(rawname + "_inv_epsilon_symmetrized_Gc_" + std::to_string(Gs_array[gs]) + ".dat");
-    }
-
-    // exciton.compute_2D_DielectricMatrix(q_points_file);
-
-    // exciton.writePolarizabilityMatrix(rawname + "_polarizability.dat");
-
-    // exciton.writeDielectricMatrix(rawname + "_epsilon.dat");    
+    exciton.writeInverseDielectricMatrix(rawname + "_invepsilon.dat");
 
     return 0;
 }

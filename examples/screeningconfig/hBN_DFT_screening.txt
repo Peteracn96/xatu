@@ -5,7 +5,7 @@
 # vectors
 0 0
 # momentum
-0.001  0.   0
+0.2  0.  0.
 # function
 dielectric
 # ncell_aux
@@ -15,3 +15,6 @@ false
 # isotropic
 true
 # gcutoff
+3.0
+# thickness
+3.33

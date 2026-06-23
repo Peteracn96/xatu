@@ -51,10 +51,25 @@ void ExcitonTB::initializeExcitonAttributes(int ncell, const arma::ivec& bands,
     this->eps_m_      = parameters(0);
     this->eps_s_      = parameters(1);
     this->r0_         = parameters(2);
+    // Set ry
+    if (parameters.n_elem >= 4) {
+        this->ry_ = parameters(3);
+    } else {
+        this->ry_ = r0_;
+    }
+
+    // Set rz
+    if (parameters.n_elem >= 5) {
+        this->rz_ = parameters(4);
+    } else {
+        this->rz_ = 0.5 * (this->r0_ + this->ry_);
+    }
+
     this->cutoff_     = ncell/2.5; // Default value, seems to preserve crystal point group
     if(r0 == 0){
         throw std::invalid_argument("Error: r0 must be non-zero");
     }
+
 }
 
 /**
@@ -68,7 +83,7 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     int ncell        = cfg.excitonInfo.ncell;
     int nbands       = cfg.excitonInfo.nbands;
     arma::ivec bands = cfg.excitonInfo.bands;
-    arma::rowvec parameters = {cfg.excitonInfo.eps(0), cfg.excitonInfo.eps(1), cfg.excitonInfo.eps(2)};
+    arma::rowvec parameters = arma::conv_to<arma::rowvec>::from(cfg.excitonInfo.eps);
     arma::rowvec Q   = cfg.excitonInfo.Q;
     double percentage = cfg.excitonInfo.percentage;
 
@@ -113,7 +128,7 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
     if (cfg.excitonInfo.Gcutoff_found){
         this->Gc_exciton_ = cfg.excitonInfo.Gc_ReciprocalVectors;
     } else {
-        this->Gc_exciton_ = (this->ncell)/2.5 * arma::norm(system->reciprocalLattice.row(0));
+        this->Gc_exciton_ = 3.0;
     }
 
     if (this->mode == "reciprocalspace"){
@@ -122,15 +137,10 @@ void ExcitonTB::initializeExcitonAttributes(const ExcitonConfiguration& cfg){
             this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gc_exciton_);
 
             this->nReciprocalVectors_ = this->trunreciprocalLattice_.n_rows;
-
-            if (this->nReciprocalVectors_ > (int)this->trunreciprocalLattice_.n_rows){
-                throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
-            }
         }
     } else if (this->mode == "realspace"){
         std::cout << "Doing nothing for now\n";
     }
-    
 }
 
 /*
@@ -154,7 +164,6 @@ void ExcitonTB::verifypotential(){
  * Method to set the screening attributes of an exciton object from a ScreeningConfiguration object.
  * @details Overload of the method to use a configuration object. Based on the parametric method.
  * @param cfg ScreeningConfiguration object from parsed file.
- * @param mode Real space or reciprocal space mode
  * @return void
  */
 void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg){
@@ -163,19 +172,18 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
     arma::rowvec q            = cfg.screeningInfo.q;
     arma::ivec gs             = cfg.screeningInfo.Gs;
     std::string function      = cfg.screeningInfo.function;
-    arma::ivec ts             = cfg.screeningInfo.ts;
     uint ncell_aux            = cfg.screeningInfo.ncell_aux;
     bool model_has_spin       = cfg.screeningInfo.spin;
     bool isotropic            = cfg.screeningInfo.isotropic;
     double Gcutoff            = cfg.screeningInfo.Gcutoff;
     double d                  = cfg.screeningInfo.d;
-    this->ts_ = ts;
 
     this->isscreeningset      = true;
     this->function_           = function;
     this->ncell_aux_          = ncell_aux;
     this->nk_aux_             = pow(ncell_aux, 2);
     this->Gcutoff_            = Gcutoff;
+    this->isotropic           = isotropic;
     this->d_                  = d;
 
     uint totalvbands = system->fermiLevel + 1;
@@ -253,7 +261,7 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
     if (this->mode == "realspace"){
         if (cfg.screeningInfo.function == "exciton"){
-            std::cout << "Computation of the exciton using the RPA dielectric function in real space not available yet." << std::endl;
+            std::cout << "Numerical screening in real space not implemented." << std::endl;
         }
     } else if (this->mode == "reciprocalspace"){
         double radius = this->Gcutoff_;
@@ -261,8 +269,10 @@ void ExcitonTB::initializeScreeningAttributes(const ScreeningConfiguration& cfg)
 
         uint ngs = this->nGs = this->trunreciprocalLattice_.n_rows;
 
-        if (ngs < this->nReciprocalVectors) {
-            throw std::invalid_argument("initializeExcitonAttributes(): Number of reciprocal lattice vectors for the screening (" + std::to_string(ngs) + ") may not be less than the number of vectors included for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") .");
+        if (ngs < (uint) this->nReciprocalVectors) {
+            std::cout << "Warning: Number of reciprocal lattice vectors for the screening (" + std::to_string(ngs) + ") may not be less than the number of vectors included for the exciton (" + std::to_string(this->nReciprocalVectors_) + "). Defaulting the exciton G cutoff to the screening G cutoff.\n" << std::endl;
+            this->Gc_exciton_ = this->Gcutoff_;
+            this->nReciprocalVectors_ = ngs;
         }
 
         if (cfg.screeningInfo.function == "dielectric" || cfg.screeningInfo.function == "polarizability"){
@@ -371,7 +381,7 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
  * @param Q Center-of-mass momentum.
  */
 ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, int nrmbands,
-                     const arma::rowvec& parameters, const arma::rowvec& Q, const double Gcutoff, const double Gc_exciton) : ExcitonTB(config, ncell, {}, parameters, Q)
+                     const arma::rowvec& parameters, const arma::rowvec& Q, const uint ncell_aux, const uint nvbands, const uint ncbands, const double Gcutoff, const double Gc_exciton, const double d, const bool spin, const bool isotropic) : ExcitonTB(config, ncell, {}, parameters, Q)
 {
     if (2 * nbands > system->basisdim)
     {
@@ -388,13 +398,51 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, int nbands, i
     this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
     this->Gcutoff_ = Gcutoff;
     this->Gc_exciton_ = Gc_exciton;
-
+    this->mode_ = "reciprocalspace";
     this->nReciprocalVectors_ = system_->truncateReciprocalSupercell(this->Gc_exciton_).n_rows;
     this->trunreciprocalLattice_ = system_->truncateReciprocalSupercell(this->Gcutoff_);
-
-    if (this->nReciprocalVectors_ > this->trunreciprocalLattice_.n_rows) {
-        throw std::invalid_argument("constructor ExcitonTB(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
+    this->isscreeningset = true;
+    
+    if (this->nReciprocalVectors_ > (int) this->trunreciprocalLattice_.n_rows) {
+        std::cout << "Warning: Number of reciprocal lattice vectors for the exciton (" + std::to_string(this->nReciprocalVectors_) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + "). Defaulting the exciton G cutoff to the screening G cutoff." << std::endl;
+        this->Gc_exciton_ = this->Gcutoff_;
     }
+
+    uint totalvbands = system->fermiLevel + 1;
+    uint totalcbands = (uint)system->basisdim - totalvbands;
+
+    if (nvbands > totalvbands  || ncbands > totalcbands){
+        std::cout << "Number of included bands cannot be higher than the number of material bands" << std::endl;
+        std::cout << "Number of total valence bands = " << totalvbands<< std::endl;
+        std::cout << "Number of total conduction bands = " << totalcbands << std::endl;
+    
+        exit(1);
+    }
+
+    if (nvbands + ncbands > (uint)system->basisdim){
+        std::cout << "Error: Number of bands cannot be higher than actual material" << std::endl;
+        std::cout << "Total number of bands is " << system->basisdim << std::endl;
+        exit(1);
+    }
+
+    this->nvalencebands_ = nvbands;
+    this->nconductionbands_ = ncbands;
+
+    if (spin) {
+        this->g_s = 1;
+    } else {
+        this->g_s = 2;
+    }
+
+    this->isotropic_ = isotropic;
+    this->d_ = d;
+
+    uint basisdim = system_->basisdim;
+    this->ncell_aux_ = ncell_aux;
+    uint nk_aux = pow(ncell_aux, 2);
+    this->nk_aux_ = nk_aux; 
+    this->eigveckStack_  = arma::cx_cube(basisdim, basisdim, nk_aux); // For the dielectric function
+    this->eigvalkStack_  = arma::mat(basisdim, nk_aux);
 };
 
 /**
@@ -428,7 +476,7 @@ ExcitonTB::ExcitonTB(std::shared_ptr<SystemTB> sys, int ncell, const arma::ivec&
     system_ = sys;
     initializeExcitonAttributes(ncell, bands, parameters, Q);
 
-    if ((int)bands.n_elem > system->basisdim){
+    if ((int) bands.n_elem > system->basisdim){
         std::cout << "Error: Number of bands cannot be higher than actual material bands" << std::endl;
         exit(1);
     }
@@ -479,27 +527,42 @@ ExcitonTB::ExcitonTB(std::shared_ptr<SystemTB> sys, int ncell, int nbands, int n
  * Exciton destructor.
  * @details Used mainly for debugging; the message should be removed at some point.
  */
-ExcitonTB::~ExcitonTB(){};
+// ExcitonTB::~ExcitonTB(){};
 
 
 /* ------------------------------ Setters ------------------------------ */
 
 /**
  * Method to set the parameters of the Keldysh potential, namely the environmental
- * dielectric constants and the effective screening length.
- * @param parameters Vector with the three parameters, '{eps_m, eps_s, r0}'. 
+ * dielectric constants and the effective screening lengths.
+ * @param parameters Vector with 3 to 5 parameters: '{eps_m, eps_s, r0[, ry[, rz]]}'.
  * @return void
  */
-void ExcitonTB::setParameters(const arma::rowvec& parameters){
-    if(parameters.n_elem == 3){
-        eps_m_ = parameters(0);
-        eps_s_ = parameters(1);
-        r0_    = parameters(2);
+void ExcitonTB::setParameters(const arma::rowvec& parameters) {
+    if (parameters.n_elem < 3) {
+        std::cout << "parameters array must be at least 3D (eps_m, eps_s, r0)" << std::endl;
+        return;
     }
-    else{
-        std::cout << "parameters array must be 3d (eps_m, eps_s, r0)" << std::endl;
+
+    eps_m_ = parameters(0);
+    eps_s_ = parameters(1);
+    r0_    = parameters(2);
+
+    // Set ry
+    if (parameters.n_elem >= 4) {
+        ry_ = parameters(3);
+    } else {
+        ry_ = r0_;
+    }
+
+    // Set rz
+    if (parameters.n_elem >= 5) {
+        rz_ = parameters(4);
+    } else {
+        rz_ = 0.5 * (r0_ + ry_);
     }
 }
+
 
 /**
  * Sets the parameters of the Keldysh potential.
@@ -508,11 +571,24 @@ void ExcitonTB::setParameters(const arma::rowvec& parameters){
  * @param r0 Effective screeening length.
  * @return void 
  */
-void ExcitonTB::setParameters(double eps_m, double eps_s, double r0){
-    // TODO: Introduce additional comprobations regarding value of parameters (positive)
+void ExcitonTB::setParameters(double eps_m, double eps_s, double r0, double ry, double rz){
     eps_m_ = eps_m;
     eps_s_ = eps_s;
     r0_    = r0;
+
+    // Set ry
+    if (ry != 0) {
+        ry_ = ry;
+    } else {
+        ry_ = r0;
+    }
+
+    // Set rz
+    if (rz != 0) {
+        rz_ = rz;
+    } else {
+        rz_ = 0.5 * (r0 + ry);
+    }
 }
 
 /**
@@ -561,36 +637,12 @@ void ExcitonTB::setMode(std::string mode){
     if(mode != "realspace" && mode != "reciprocalspace"){
         throw std::invalid_argument("setMode(): mode must be either realspace or reciprocalspace");
     }
-    this->mode_ = mode;
-}
 
-/**
- * Sets the number of reciprocal vectors to use if the exciton calculation is set to 'reciprocalspace'.
- * @param Gc_exciton Cutoff for reciprocal lattice vectors included in the calculation of the exciton
- * @return void 
- */
-void ExcitonTB::setReciprocalVectors(double Gc_exciton){
-
-    int nReciprocalVectors = system_->truncateReciprocalSupercell(Gc_exciton).n_rows;
-
-    if(Gc_exciton < 0){
-
-        throw std::invalid_argument("setReciprocalVectors(): given cutoff must be positive");
-
-    } else if ((uint)nReciprocalVectors > this->trunreciprocalLattice_.n_rows && !this->trunreciprocalLattice_.is_empty()) {
-
-        throw std::invalid_argument("setReciprocalVectors(): Number of reciprocal lattice vectors for the exciton (" + std::to_string(nReciprocalVectors) + ") may not exceed the number of vectors included in the screening (" + std::to_string(this->trunreciprocalLattice_.n_rows) + ") .");
-        exit(0);
-
-    } else if (this->trunreciprocalLattice_.is_empty()) {
-
-        std::cout << "The reciprocal lattice vectors for calculating the exciton were not generated. Terminating." << std::endl;
-        exit(0);
-
+    if (mode == "reciprocalspace" && this->trunreciprocalLattice_.is_empty()) {
+        this->trunreciprocalLattice_ = this->system->truncateReciprocalSupercell(this->Gcutoff_);
     }
 
-    this->Gc_exciton_ = Gc_exciton;
-    this->nReciprocalVectors_ = nReciprocalVectors;
+    this->mode_ = mode;
 }
 
 /**
@@ -628,6 +680,7 @@ void ExcitonTB::setGcutoff(double Gcutoff){
         this->trunreciprocalLattice_.submat(0, 0, nGs_aux - 1, 2) = reciprocalLattice_old; // When increasing the G cutoff, conserves the order of the G vectors
     }
 
+    std::cout << "Updated reciprocal lattice:" << std::endl;
     printReciprocalLattice();
 }
 
@@ -658,32 +711,6 @@ void ExcitonTB::setVectors(int index1, int index2){
 }
 
 /**
- * Sets the motif vectors where the polarizability will be computed at.
- * @details Receives as argument an arma::ivec object.
- * @param indeces_vec Vector containing the two indices.
- * @return void
-*/
-void ExcitonTB::setmotifVectors(arma::ivec indeces_vec){
-    if(indeces_vec(0) < 0 || indeces_vec(1)){
-        throw std::invalid_argument("setmotifVectors(arma::ivec): Both vectors must have a positive index");
-    }
-    this->ts_ = indeces_vec;
-}
-
-/**
- * Sets the motif vectors where the polarizability will be computed at.
- * @param index1 Index of the first vector.
- * @param index2 Index of the second vector.
- * @return void
-*/
-void ExcitonTB::setmotifVectors(int index1, int index2){
-    if(index1 < 0 || index2 < 0){
-        throw std::invalid_argument("setmotifVectors(int,int): Both vectors must have a positive index");
-    }
-    setmotifVectors(arma::ivec({index1, index2}));
-}
-
-/**
  * Sets the potential for the direct interaction matrix elements.
  * @param potential Type of potential to be used.
  * @return void 
@@ -692,7 +719,7 @@ void ExcitonTB::setPotential(std::string potential){
     if(potential != "keldysh" && potential != "coulomb" && potential != "rpa"){
         throw std::invalid_argument("setPotential(): potential must be either keldysh, coulomb or rpa");
     }
-    double test = STVH1(0.5); std::cout << "H_1(0.5) = " << test << std::endl;
+
     this->potential_ = potential;
 }
 
@@ -743,6 +770,15 @@ void ExcitonTB::setPercentage(double percentage){
     this->percentage_ = percentage;
 }
 
+/**
+ * Sets the thickness of the 2D system
+ * @param d Thickness
+ * @return void
+*/
+void ExcitonTB::setThickness(double d){
+    this->d_ = d;
+}
+
 /* ------------------------------ Getters ------------------------------ */
 int ExcitonTB::getNGs() const {
 
@@ -754,6 +790,119 @@ int ExcitonTB::getNGs() const {
     return this->trunreciprocalLattice_.n_rows;
 }
 
+/**
+ * Gets the thickness of the 2D system
+ * @return Thickness
+ */
+double ExcitonTB::getThickness() const {
+    return this->d_;
+}
+
+arma::cx_cube ExcitonTB::getChiMatrix() const {
+
+    uint nks_expected = this->ncell_ * this->ncell_;
+    uint nks_matrix = this->Invepsilonmatrix_.n_slices;
+
+    if(nks_expected != nks_matrix){
+        std::cout << "Warning: Number of k points for the polarizability matrix (" << nks_matrix << ") does not match the size of the BZ (" << nks_expected << ")." << std::endl;
+    }
+    
+    return this->Chimatrix_;
+}
+
+std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getPolarizabilityMatrix_as_vector() const {
+
+    uint nqs = 0;
+    uint nks_matrix = 0;
+    uint ngs = 0;
+        
+    if (this->Chimatrix_.is_empty()) {
+        std::cout << "Polarizability matrix is empty. Returning empty vector." << std::endl;
+        return std::vector<std::vector<std::vector<std::complex<double>>>>();
+    } else {
+        nks_matrix = this->Chimatrix_.n_slices;
+        ngs = this->Chimatrix_.slice(0).n_rows;
+    }
+    
+    if (this->qpoints_list_.is_empty()) {
+        std::cout << "Warning: List of q points is not defined. Polarizability matrix will still be returned." << std::endl;
+    } else {
+        nqs = this->qpoints_list_.n_rows;
+            for (uint iq = 0; iq < nqs; iq++) {
+            arma::rowvec q_point = this->qpoints_list_.row(iq);
+            arma::rowvec k_point = system->meshBZ.row(iq);
+            if (arma::norm(q_point - k_point) > 1e-6) {
+                std::cout << "Warning: List of q points does not coincide with the BZ mesh. Polarizability matrix will still be returned." << std::endl;
+                break;
+            }
+        }
+    }
+    
+    std::vector<std::vector<std::complex<double>>> null_matrix = std::vector<std::vector<std::complex<double>>>(ngs, std::vector<std::complex<double>>(ngs, std::complex<double>(0.0, 0.0)));
+
+    std::vector<std::vector<std::vector<std::complex<double>>>> Chimatrix_as_vector;
+    Chimatrix_as_vector.resize(nks_matrix);
+    
+    for (uint ik = 0; ik < nks_matrix; ik++) {
+        arma::cx_mat inv_epsilon_at_ik = this->Chimatrix_.slice(ik);
+        Chimatrix_as_vector[ik].resize(ngs);
+        Chimatrix_as_vector[ik] = arma::conv_to<std::vector<std::vector<std::complex<double>>>>::from(inv_epsilon_at_ik);
+    }
+    
+    return Chimatrix_as_vector;
+}
+
+arma::cx_cube ExcitonTB::getInverseDielectricMatrix() const {
+
+    uint nks_expected = this->ncell_ * this->ncell_;
+    uint nks_matrix = this->Invepsilonmatrix_.n_slices;
+
+    if(nks_expected != nks_matrix){
+        std::cout << "Warning: Number of k points for the inverse dielectric matrix (" << nks_matrix << ") does not match the size of the BZ (" << nks_expected << ")." << std::endl;
+    }
+    
+    return this->Invepsilonmatrix_;
+}
+
+std::vector<std::vector<std::vector<std::complex<double>>>> ExcitonTB::getInverseDielectricMatrix_as_vector() const {
+
+    uint nqs = 0;
+    uint nks_matrix = 0;
+    uint ngs = 0;
+        
+    if (this->Invepsilonmatrix_.is_empty()) {
+        std::cout << "Inverse dielectric matrix is empty. Returning empty vector." << std::endl;
+        return std::vector<std::vector<std::vector<std::complex<double>>>>();
+    } else {
+        nks_matrix = this->Invepsilonmatrix_.n_slices;
+        ngs = this->Invepsilonmatrix_.slice(0).n_rows;
+    }
+    
+    if (this->qpoints_list_.is_empty()) {
+        std::cout << "Warning: List of q points is not defined. Inverse dielectric matrix will still be returned." << std::endl;
+    } else {
+        nqs = this->qpoints_list_.n_rows;
+            for (uint iq = 0; iq < nqs; iq++) {
+            arma::rowvec q_point = this->qpoints_list_.row(iq);
+            arma::rowvec k_point = system->meshBZ.row(iq);
+            if (arma::norm(q_point - k_point) > 1e-6) {
+                std::cout << "Warning: List of q points does not coincide with the BZ mesh. Inverse dielectric matrix will still be returned." << std::endl;
+                break;
+            }
+        }
+    }
+
+    std::vector<std::vector<std::vector<std::complex<double>>>> Invepsilonmatrix_as_vector;
+    Invepsilonmatrix_as_vector.resize(nks_matrix);
+    
+    for (uint ik = 0; ik < nks_matrix; ik++) {
+        arma::cx_mat inv_epsilon_at_ik = this->Invepsilonmatrix_.slice(ik);
+        Invepsilonmatrix_as_vector[ik].resize(ngs);
+        Invepsilonmatrix_as_vector[ik] = arma::conv_to<std::vector<std::vector<std::complex<double>>>>::from(inv_epsilon_at_ik);
+    }
+    
+    return Invepsilonmatrix_as_vector;
+}
 
 /*---------------------------------------- Potentials ----------------------------------------*/
 
@@ -763,7 +912,7 @@ int ExcitonTB::getNGs() const {
  * @param X x --- Argument of H0(x) ( x ò 0 )
  * @param SH0 SH0 --- H0(x). The return value is written to the direction of the pointer.
 */
-void ExcitonTB::STVH0(double X, double *SH0) const {
+void ExcitonTB::STVH0(double X, double *SH0) {
     double A0,BY0,P0,Q0,R,S,T,T2,TA0;
 	int K, KM;
 
@@ -796,39 +945,6 @@ void ExcitonTB::STVH0(double X, double *SH0) const {
         }
 }
 
-/**
- * Purpose: Compute Struve function H1(x).
- * Source: https://dlmf.nist.gov/11.2#i
- * @param X x --- Argument of H1(x)
- * @param SH0 SH0 --- H0(x). The return value is written to the direction of the pointer.
- */
-double ExcitonTB::STVH1(double X) const
-{
-    int N = 1000;
-
-    double result = 0.0;
-    double term_previous = 0.0;
-    double term = 1.0;
-
-    for (int n = 0; n <= N; ++n)
-    {
-        term = std::pow(-1,n)*std::pow(X/2.0, 2*n) / (std::tgamma(n + 1.5) * std::tgamma(n + 2.5));
-        result += term;
-
-        if (std::abs(term) < 1E-10)
-        {
-            break;
-        } else if (n == N)
-        {
-            N = N + 10;
-        }
-        
-
-    }
-
-    return std::pow(0.5*X, 2)*result;
-}
-
 /** 
  * Calculate value of interaction potential (Keldysh). Units are eV.
  * @details If the distance is zero, then the interaction is renormalized to be V(a) since
@@ -836,22 +952,25 @@ double ExcitonTB::STVH1(double X) const
  * @param r Distance at which we evaluate the potential.
  * @return Value of Keldysh potential, V(r).
  */
-double ExcitonTB::keldysh(double r) const {
+double ExcitonTB::keldysh(arma::rowvec r){
     double eps_bar = (eps_m + eps_s)/2;
     double SH0;
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
-    double R = abs(r)/r0;
+    arma::rowvec R0 = {r0,ry,rz};
+    double R = arma::norm(r/R0);
+    double r_norm = arma::norm(r);
+    double r0avg = (r0 + ry + rz)/3;
     double potential_value;
-    if(r == 0){
+    if(r_norm < 1E-10){
         STVH0(regularization/r0, &SH0);
-        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(regularization/r0));
+        potential_value = ec/(8E-10*eps0*eps_bar*r0avg)*(SH0 - y0(regularization/r0avg));
     }
-    else if (r > cutoff){
+    else if (r_norm > cutoff){
         potential_value = 0.0;
     }
     else{
         STVH0(R, &SH0);
-        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(R));
+        potential_value = ec/(8E-10*eps0*eps_bar*r0avg)*(SH0 - y0(R));
     };
 
     return potential_value;
@@ -863,67 +982,14 @@ double ExcitonTB::keldysh(double r) const {
  * @param regularization Regularization distance to remove divergence at r=0.
  * @return Value of Coulomb potential, V(r).
  */
-double ExcitonTB::coulomb(double r) const {
+double ExcitonTB::coulomb(arma::rowvec r){
     double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
-    r = abs(r);
-    if (r > cutoff){
+    double R = abs(arma::norm(r));
+    if (R > cutoff){
         return 0.0;
     }
-    return (r != 0) ? ec/(4E-10*PI*eps0*r) : ec*1E10/(4*PI*eps0*regularization);    
+    return (R != 0) ? ec/(4E-10*PI*eps0*R) : ec*1E10/(4*PI*eps0*regularization);    
 }
-
-/**
- * Coulomb potential in real space, with support for on-site energies (at the moment input parameters).
- * @param r Distance at which we evaluate the potential.
- * @param i Index of the atom, in case we are computing the Coulomb potential on-site (r=0)
- * @return Value of Coulomb potential, V(r).
- */
-double ExcitonTB::coulomb(double r, uint i, uint j) const {
-    double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
-    r = abs(r);
-
-    if (r < 10E-5 && i == j) {
-
-        if ((int)i + 1 > system->natoms) {
-            std::cout << "Index out of bounds, must be <= natoms - 1. Exiting" << std::flush;
-            exit(0);
-        }
-
-        if (system->motif.col(4)(i) == 0)
-        {
-            std::cout << "Something went wrong, here is the regularization value from input model: " << system->motif.col(4)(i) << std::endl;
-        }
-        
-        return system->motif.col(4)(i);
-    } else{
-        return ec/(4E-10*PI*eps0*r);   
-    }
-}
-
-/**
- * RPA potential in real space.
- * Implementation in progress, returns the same as keldysh.
- */
-double ExcitonTB::rpa(double r) const {
-    double eps_bar = (eps_m + eps_s)/2;
-    double SH0;
-    double cutoff = arma::norm(system->bravaisLattice.row(0)) * cutoff_ + 1E-5;
-    double R = abs(r)/r0;
-    double potential_value;
-    if(r == 0){
-        STVH0(regularization/r0, &SH0);
-        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(regularization/r0));
-    }
-    else if (r > cutoff){
-        potential_value = 0.0;
-    }
-    else{
-        STVH0(R, &SH0);
-        potential_value = ec/(8E-10*eps0*eps_bar*r0)*(SH0 - y0(R));
-    };
-
-    return potential_value;
-};
 
 /**
  * Method to select the potential to be used in the of the exciton calculation.
@@ -931,44 +997,17 @@ double ExcitonTB::rpa(double r) const {
  * @return Pointer to function representing the potential.
  */
 
- const potptr ExcitonTB::selectPotential(std::string potential){
+potptr ExcitonTB::selectPotential(std::string potential){
     if(potential == "keldysh"){
         return &ExcitonTB::keldysh;
     }
     else if(potential == "coulomb"){
         return &ExcitonTB::coulomb;
     }
-    else if(potential == "rpa"){
-        return &ExcitonTB::keldysh;
-    }
     else{
-        throw std::invalid_argument("selectPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
+        throw std::invalid_argument("selectPotential(): potential must be either 'keldysh', 'coulomb'");
     }
 }
-
-/**
- * Method to select the potential to be used in the exciton calculation in reciprocal space.
- * @param potential Potential to be used in the direct term.
- * @return Pointer to function representing the potential.
- */
-recpotptr ExcitonTB::selectReciprocalPotential(std::string potential){ //This function is not being used for now, as rpaFT returns a std::complex<double> and not double.
-    if(potential == "keldysh"){
-        return &ExcitonTB::keldyshFT;
-    }
-    else if(potential == "coulomb"){
-        return &ExcitonTB::coulombFT;
-    }
-    else if(potential == "rpa"){
-        return &ExcitonTB::keldyshFT;
-    }
-    else{
-        throw std::invalid_argument("selectreciprocalPotential(): potential must be either 'keldysh', 'coulomb' or 'rpa'");
-    }
-}
-
-
-
-
 
 /*---------------------------------------- Fourier transforms ----------------------------------------*/
 /**
@@ -992,59 +1031,6 @@ double ExcitonTB::coulomb_2D_FT(const arma::rowvec& k) const {
     
     return potential;
 }  
-
-/**
- * Evaluates the 2D Fourier transform of the Coulomb potential, which is an analytical expression.
- * @param g Index of G.
- * @param g2 Index of G2.
- * @param q kpoint where we evaluate the FT.
- * @return 2D Fourier transform of the potential at q, FT[V](q).
- */
-double ExcitonTB::coulombFT(int g, int g2, const arma::rowvec q) const {
-
-    if (g != g2){
-        return 0.;
-    }
-
-    auto G = this->trunreciprocalLattice_.row(g);
-    
-    double potential = coulomb_2D_FT(q + G);
-    
-    return potential;
-}  
-
-/**
- * Evaluates the Fourier transform of the Keldysh potential, which is an analytical expression.
- * @param q kpoint where we evaluate the FT.
- * @return Fourier transform of the potential at q, FT[V](q).
- */
-double ExcitonTB::keldyshFT(int g, int g2, arma::rowvec q) const {
-
-    if (g != g2){
-        return 0.;
-    }
-
-    double radius = cutoff*arma::norm(system->reciprocalLattice.row(0));
-    double potential = 0;
-    double eps_bar = (eps_m + eps_s)/2;
-    double eps = arma::norm(system->reciprocalLattice.row(0))/totalCells;
-
-    auto G = this->trunreciprocalLattice_.row(g);
-
-    double qnorm = arma::norm(q + G);
-    if (qnorm < eps){
-        potential = 0;
-        // double percentage = 0.48;
-        // double q0 = percentage*arma::norm(arma::rowvec({0.024184, 0.0418879})); //2/r0;
-        // potential = (2/q0 - r0); // Introduces regularization for Ryova-Keldysh potential in momentum space, Phys. Rev. B 88, 245309 (2013)
-    }
-    else{
-        potential = 1/(qnorm*(1 + r0*qnorm));
-    }
-    
-    potential = potential*ec*1E10/(2*eps0*eps_bar*system->unitCellArea);
-    return potential;
-}
 
 /**
  * Evaluates the Fourier transform of the Keldysh potential, which is an analytical expression.
@@ -1071,10 +1057,11 @@ double ExcitonTB::keldyshFT(arma::rowvec q) const {
     return potential;
 }
 
-
 /**
  * Evaluates the RPA potential in reciprocal space.
  * @param q kpoint where we evaluate the FT.
+ * @param g index of vector G.
+ * @param g2 index of vector G'.
  * @return W_(G,G')(q) matrix element of the screened potential
  */
 std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
@@ -1084,8 +1071,7 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     }
 
     std::complex<double> potential = 0;
-    double eps = 1E-12; // arma::norm(system->reciprocalLattice.row(0))/totalCells;
-
+    double eps = 1E-12;
     double qnorm = arma::norm(q);
 
     if (qnorm < eps && g == 0 && g2 == 0){
@@ -1098,15 +1084,17 @@ std::complex<double> ExcitonTB::rpaFT(int g, int g2, arma::rowvec q) const {
     else
     {
         int iq = system->findEquivalentPointBZ(q, this->ncell_);
-        double extra_factor = 1;
+        double vc_average = 1.0;
         double d = this->d_;
-        if (d > 1E-4){
-            arma::rowvec G = this->trunreciprocalLattice_.row(g);
-            arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
-            
-            extra_factor = 2*std::sqrt(std::exp(-arma::norm(q + G)*d) - 1 + d*arma::norm(q+G))*std::sqrt(std::exp(-arma::norm(q + G2)*d) - 1 + d*arma::norm(q+G2))/(arma::norm(q + G)*arma::norm(q + G2)*d*d); // std::exp(-std::sqrt(arma::norm(q + G))*std::sqrt(arma::norm(q + G2)*this->d_));
+
+        arma::rowvec G = this->trunreciprocalLattice_.row(g);
+        arma::rowvec G2 = this->trunreciprocalLattice_.row(g2);
+        
+        if (d > 1E-4) {                        
+            vc_average = 2*std::sqrt(std::exp(-arma::norm(q + G)*d) - 1 + d*arma::norm(q+G))*std::sqrt(std::exp(-arma::norm(q + G2)*d) - 1 + d*arma::norm(q+G2))/(arma::norm(q + G)*arma::norm(q + G2)*d*d);
         }
-        potential = extra_factor*std::sqrt(coulombFT(g, g, q)) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * std::sqrt(coulombFT(g2, g2, q));
+
+        potential = vc_average * std::sqrt(coulomb_2D_FT(q + G)) * this->Invepsilonmatrix_.slice(iq).row(g)(g2) * std::sqrt(coulomb_2D_FT(q + G2));
     }
 
     return potential;
@@ -1132,8 +1120,9 @@ std::complex<double> ExcitonTB::motifFourierTransform(int fAtomIndex, int sAtomI
 
     for(uint n = 0; n < cells.n_rows; n++){
         arma::rowvec cell = cells.row(n);
-        double module = arma::norm(cell + firstAtom - secondAtom);
-        Vk += (this->*potential)(module)*std::exp(imag*arma::dot(k, cell));
+        // double module = arma::norm(cell + firstAtom - secondAtom);
+        arma::rowvec dist = cell + firstAtom - secondAtom;
+        Vk += (this->*potential)(dist)*std::exp(imag*arma::dot(k, cell));
     }
     Vk /= pow(totalCells, 1);
 
@@ -1260,37 +1249,33 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                                      int nGs) {
     std::complex<double> Ic, Iv;
     std::complex<double> term = 0;
-    double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
     arma::mat reciprocalVectors = this->trunreciprocalLattice_;
 
     arma::rowvec null_vector(3,arma::fill::zeros);
 
     arma::rowvec k_dif = k - k2;
-    // arma::rowvec kQ_dif = kQ - k2Q;
+    arma::rowvec kQ_dif = kQ - k2Q;
 
     int k_eff_index = system_->findEquivalentPointBZ(k_dif, ncell);
-    // int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
+    int kQ_eff_index = system_->findEquivalentPointBZ(kQ_dif, ncell);
     arma::rowvec k_eff = system_->kpoints.row(k_eff_index);
-    // arma::rowvec kQ_eff = system->kpoints.row(kQ_eff_index);
+    arma::rowvec kQ_eff = system_->kpoints.row(kQ_eff_index);
 
     arma::rowvec g = k_dif - k_eff;
 
-    uint g_index = 0;
-
-    uint firstGvector = reciprocalVectors.n_rows > 1 ? 1 : 0;
-    if (this->Gc_exciton_ < arma::norm(reciprocalVectors.row(firstGvector))){
-        // g_index = this->fetchReciprocalLatticeVector(g);
+    // If the Gcutoff for the exciton is 0, then only G=G'=0 and G=G'=g enter in the sum, and there is no shift G->G-g and G'->G'-g in the sum, as there is no sum    
+    if (this->Gc_exciton_ < 1E-6){        
         g = null_vector;
     }
 
-    if (potential == "coulomb"){ //There should be a better way of selecting the potential. Problem is rpaFT returns a std::complex<double>, and not double.
+    if (potential == "coulomb"){
         for(int ig = 0; ig < nGs; ig++){
             arma::rowvec G = reciprocalVectors.row(ig);
 
             Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
             Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G);
 
-            term += conj(Ic)*this->coulombFT(ig, ig, k - k2 + G)*Iv;
+            term += conj(Ic)*this->coulomb_2D_FT(k - k2 + G)*Iv;
         }
     } else if (potential == "keldysh"){
         for(int ig = 0; ig < nGs; ig++){
@@ -1313,31 +1298,13 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
                 Ic = blochCoherenceFactor(coefsK2Q, coefsKQ, kQ, k2Q, G);
                 Iv = blochCoherenceFactor(coefsK2, coefsK, k, k2, G2);
 
-                term += conj(Ic)*this->rpaFT(ig + g_index, ig2 + g_index, k_eff)*Iv;
+                term += conj(Ic)*this->rpaFT(ig, ig2, k_eff)*Iv;
             }
-        }
+        }       
     } else {
         std::cout << "Potential not valid" << std::endl;
         exit(1);
     }
-    
-    // int g = 0;
-    // int g2 = 0;
-    // arma::rowvec G = reciprocalVectors.row(g);
-    // arma::rowvec G2 = reciprocalVectors.row(g2);
-    // while(arma::norm(G) <= radius){
-    //     G = reciprocalVectors.row(g);
-    //     while(arma::norm(G2) <= radius){
-    //         G2 = reciprocalVectors.row(g2);
-    //         Ic = blochCoherenceFactor(coefsKQ, coefsK2Q, kQ, k2Q, G);
-    //         Iv = blochCoherenceFactor(coefsK, coefsK2, k, k2, G2);
-
-    //         term += Ic*(this->*potential)(g, g2, k - k2)*conj(Iv);
-
-    //         g2++;
-    //     }
-    //     g++;
-    // }
 
     return term/((std::complex<double>)totalCells);
 };
@@ -1353,7 +1320,7 @@ std::complex<double> ExcitonTB::reciprocalInteractionTerm(const arma::cx_vec& co
  */
 std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1, const arma::cx_vec& coefs2,
                                                     const arma::rowvec& k1, const arma::rowvec& k2,
-                                                    const arma::rowvec& G) const {
+                                                    const arma::rowvec& G){
 
     std::complex<double> imag(0, 1);
     arma::cx_vec coefs = arma::conj(coefs1) % coefs2;
@@ -1379,13 +1346,13 @@ std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec& coefs1,
 
 
 /**
- * Calculation of Bloch coherence factor taking into account the monolayer's finite thickness d
+ * Calculation of Bloch coherence factor taking into account the material's finite thickness d
  * @param coefs1 Vector of eigenstate |n,k>.
  * @param coefs2 Vector of eigenstate |n',k'>.
  * @param k1 kpoint k.
  * @param k2 kpoint k'.
  * @param G Reciprocal lattice vector used to compute the coherence factor.
- * @param d Monolayer thickness.
+ * @param d 2D material thickness.
  * @return Bloch coherence factor I = <n'k'| e^{-i(q + G).r} |nk> evaluated at G for states |nk>, |n'k'>, for finite thickness.
  */
 std::complex<double> ExcitonTB::blochCoherenceFactor(const arma::cx_vec &coefs1, const arma::cx_vec &coefs2,
@@ -1443,7 +1410,6 @@ arma::imat ExcitonTB::specifyBasisSubset(const arma::ivec& bands){
         std::cerr << e;
     };
 
-    int reducedBasisDim = system->nk*bands.n_elem;
     std::vector<arma::s64> valence, conduction;
     for(uint i = 0; i < bands.n_elem; i++){
         if (bands(i) <= 0){
@@ -1523,11 +1489,6 @@ void ExcitonTB::initializeResultsH0(){
     arma::cx_mat auxEigvec(basisdim, basisdim);
     arma::cx_mat h;
 
-    // Progress bar variables
-    int step = 1;
-	int displayNext = step;
-	int percent = 0;
-
     system_->calculateInverseReciprocalMatrix();
     std::complex<double> imag(0, 1);
 
@@ -1578,9 +1539,32 @@ void ExcitonTB::initializeResultsH0(){
         std::cout << "Done\n" << std::endl;
     }
 
-    if (isscreeningset == true){
+    if (this->mode == "reciprocalspace" && this->isscreeningset == true){
+
+        if (this->kpoints_aux.is_empty()) {
+            std::cout << "Creating the coarser BZ mesh. " << std::flush;
+
+            int ndim = 2;
+            arma::mat kpoints(pow(ncell_aux, ndim), 3);
+            arma::mat combinations = system->generateCombinations(ncell_aux, ndim);
+            if (ncell_aux % 2 == 1)
+            {
+                combinations += 1. / 2;
+            }
+
+            for (uint i = 0; i < nk_aux; i++)
+            {
+                arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+                for (int j = 0; j < ndim; j++)
+                {
+                    kpoint += (2 * combinations.row(i)(j) - ncell_aux) / (2 * ncell_aux) * system->reciprocalLattice_.row(j);
+                }
+                kpoints.row(i) = kpoint;
+            }
+            this->kpoints_aux_ = kpoints;            
+        }
        
-        std::cout << "Diagonalizing H0(k) for all k points in the coarser BZ mesh, and storing data in dielectric function's stack... " << std::flush;
+        std::cout << "Diagonalizing H0(k) for all k points in the coarser BZ mesh... " << std::flush;
         
         for (uint i = 0; i < nk_aux; i++){
             arma::rowvec k = this->kpoints_aux.row(i);
@@ -1619,8 +1603,7 @@ void ExcitonTB::initializeHamiltonian(){
 
     this->excitonbasisdim_ = system->nk*valenceBands.n_elem*conductionBands.n_elem;
     this->totalCells_ = pow(ncell*system->factor, system->ndim);
-    // system->bravaisLattice.print("Bravais Lattice vectors:");
-    // system->motif.print("Motif vectors:");
+
     std::cout << "Initializing basis for BSE... " << std::flush;
     initializeBasis();
     generateBandDictionary();
@@ -1645,29 +1628,46 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
     }
 
     uint nk = this->nk_aux;
-    int basisdim = system->basisdim;
-    arma::mat k_points = this->kpoints_aux;
+    
+    if (this->kpoints_aux.is_empty()) {
+        std::cout << "Creating the coarser BZ mesh... " << std::flush;
 
-    int nvbands = valencebands.size();
-    int ncbands = conductionbands.size();
+        int ndim = 2;
+        arma::mat kpoints(pow(ncell_aux, ndim), 3);
+        arma::mat combinations = system->generateCombinations(ncell_aux, ndim);
+        if (ncell_aux % 2 == 1)
+        {
+            combinations += 1. / 2;
+        }
+
+        for (uint i = 0; i < nk_aux; i++)
+        {
+            arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+            for (int j = 0; j < ndim; j++)
+            {
+                kpoint += (2 * combinations.row(i)(j) - ncell_aux) / (2 * ncell_aux) * system->reciprocalLattice_.row(j);
+            }
+            kpoints.row(i) = kpoint;
+        }
+        this->kpoints_aux_ = kpoints;            
+    }
+    arma::mat k_points = this->kpoints_aux_;
+
+    int nvbands = system->fermiLevel + 1;
 
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
 
     int upperindexcband = nvbands + ncbandsincluded - 1;
-    int lowerindexvbands = nvbands - nvbandsincluded;
 
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
-    std::complex<double> term = 0.;
     std::complex<double> term_aux = 0.;
-    std::complex<double> term_aux_2 = 0.;
 
     std::cout << "Done \n";
     
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
-
 
     for (int ic = nvbands; ic <= upperindexcband; ic++){
     
@@ -1697,8 +1697,6 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
                 std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G);
                 std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
 
-                term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
-            
                 std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G);
                 std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
        
@@ -1711,7 +1709,7 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
 
     polarfile.close();
 
-    std::cout << "Chi = " << g_s*term_aux/((std::complex<double>)nk) << std::endl;
+    std::cout << "The value of the polarizability is = " << g_s*term_aux/((std::complex<double>)nk) << std::endl;
 
     return g_s*term_aux/((std::complex<double>)nk);
 }
@@ -1724,34 +1722,21 @@ std::complex<double> ExcitonTB::computesinglePolarizabilityMatrixElement(arma::r
  * @param q Momentum vector q
  * @return Polarizability
 */
-inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q) {
+inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& q, const arma::rowvec& G, const arma::rowvec& G2) {
 
     uint nk = this->nk_aux;
-    int basisdim = system->basisdim;
 
-    int nvbands = valencebands.size();
-    int ncbands = conductionbands.size();
-
+    int nvbands = system->fermiLevel + 1;
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
-
     int upperindexcband = nvbands + ncbandsincluded - 1;
-    int lowerindexvbands = nvbands - nvbandsincluded;
-
-    //int basisdim = nvbands + ncbands;
 
     arma::cx_vec coefskq, coefsk;
-    arma::cx_vec coefskq_c, coefsk_v;
 
-    std::complex<double> term = 0.;
-    std::complex<double> term_aux = 0.;
-    std::complex<double> term_aux_2 = 0.;
+    std::complex<double> term = 0.;    
     std::complex<double> g_s = this->g_s; // Spin degeneracy
 
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty()) {
-        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-        this->eigvalkqStack_ = arma::mat(basisdim, nk);
-
         std::cout << "Bloch Hamiltonian has to be diagonalized at every k+q point before computing polarizability matrix elements. Terminating" << std::endl;
         exit(0);
     }
@@ -1768,29 +1753,17 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
                // Using the atomic gauge
                 if(gauge == "atomic"){
                     coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
-                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), k);
-                
-                    coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), kq);
-                    coefsk_v = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(iv), k);
+                    coefsk = system_->latticeToAtomicGauge(eigveckStack_.slice(ik).col(ic), k);                                    
                 }
                 else{                            
                     coefskq = eigveckqStack_.slice(ik).col(iv);
                     coefsk = eigveckStack_.slice(ik).col(ic);
-
-                    coefskq_c = eigveckqStack_.slice(ik).col(ic);
-                    coefsk_v = eigveckStack_.slice(ik).col(iv);
                 }
 
                 std::complex<double> IvcG = blochCoherenceFactor(coefsk, coefskq, kq, k, G);
                 std::complex<double> IvcG2 = blochCoherenceFactor(coefsk, coefskq, kq, k, G2);
 
-                std::complex<double> IcvG = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefsk_v, coefskq_c, kq, k, G2);
-
                 term += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
-
-                // term_aux += IvcG*std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
-                // term_aux_2 += IcvG*std::conj(IcvG2)  / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
             }
         }
     }
@@ -1807,19 +1780,16 @@ inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(co
  * @param d Thickness of the 2D system
  * @return Polarizability
 */
-inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const arma::rowvec& q, double d) {
+inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixElement(const arma::rowvec& q, const arma::rowvec& G, const arma::rowvec& G2, const double d) {
 
     uint nk = this->nk_aux;
-    int basisdim = system->basisdim;
 
-    int nvbands = valencebands.size();
-    int ncbands = conductionbands.size();
+    int nvbands = system->fermiLevel + 1;
 
     int nvbandsincluded = this->nvalencebands_;
     int ncbandsincluded = this->nconductionbands_;
 
     int upperindexcband = nvbands + ncbandsincluded - 1;
-    int lowerindexvbands = nvbands - nvbandsincluded;
 
     arma::cx_vec coefskq, coefsk;
     arma::cx_vec coefskq_c, coefsk_v;
@@ -1870,7 +1840,6 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
 
 
                 term_aux += IvcG_d*std::conj(IvcG2_d) / (eigvalkStack_.col(ik)(iv) - eigvalkqStack_.col(ik)(ic));
-                
                 term_aux_2 += IcvG_d*std::conj(IcvG2_d)  / (eigvalkStack_.col(ik)(ic) - eigvalkqStack_.col(ik)(iv));
             }
         }
@@ -1891,9 +1860,9 @@ std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::r
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
 
-    const double potential = std::sqrt(coulomb_2D_FT(G + q))*std::sqrt(coulomb_2D_FT(G2 + q));
+    const double potential = coulomb_2D_FT(q + G)*coulomb_2D_FT(q + G2);
 
-    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,q);
+    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(q,G,G2);
             
     return epsilon;
 }
@@ -1913,215 +1882,8 @@ std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const ar
 
     double kroneckerdelta = arma::norm(G - G2) < 10E-4 ? 1 : 0;
 
-    std::complex<double> Chi_Q2D = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+    std::complex<double> epsilon = kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
 
-    std::complex<double> epsilon = kroneckerdelta - potential*Chi_Q2D;
-
-    return epsilon;
-}
-
-/**
- * Method to compute the (G,G') matrix element of the static 2D polarizability at the specified momentum vector q.
- * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh.  The purely 2D polarizability is computed.
- * @param G Reciprocal lattice vector G
- * @param G2 Reciprocal lattice vector G2
- * @param iq Index of momentum vector q
- * @return Polarizability
-*/
-inline std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const int iq) {
-
-    int nk = this->nk_aux;
-    int natoms = system->natoms;
-    int basisdim = system->basisdim;
-
-    int nvbands = valencebands.size();
-    int ncbands = conductionbands.size();
-
-    int nvbandsincluded = this->nvalencebands_;
-    int ncbandsincluded = this->nconductionbands_;
-
-    int upperindexcband = nvbands + ncbandsincluded - 1;
-    int lowerindexvbands = nvbands - nvbandsincluded;
-
-    arma::cx_vec coefskq, coefsk;
-    arma::cx_vec coefskq_c, coefsk_v;
-
-    std::complex<double> term = 0.;
-    std::complex<double> term_aux = 0.;
-    std::complex<double> g_s = this->g_s; // Spin degeneracy
-
-    for (int ik = 0; ik < nk; ik++){
-
-        arma::rowvec k = this->kpoints_aux.row(ik);
-        arma::rowvec kq = this->kpoints_aux.row(ik) + system->kpoints.row(iq);
-
-        // int kqindex = system_->findEquivalentPointBZ(kq, ncell);
-
-        const arma::cx_dmat *auxk_slice = &eigveckStack_.slice(ik);
-        const arma::cx_dmat *auxkq_slice = &eigveckqStack_.slice(ik);
-
-        for (int ic = nvbands; ic <= upperindexcband; ic++){
-
-            // Using the atomic gauge
-            if (gauge == "atomic"){
-                coefsk = system_->latticeToAtomicGauge(auxk_slice->col(ic), k);
-            } else {
-                coefsk = auxk_slice->col(ic);
-            }
-
-            if (gauge == "atomic") {
-                coefskq_c = system_->latticeToAtomicGauge(auxkq_slice->col(ic), kq);
-            } else {
-                coefskq_c = auxkq_slice->col(ic);
-            }
-
-            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--){
-
-                // Using the atomic gauge
-                if (gauge == "atomic"){
-                    coefskq = system_->latticeToAtomicGauge(auxkq_slice->col(iv), kq);
-                } else {
-                    coefskq = auxkq_slice->col(iv);
-                }
-
-                if (gauge == "atomic") {
-                    coefsk_v = system_->latticeToAtomicGauge(auxk_slice->col(iv), k);
-                } else {
-                    coefsk_v = auxk_slice->col(iv);
-                }
-
-                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
-
-                // term += IvcG * std::conj(IvcG2) / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic));
-
-                std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
-                std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
-
-                term_aux += std::conj(IvcG) * IvcG2 / (eigvalkqStack_.col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG) * IcvG2 / (eigvalkqStack_.col(ik)(ic) - eigvalkStack_.col(ik)(iv));
-            }
-        }
-    }
-
-    return g_s*term_aux/((std::complex<double>)totalCells);
-}
-
-/**
- * Method to compute the (G,G') matrix element of the static polarizability at the specified momentum vector q from list of q points read from file.
- * @details The momentum q has to be specified through the vector coordinates and index.  The purely 2D polarizability is computed.
- * @param G Reciprocal lattice vector G
- * @param G2 Reciprocal lattice vector G2
- * @param q Momentum vector q
- * @param iq Index of momentum vector q
- * @return Polarizability
- */
-std::complex<double> ExcitonTB::compute_2D_PolarizabilityMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const int iq)
-{
-
-    int nk = this->nk_aux;
-    int natoms = system->natoms;
-    int basisdim = system->basisdim;
-
-    int nvbands = valencebands.size();
-    int ncbands = conductionbands.size();
-
-    int nvbandsincluded = this->nvalencebands_;
-    int ncbandsincluded = this->nconductionbands_;
-
-    int upperindexcband = nvbands + ncbandsincluded - 1;
-    int lowerindexvbands = nvbands - nvbandsincluded;
-
-    arma::cx_vec coefskq, coefsk;
-    // arma::cx_vec coefskq_c, coefsk_v;
-
-    std::complex<double> term = 0.;
-    std::complex<double> g_s = this->g_s; // Spin degeneracy
-
-    for (int ik = 0; ik < nk; ik++)
-    {
-
-        arma::rowvec k = this->kpoints_aux.row(ik);
-        arma::rowvec kq = this->kpoints_aux.row(ik) + q;
-
-        arma::cx_mat *auxk_slice = &eigveckStack_.slice(ik);
-        //arma::cx_mat *auxkq_slice = &eigveckqStack_test[iq].slice(ik);
-
-        for (int ic = nvbands; ic <= upperindexcband; ic++)
-        {
-
-            // Using the atomic gauge
-            if (gauge == "atomic")
-            {
-                coefsk = system_->latticeToAtomicGauge(auxk_slice->col(ic), k);
-            }
-            else
-            {
-                coefsk = auxk_slice->col(ic);
-            }
-
-            // if (gauge == "atomic")
-            // {
-            //     coefskq_c = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(ic), q);
-            // }
-            // else
-            // {
-            //     coefskq_c = eigveckqStack_.slice(ik).col(ic);
-            // }
-
-            for (int iv = nvbands - 1; iv >= nvbands - nvbandsincluded; iv--)
-            {
-
-                // Using the atomic gauge
-                if (gauge == "atomic")
-                {
-                    coefskq = system_->latticeToAtomicGauge(eigveckqStack_.slice(ik).col(iv), kq);
-                }
-                else
-                {
-                    coefskq = eigveckqStack_.slice(ik).col(iv);
-                }
-
-                // if (gauge == "atomic")
-                // {
-                //     coefsk_v = system_->latticeToAtomicGauge(auxk_slice->col(iv), k);
-                // }
-                // else
-                // {
-                //     coefsk_v = auxk_slice->col(iv);
-                // }
-
-                std::complex<double> IvcG = blochCoherenceFactor(coefskq, coefsk, kq, k, G);
-                std::complex<double> IvcG2 = blochCoherenceFactor(coefskq, coefsk, kq, k, G2);
-
-                //term += IvcG * std::conj(IvcG2) / (eigvalkStack_.col(kqindex)(iv) - eigvalkStack_.col(ik)(ic));
-
-                // std::complex<double> IcvG = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G);
-                // std::complex<double> IcvG2 = blochCoherenceFactor(coefskq_c, coefsk_v, kq, k, G2);
-                // term += std::conj(IvcG) * IvcG2 / (eigvalkqStack_test.slice(iq).col(ik)(iv) - eigvalkStack_.col(ik)(ic)) - std::conj(IcvG) * IcvG2 / (eigvalkqStack_test.slice(iq).col(ik)(ic) - eigvalkStack_.col(ik)(iv));
-                term += std::conj(IvcG) * IvcG2 / (eigvalkqStack_test.slice(iq).col(ik)(iv) - eigvalkStack_.col(ik)(ic));
-            }
-        }
-    }
-
-    return g_s*2.0*term/((std::complex<double>)nk); // Factor of 2 from TRS
-}
-
-/**
- * Method to compute the (G,G') matrix element of the static polarizability at the specified arbitrary momentum vector q.
- * @details The momentum q has to be specified through an index, matching a k point in the BZ mesh. The purely 2D dielectric function is computed.
- * @param G Reciprocal lattice vector G
- * @param G2 Reciprocal lattice vector G2
- * @param iq Index of momentum vector q
- * @return Polarizability 
-*/
-std::complex<double> ExcitonTB::compute_2D_DielectricMatrixElement(const arma::rowvec& G, const arma::rowvec& G2, const int iq) {
-
-    double kroneckerdelta = arma::norm(G - G2) < 10E-7 ? 1 : 0;
-
-    double potential = coulomb_2D_FT(G + q);
-
-    std::complex<double> epsilon = kroneckerdelta - potential*this->compute_2D_PolarizabilityMatrixElement(G,G2,iq);
-            
     return epsilon;
 }
 
@@ -2135,7 +1897,7 @@ void ExcitonTB::PolarizabilityMesh() {
     auto start = high_resolution_clock::now();
 
     if (this->mode == "realspace"){
-        std::cout << "Numerical screening in real space not available yet. Terminating." << std::flush;
+        std::cout << "Numerical screening in real space not implemented. Terminating." << std::flush;
         exit(0);
     }
 
@@ -2159,7 +1921,6 @@ void ExcitonTB::PolarizabilityMesh() {
 
         arma::cx_vec Chi(nq, arma::fill::zeros);
 
-        double radius = cutoff * arma::norm(system->reciprocalLattice.row(0));
         arma::mat reciprocalVectors = this->trunreciprocalLattice_;
 
         arma::rowvec g = reciprocalVectors.row(this->Gs(0)); // Sets G
@@ -2169,8 +1930,8 @@ void ExcitonTB::PolarizabilityMesh() {
             this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk_aux);
             this->eigvalkqStack_ = arma::mat(basisdim, nk_aux);
         }
-        std::cout << "iq = ";
-        // #pragma omp parallel for
+
+        #pragma omp parallel for
         for (uint iq = 0; iq < nq; iq++){
 
             vec auxEigVal(basisdim);
@@ -2186,8 +1947,6 @@ void ExcitonTB::PolarizabilityMesh() {
                 this->eigvalkqStack_.col(i) = auxEigVal;
                 this->eigveckqStack_.slice(i) = auxEigvec;
             };
-            
-            std::cout << iq << " " << std::flush;
             
             Chi(iq) = this->compute_2D_PolarizabilityMatrixElement(g, g2, q);
         }
@@ -2237,7 +1996,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
     auto start = high_resolution_clock::now();
 
     if (this->mode == "realspace"){
-        std::cout << "Implementation of the exciton in real space with numerical screening not available yet. Terminating" << std::endl;
+        std::cout << "Numerical screening in real space not implemented. Terminating" << std::endl;
         exit(0);
     }
     
@@ -2249,23 +2008,25 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
         uint odd = Ncells % 2;
         uint nq = odd == 1 ? Ncells * (Ncells - odd) / 2 + (Ncells - odd) / 2 + 1 : (2 * Ncells - 1) + (Ncells - 1) * (Ncells - 2) / 2 + Ncells / 2 + 1; // Only half of the BZ
 
-        std::cout << "Number of G vectors included in the calculation: " << nGs << std::endl;
-        printReciprocalLattice();
+        std::cout << "\nNumber of G vectors included in the calculation of the screening: " << nGs << std::endl;
 
         this->setq_points_list(system->kpoints); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
-        uint Nqpoints = this->qpoints_list_.n_rows;        
+        uint Nqpoints = this->qpoints_list_.n_rows;
         arma::mat q_points(Nqpoints, 3, arma::fill::zeros);
-        
+
         uint nk_aux = this->nk_aux;
         uint Nktotal = system->nk;
 
         q_points = this->qpoints_list_; 
-        
+        uint nq_count = 0;
         uint basisdim = system->basisdim;
+
+        double d = this->d;
+        bool is_d_finite = std::abs(d) > 1E-4;
         
         std::cout << "Diagonalizing H(k+q) for every point q, for every point k... " << std::flush;
 
-        // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of q points
+        // In case the polarizability/dielectric matrix has been computed before with another routine, reshape to account for a different number of q points
         if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty())
         {
             this->eigvalkqStack_test = arma::cube(basisdim, nk_aux, Nqpoints, arma::fill::zeros);
@@ -2292,8 +2053,6 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
 
         arma::vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
-        
-        std::cout << "q point " << std::flush;
 
         for (uint iq = 0; iq < Nqpoints; ++iq)
         {
@@ -2309,19 +2068,16 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                 this->eigveckqStack_test[iq].slice(i) = auxEigvec;
             };
 
-            if ((iq + 1) % 10 == 0) {
-                std::cout << iq + 1 << ", " << std::flush;
-            }
         }
 
-        std::cout << "\nDone. \nComputing dielectric matrix in the BZ mesh... \n" << std::flush;
+        std::cout << "\nDone. \nCalculation of the dielectric matrix in the BZ mesh at... \n" << std::flush;
 
         arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
 
         arma::imat indecesqg(nq*nGs*(nGs+1)/2,3,arma::fill::zeros);
 
-        if (odd == 0){ // If Ncells is even, then q points at the boundaries of the BZ with no symmetric counterpart are computed seperately
+        if (odd == 0){ // If Ncells is even, then q points at the boundaries of the BZ with no symmetric counterpart are computed separately
             int i=0;
             
             for (uint iq = 0; iq < Ncells; iq++){ // 1st BZ boundary
@@ -2346,7 +2102,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                 }
             }
 
-            for (uint iq = 1; iq < Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
+            for (uint iq = 1; iq < Ncells/2; iq++){ // Centrosymmetric submesh of the whole BZ mesh
                 for (uint iq2 = 1; iq2 < Ncells; iq2++){    
                     for (uint g = 0; g < nGs; g++){
                         for (uint g2 = g; g2 < nGs; g2++){
@@ -2359,7 +2115,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                 }
             }
 
-            for (uint iq = 0; iq < Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
+            for (uint iq = 0; iq < Ncells/2; iq++){ // Centrosymmetric submesh of the whole BZ mesh
                 for (uint g = 0; g < nGs; g++){
                     for (uint g2 = g; g2 < nGs; g2++){
                         indecesqg.row(i)(0) = 1 + iq + Ncells*Ncells/2;
@@ -2369,7 +2125,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     }
                 }
             }
-        } else if (odd == 1) { // If Ncells is odd, the full BZ mesh is automatically center-symmetric
+        } else if (odd == 1) { // If Ncells is odd, the full BZ mesh is automatically centrosymmetric
             int i=0;
             
             for (uint iq = 0; iq < nq; iq++){
@@ -2384,15 +2140,9 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
             }
         }
 
-        std::cout << "Calculation of dielectric matrix at " << std::endl;
-        if (odd == 0){
-
-            std::cout << " (Number of k points is even. Computing the dielectric matrix at the nonsymmetric part of the BZ... )" << std::endl;
+        if (odd == 0){            
             uint iq_test = 0;
-            arma::rowvec q_test = q_points.row(iq_test);
-
-            double percentage = 0;
-            double percentage_aux = 0;
+            arma::rowvec q_test = q_points.row(iq_test);            
             
             for (uint ik = 0; ik < (2 * Ncells - 1); ik++)
             {
@@ -2411,10 +2161,17 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     arma::rowvec G = ReciprocalVectors.row(g);
                     arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-                    std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                    std::complex<double> Chi = 0.0;
+                    
+                    if (is_d_finite) {
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
+                    }
+                    else {
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
+                    }
 
-                    double potentialg =  std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, q);
-                    double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g2, g2, q));
+                    double potentialg =  std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));
+                    double potentialg2 = potentialg;
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
@@ -2424,22 +2181,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * Chi;
                     this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
                 }
-
-                percentage = ((double)ik + 1)*100./(double)Nqpoints;
-
-                if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
-                {
-                    std::cout << (int) percentage << "%%, " << std::flush;
-                    percentage_aux = percentage;
-                }
+                nq_count++;
             }
-
-            // Computes the dielectric matrix at the centrosymmetric submesh of the BZ
-
-            std::cout << " (Computing the dielectric matrix at the centrosymmetric part of the BZ... )" << std::endl;
 
             uint iq_i = (2 * Ncells - 1);
             uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
+            
             for (uint ik = 0; ik < ik_f; ik++)
             {
                 uint iq = indecesqg.row(iq_i*nGs*(nGs + 1)/2 + ik*nGs*(nGs + 1)/2)(0); // indecesqg.row(i_aux)(0);
@@ -2448,14 +2195,13 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                 this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
                 this->eigveckqStack_ = this->eigveckqStack_test[iq];
 
-                uint negativeqindex = -1; // system->findEquivalentPointBZ(-q, Ncells);
+                uint negativeqindex = -1;
 
                 for (uint i = 0; i < Nqpoints; ++i)
                 {
                     if (arma::norm(q + q_points.row(i)) < 1E-7)
                     {
                         negativeqindex = i;
-                        // std::cout << "For q_index " << iq << "it's negative counterpart is " << negativeqindex << std::endl;
                         break;
                     }
                 }
@@ -2473,7 +2219,14 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     uint negativeG = fetchReciprocalLatticeVector(-G);
                     uint negativeG2 = fetchReciprocalLatticeVector(-G2);
                     
-                    std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                    std::complex<double> Chi = 0.0;
+
+                    if (is_d_finite) {
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
+                    }
+                    else {
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
+                    }
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
@@ -2481,34 +2234,33 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->Chimatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = Chi;
                     this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = std::conj(Chi);
 
-                    double potentialg  = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, q);
-                    double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
+                    double potentialg  = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));
+                    double potentialg2 = potentialg;
 
-                    double potentialnegativeG  = std::sqrt(coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex))) * std::sqrt(coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex))); // coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex));
-                    double potentialnegativeG2 = std::sqrt(coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex))) * std::sqrt(coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex))); // coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex));
+                    double potentialnegativeG  = std::sqrt(coulomb_2D_FT(system->kpoints.row(negativeqindex) - G)) * std::sqrt(coulomb_2D_FT(system->kpoints.row(negativeqindex) - G2));
+                    double potentialnegativeG2 = potentialnegativeG;
                     double kroneckerdelta = g == g2 ? 1 : 0;
 
                     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * this->Chimatrix_.slice(iq).row(g)(g2);
-                    this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * this->Chimatrix_.slice(iq).row(g2)(g);
+                    this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
 
-                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * this->Chimatrix_.slice(negativeqindex).row(negativeG2)(negativeG);
-                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2);
+                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * Chi;
+                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
                 }
-
-                percentage = ((double)ik + 1)*100./(double)Nqpoints;
-
-                if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
-                {
-                    std::cout << (int) percentage << "%%, " << std::flush;
-                    percentage_aux = percentage;
+                
+                int nq_count_aux = nq_count + 1;
+                double percentage_aux = 2*(double)nq_count_aux/nq*100.0;
+                double percentage = 2*(double)nq_count/nq*100.0;
+                
+                if (((int) percentage_aux != (int) percentage) && ((int) percentage) % 5 == 0) {
+                    std::cout << (int) percentage << "%" << std::endl;
                 }
+                nq_count++;                                
             }
         }
         
         if (odd == 1){
 
-            double percentage = 0;
-            double percentage_aux = 0;
             for (uint ik = 0; ik < nq; ik++)
             {
                 uint iq = indecesqg.row(ik*nGs*(nGs + 1)/2)(0); 
@@ -2533,7 +2285,14 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
                     this->eigveckqStack_ = this->eigveckqStack_test[iq];
 
-                    std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                    std::complex<double> Chi = 0.0;
+
+                    if (is_d_finite) {
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
+                    }
+                    else {
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
+                    }
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
@@ -2541,12 +2300,12 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = Chi;
                     this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = std::conj(Chi);
 
-                    double potentialg = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g, g, q)); // coulombFT(g, g, system->kpoints.row(iq));
-                    double potentialg2 = std::sqrt(coulombFT(g2, g2, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, system->kpoints.row(iq));
+                    double potentialg = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));
+                    double potentialg2 = potentialg;
 
-                    double potentialnegativeG = std::sqrt(coulombFT(negativeG, negativeG, q_points.row(Nktotal - iq - 1))) * std::sqrt(coulombFT(negativeG, negativeG, q_points.row(Nktotal - iq - 1)));
-                    double potentialnegativeG2 = std::sqrt(coulombFT(negativeG2, negativeG2, q_points.row(Nktotal - iq - 1))) * std::sqrt(coulombFT(negativeG2, negativeG2, q_points.row(Nktotal - iq - 1)));
-                    
+                    double potentialnegativeG = std::sqrt(coulomb_2D_FT(q_points.row(Nktotal - iq - 1)-G)) * std::sqrt(coulomb_2D_FT(q_points.row(Nktotal - iq - 1)-G2));
+                    double potentialnegativeG2 = potentialnegativeG;
+
                     double kroneckerdelta = g == g2 ? 1 : 0;
 
                     this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * Chi;
@@ -2556,156 +2315,15 @@ void ExcitonTB::compute_2D_DielectricMatrix(){
                     this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
                 }
 
-                percentage = ((double)ik + 1) * 100 / nq;
-
-                if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
-                {
-                    std::cout << (int) percentage << "%%, " << std::flush;
-                    percentage_aux = percentage;
+                int nq_count_aux = nq_count + 1;
+                double percentage_aux = 2*(double)nq_count_aux/nq*100.0;
+                double percentage = 2*(double)nq_count/nq*100.0;
+                
+                if (((int) percentage_aux != (int) percentage) && ((int) percentage) % 5 == 0) {
+                    std::cout << (int) percentage << "%" << std::endl;
                 }
+                nq_count++;      
             }
-        }
-    }
-
-
-    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
-    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
-
-    std::cout << "Done. \nCalculation of dielectric matrix done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
-}
-
-/**
- * Method to augment the static 2D dielectric matrix in the BZ mesh.
- * @return void
-*/
-void ExcitonTB::augment_single_2D_DielectricMatrix(double Gcutoff){
-
-    auto start = high_resolution_clock::now();
- 
-    arma::mat qpoint_mat = arma::mat(1,3,arma::fill::zeros);
-    qpoint_mat.row(0) = this->q_;
-    this->setq_points_list(qpoint_mat); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
-    uint Nqpoints = this->qpoints_list_.n_rows;   
-    uint nq = 1;    
-    
-    arma::mat q_points(nq, 3, arma::fill::zeros);
-    q_points = this->qpoints_list_; 
-
-    uint ncell_aux = this->ncell_aux;
-    uint nk_aux = this->nk_aux;
-
-    uint basisdim = system->basisdim;
-
-    if (this->Invepsilonmatrix_.is_empty())
-    {
-        std::cout << "No inverse dielectric matrix exists. One must be provided before augmenting it. Terminating." << std::endl;
-        exit(0);
-    }
-
-    uint nq_points = this->Invepsilonmatrix_.n_slices;
-
-    if (nq_points != Nqpoints)
-    {
-        std::cout << "The number of q points in the provided inverse dielectric matrix (" << nq_points << ") does not match the number of q points (" << Nqpoints << "). Terminating." << std::endl;
-        exit(0);
-    }        
-
-    arma::cx_cube Invepsilonmatrix_provided = this->Invepsilonmatrix_;
-
-    if (this->epsilonmatrix_.is_empty())
-    {
-        this->epsilonmatrix_ = arma::cx_cube(Invepsilonmatrix_provided.n_rows, Invepsilonmatrix_provided.n_cols, Invepsilonmatrix_provided.n_slices, arma::fill::zeros);
-    }
-    else
-    {
-        if (this->epsilonmatrix_.n_rows != Invepsilonmatrix_provided.n_rows || this->epsilonmatrix_.n_cols != Invepsilonmatrix_provided.n_cols || this->epsilonmatrix_.n_slices != Invepsilonmatrix_provided.n_slices)
-        {
-            this->epsilonmatrix_.reshape(Invepsilonmatrix_provided.n_rows, Invepsilonmatrix_provided.n_cols, Invepsilonmatrix_provided.n_slices);
-        }
-    }
-
-    std::cout << "Inverting the provided inverse dielectric matrix... " << std::flush;
-    for (uint iq = 0; iq < Nqpoints; iq++) // inverts the inverse dielectric matrix to obtain the direct dielectric matrix
-    {
-        this->epsilonmatrix_.slice(iq) = arma::inv(Invepsilonmatrix_provided.slice(iq));
-    }
-    std::cout << "Done." << std::endl;
-    this->writeDielectricMatrix("dielectric_matrix_provided.dat");
-    arma::cx_cube dielectricmatrix_provided = this->epsilonmatrix_;
-
-    uint nGs_existing = this->Invepsilonmatrix_.slice(0).n_rows;
-    double Gcutoff_existing = this->Gcutoff_;   
-        
-    setGcutoff(Gcutoff);        
-
-    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    uint nGs_new = ReciprocalVectors.n_rows;
-    
-    if (nGs_existing >= nGs_new)
-    {
-        std::cout << "The cutoff of the augmented dielectric matrix has to be higher than the existing one. Terminating." << std::endl;
-        exit(0);
-    }
-    
-    this->Chimatrix_.reshape(nGs_new, nGs_new, Nqpoints);
-    this->epsilonmatrix_.reshape(nGs_new, nGs_new, Nqpoints);
-    this->Invepsilonmatrix_.reshape(nGs_new, nGs_new, Nqpoints);
-
-    for (uint iq = 0; iq < Nqpoints; iq++)
-    {                       
-        this->epsilonmatrix_.slice(iq).submat(arma::span(0, nGs_existing - 1), arma::span(0, nGs_existing - 1)) = dielectricmatrix_provided.slice(iq);
-    }
-
-    arma::cx_mat auxvecsol(nGs_new,nGs_new,arma::fill::zeros);
-    arma::cx_mat auxvec(nGs_new,nGs_new,arma::fill::eye);
-    uint nGs_new_combinations = nGs_existing*(nGs_new-nGs_existing) +  (nGs_new-nGs_existing)*(nGs_new-nGs_existing+1)/2;
-    arma::imat indecesg(nGs_new_combinations,2,arma::fill::zeros);
-    std::cout << "Number of GG' combinations to compute: " << nGs_new_combinations << std::endl;
-    std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
-
-    if (this->eigvalkqStack_.is_empty() || this->eigveckqStack_.is_empty())
-    {
-        this->eigvalkqStack_ = arma::mat(basisdim, nk_aux, arma::fill::zeros);
-        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
-    }
-    else
-    {
-        this->eigvalkqStack_.set_size(basisdim, nk_aux);
-        this->eigveckqStack_.set_size(basisdim, basisdim, nk_aux);        
-    }
-
-    arma::vec auxEigVal(basisdim);
-    arma::cx_mat auxEigvec(basisdim, basisdim);
-    
-    arma::rowvec q = this->q_;
-    uint iq = 0;
-
-    for (uint i = 0; i < nk_aux; i++)
-    {
-        arma::rowvec kq = this->kpoints_aux.row(i) + q;
-        system->solveBands(kq, auxEigVal, auxEigvec);
-
-        auxEigvec = fixGlobalPhase(auxEigvec);
-        this->eigvalkqStack_.col(i) = auxEigVal;
-        this->eigveckqStack_.slice(i) = auxEigvec;
-    }   
-
-    std::cout << "\nDone. \nComputing the remaining Q2D dielectric function matrix elements... \n" << std::flush;
-       
-    int i=0;
-    for (uint g = 0; g < nGs_existing; g++){
-        for (uint g2 = nGs_existing; g2 < nGs_new; g2++){
-            indecesg.row(i)(0) = g;
-            indecesg.row(i)(1) = g2;
-            i++;
-        }
-    }
-
-    for (uint g = nGs_existing; g < nGs_new; g++){
-        for (uint g2 = g; g2 < nGs_new; g2++){
-            indecesg.row(i)(0) = g;
-            indecesg.row(i)(1) = g2;
-            i++;
         }
     }
 
@@ -2738,375 +2356,14 @@ void ExcitonTB::augment_single_2D_DielectricMatrix(double Gcutoff){
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
 
-    std::cout << "Done. \nCalculation of dielectric matrix done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
+    std::cout << ") Done. \nCalculation of dielectric matrix completed in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
 }
 
 /**
- * Method to compute the static Q2D dielectric matrix in the BZ mesh.
+ * Method to augment the static 2D dielectric matrix in the BZ mesh.
  * @return void
 */
-void ExcitonTB::compute_quasi2D_DielectricMatrix(){
-
-    auto start = high_resolution_clock::now();
-
-    if (this->mode == "realspace"){
-        std::cout << "Numerical screening in real space not available. Terminating" << std::endl;
-        exit(0);
-    }
-    
-    if (this->mode == "reciprocalspace"){
-
-        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        uint nGs = ReciprocalVectors.n_rows;
-        uint Ncells = this->ncell_;
-        uint odd = Ncells % 2;
-        uint nq = odd == 1 ? Ncells * (Ncells - odd) / 2 + (Ncells - odd) / 2 + 1 : (2 * Ncells - 1) + (Ncells - 1) * (Ncells - 2) / 2 + Ncells / 2 + 1; // Only half of the BZ
-
-        std::cout << "Number of G vectors included in the calculation: " << nGs << std::endl;
-        printReciprocalLattice();
-
-        this->setq_points_list(system->kpoints); // The set of q points where the dielectric matrix is computed coincides with the BZ mesh
-        uint Nqpoints = this->qpoints_list_.n_rows;
-        arma::mat q_points(Nqpoints, 3, arma::fill::zeros);
-
-        uint nk_aux = this->nk_aux;
-        uint Nktotal = system->nk;
-
-        q_points = this->qpoints_list_;
-        
-        uint basisdim = system->basisdim;
-
-        double d = this->d_;
-        
-        std::cout << "Diagonalizing H(k+q) for every point q, for every point k... " << std::flush;
-
-        if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.empty())
-        {
-            this->eigvalkqStack_test = arma::cube(basisdim, nk_aux, Nqpoints, arma::fill::zeros);
-
-            std::vector<arma::cx_cube> vector_aux;
-            vector_aux.resize(Nqpoints);
-            this->eigveckqStack_test = vector_aux;
-
-            for (uint iq = 0; iq < Nqpoints; ++iq)
-            {
-                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
-            }
-        }
-        else
-        {
-            this->eigvalkqStack_test.set_size(basisdim, nk_aux, Nqpoints);
-            this->eigveckqStack_test.resize(Nqpoints);
-
-            for (uint iq = 0; iq < Nqpoints; ++iq)
-            {
-                this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk_aux, arma::fill::zeros);
-            }
-        }
-
-        arma::vec auxEigVal(basisdim);
-        arma::cx_mat auxEigvec(basisdim, basisdim);
-        
-        std::cout << "q point " << std::flush;
-        for (uint iq = 0; iq < Nqpoints; ++iq)
-        {
-            arma::rowvec q = q_points.row(iq);
-
-            for (uint i = 0; i < nk_aux; i++)
-            {
-                arma::rowvec kq = this->kpoints_aux.row(i) + q;
-                system->solveBands(kq, auxEigVal, auxEigvec);
-
-                auxEigvec = fixGlobalPhase(auxEigvec);
-                this->eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
-                this->eigveckqStack_test[iq].slice(i) = auxEigvec;
-            }
-            std::cout << iq + 1 << ", " << std::flush;
-            if ((iq + 1) % 150 == 0) {
-                std::cout << std::endl;
-            }
-        }
-
-        std::cout << "\nDone. \nComputing Q2D dielectric matrix in the BZ mesh... \n" << std::flush;
-
-        arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
-        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
-
-        arma::imat indecesqg(nq*nGs*(nGs+1)/2,3,arma::fill::zeros);
-
-        if (odd == 0){ // If Ncells is even, then q points at the boundaries of the BZ with no symmetric counterpart are computed seperately
-            int i=0;
-            
-            for (uint iq = 0; iq < Ncells; iq++){ // 1st BZ boundary
-                for (uint g = 0; g < nGs; g++){
-                    for (uint g2 = g; g2 < nGs; g2++){
-                        indecesqg.row(i)(0) = iq;
-                        indecesqg.row(i)(1) = g;
-                        indecesqg.row(i)(2) = g2;
-                        i++;
-                    }
-                }
-            }
-
-            for (uint iq = 1; iq < Ncells; iq++){ // 2nd BZ boundary
-                for (uint g = 0; g < nGs; g++){
-                    for (uint g2 = g; g2 < nGs; g2++){
-                        indecesqg.row(i)(0) = iq*Ncells;
-                        indecesqg.row(i)(1) = g;
-                        indecesqg.row(i)(2) = g2;
-                        i++;
-                    }
-                }
-            }
-
-            for (uint iq = 1; iq < Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
-                for (uint iq2 = 1; iq2 < Ncells; iq2++){    
-                    for (uint g = 0; g < nGs; g++){
-                        for (uint g2 = g; g2 < nGs; g2++){
-                            indecesqg.row(i)(0) = iq2 + iq*Ncells;
-                            indecesqg.row(i)(1) = g;
-                            indecesqg.row(i)(2) = g2;
-                            i++;
-                        }
-                    }
-                }
-            }
-
-            for (uint iq = 0; iq < Ncells/2; iq++){ // Center-symmetric submesh of the full BZ mesh
-                for (uint g = 0; g < nGs; g++){
-                    for (uint g2 = g; g2 < nGs; g2++){
-                        indecesqg.row(i)(0) = 1 + iq + Ncells*Ncells/2;
-                        indecesqg.row(i)(1) = g;
-                        indecesqg.row(i)(2) = g2;
-                        i++;
-                    }
-                }
-            }
-        } else if (odd == 1) { // If Ncells is odd, the full BZ mesh is automatically center-symmetric
-            int i=0;
-            
-            for (uint iq = 0; iq < nq; iq++){
-                for (uint g = 0; g < nGs; g++){
-                    for (uint g2 = g; g2 < nGs; g2++){
-                        indecesqg.row(i)(0) = iq;
-                        indecesqg.row(i)(1) = g;
-                        indecesqg.row(i)(2) = g2;
-                        i++;
-                    }
-                }
-            }
-        }
-
-        std::cout << "Calculation of dielectric matrix at " << std::endl;
-
-        double percentage = 0;
-        double percentage_aux = 0;
-        uint nq_count = 0;
-        if (odd == 0){
-
-            std::cout << " (Number of k points is even. Computing the dielectric matrix at the nonsymmetric part of the BZ... )" << std::endl;
-            uint iq_test = 0;
-            arma::rowvec q_test = q_points.row(iq_test);
-
-            double percentage = 0;
-            double percentage_aux = 0;
-            
-            for (uint ik = 0; ik < (2 * Ncells - 1); ik++)
-            {
-                uint iq = indecesqg.row(ik*nGs*(nGs+1)/2)(0);
-                arma::rowvec q = q_points.row(iq);
-
-                this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
-                this->eigveckqStack_ = this->eigveckqStack_test[iq];
-
-                #pragma omp parallel for
-                for (uint ig = 0; ig < nGs * (nGs + 1) / 2; ig++)
-                {
-                    uint g  = indecesqg.row(ig)(1);
-                    uint g2 = indecesqg.row(ig)(2);
-
-                    arma::rowvec G = ReciprocalVectors.row(g);
-                    arma::rowvec G2 = ReciprocalVectors.row(g2);
-
-                    std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
-
-                    double potentialg =  std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
-
-                    this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
-
-                    double kroneckerdelta = g == g2 ? 1 : 0;
-
-                    std::complex<double> epsilon_gg2_element = kroneckerdelta - potentialg * Chi;
-
-                    this->epsilonmatrix_.slice(iq).row(g)(g2) = epsilon_gg2_element;
-                    this->epsilonmatrix_.slice(iq).row(g2)(g) = std::conj(epsilon_gg2_element);
-                }
-
-                
-                percentage = ((double)nq_count + 1)*100./(double)Nqpoints;
-
-                // if ((int) percentage % 10 == 0 && (int) percentage_aux != (int) percentage)
-                // {
-                //     std::cout << (int) percentage << "%, " << std::endl;
-                //     percentage_aux = percentage;
-                // }                
-
-                std::cout  << nq_count << ", " <<std::flush;
-
-                if (nq_count % 50 ==0){
-                    std::cout << std::endl;
-                }
-                nq_count++;
-            }
-
-            // Computes the dielectric matrix at the centrosymmetric submesh of the BZ
-
-            std::cout << " (Computing the dielectric matrix at the centrosymmetric part of the BZ... )" << std::endl;
-
-            uint iq_i = (2 * Ncells - 1);
-            uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
-            for (uint ik = 0; ik < ik_f; ik++)
-            {
-                uint iq = indecesqg.row(iq_i*nGs*(nGs + 1)/2 + ik*nGs*(nGs + 1)/2)(0);
-                arma::rowvec q = q_points.row(iq);
-
-                this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
-                this->eigveckqStack_ = this->eigveckqStack_test[iq];
-
-                uint negativeqindex = -1;
-
-                for (uint i = 0; i < Nqpoints; ++i)
-                {
-                    if (arma::norm(q + q_points.row(i)) < 1E-7)
-                    {
-                        negativeqindex = i;                        
-                        break;
-                    }
-                }
-
-                #pragma omp parallel for
-                for (uint ig = 0; ig < nGs * (nGs + 1) / 2; ig++)
-                {
-                    //uint iq = ik; //indecesqg.row(i_aux)(0);
-                    uint g  = indecesqg.row(ig)(1);
-                    uint g2 = indecesqg.row(ig)(2);
-
-                    arma::rowvec G = ReciprocalVectors.row(g);
-                    arma::rowvec G2 = ReciprocalVectors.row(g2);
-                    
-                    uint negativeG = fetchReciprocalLatticeVector(-G);
-                    uint negativeG2 = fetchReciprocalLatticeVector(-G2);
-                    
-                    std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
-
-                    this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
-                    this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
-                    
-                    this->Chimatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = Chi;
-                    this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = std::conj(Chi);
-
-                    double potentialg  = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, q);
-                    double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
-
-                    double potentialnegativeG  = std::sqrt(coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex))) * std::sqrt(coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex))); // coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex));
-                    double potentialnegativeG2 = potentialnegativeG;
-                    double kroneckerdelta = g == g2 ? 1 : 0;
-
-                    this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * this->Chimatrix_.slice(iq).row(g)(g2);
-                    this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * this->Chimatrix_.slice(iq).row(g2)(g);
-
-                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * this->Chimatrix_.slice(negativeqindex).row(negativeG2)(negativeG);
-                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * this->Chimatrix_.slice(negativeqindex).row(negativeG)(negativeG2);
-                }
-
-                percentage = ((double)nq_count + 1)*100./(double)Nqpoints;
-
-                // if ((int) percentage % 10 == 0 && (int) percentage_aux != (int) percentage){
-                //     std::cout << (int) percentage << "%" << std::endl;
-                // }
-                std::cout  << nq_count << ", " <<std::flush;
-
-                if (nq_count % 50 ==0){
-                    std::cout << std::endl;
-                }
-                nq_count++;
-            }
-        }
-        
-        if (odd == 1){
-
-            double percentage = 0;
-            double percentage_aux = 0;
-            for (uint ik = 0; ik < nq; ik++)
-            {
-                uint iq = indecesqg.row(ik*nGs*(nGs + 1)/2)(0); 
-                arma::rowvec q = q_points.row(iq);
-
-                this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
-                this->eigveckqStack_ = this->eigveckqStack_test[iq];
-
-                #pragma omp parallel for
-                for (uint ig = 0; ig < nGs * (nGs + 1) / 2; ig++)
-                {
-                    uint g = indecesqg.row(ig)(1);
-                    uint g2 = indecesqg.row(ig)(2);
-
-                    arma::rowvec G = ReciprocalVectors.row(g);
-                    arma::rowvec G2 = ReciprocalVectors.row(g2);
-                    arma::rowvec q = q_points.row(iq);
-
-                    uint negativeG = fetchReciprocalLatticeVector(-G);
-                    uint negativeG2 = fetchReciprocalLatticeVector(-G2);
-
-                    this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
-                    this->eigveckqStack_ = this->eigveckqStack_test[iq];
-
-                    std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
-
-                    this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
-                    this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
-
-                    this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = Chi;
-                    this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = std::conj(Chi);
-
-                    double potentialg = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
-                    double potentialg2 = potentialg;
-
-                    double potentialnegativeG = std::sqrt(coulombFT(negativeG, negativeG, q_points.row(Nktotal - iq - 1))) * std::sqrt(coulombFT(negativeG2, negativeG2, q_points.row(Nktotal - iq - 1)));
-                    double potentialnegativeG2 = potentialnegativeG;
-                    
-                    double kroneckerdelta = g == g2 ? 1 : 0;
-
-                    this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * Chi;
-                    this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
-
-                    this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * Chi;
-                    this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
-                }
-
-                percentage = ((double)nq_count + 1) * 100 / (double)nq;
-
-                if ((int) percentage % 10 == 0 && (int) percentage_aux != (int) percentage) {
-                    std::cout << (int) percentage << "%" << std::endl;
-                }
-
-                nq_count++;
-            }
-        }
-    }
-
-    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
-    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
-
-    std::cout << "Done. \nCalculation of dielectric matrix done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
-}
-
-
-/**
- * Method to augment the static Q2D dielectric matrix in the BZ mesh.
- * @return void
-*/
-void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
+void ExcitonTB::augment_2D_DielectricMatrix(double Gcutoff){
 
     auto start = high_resolution_clock::now();
 
@@ -3136,6 +2393,7 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
         uint basisdim = system->basisdim;
 
         double d = this->d_;
+        bool is_d_finite = std::abs(d) > 1E-4;
 
         if (this->Invepsilonmatrix_.is_empty())
         {
@@ -3175,7 +2433,6 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
         arma::cx_cube dielectricmatrix_provided = this->epsilonmatrix_;
 
         uint nGs_existing = this->Invepsilonmatrix_.slice(0).n_rows;
-        double Gcutoff_existing = this->Gcutoff_;   
          
         setGcutoff(Gcutoff);        
 
@@ -3200,6 +2457,7 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
         arma::cx_mat auxvec(nGs_new,nGs_new,arma::fill::eye);
         uint nGs_new_combinations = nGs_existing*(nGs_new-nGs_existing) +  (nGs_new-nGs_existing)*(nGs_new-nGs_existing+1)/2;
         arma::imat indecesqg(nq*nGs_new_combinations,3,arma::fill::zeros);
+        
         std::cout << "Number of extra GG' combinations to compute: " << nGs_new_combinations << std::endl;
         std::cout << "Diagonalizing H(k+q) for every point q, for every point k... " << std::flush;
 
@@ -3245,14 +2503,13 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                 this->eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
                 this->eigveckqStack_test[iq].slice(i) = auxEigvec;
             }
-
             std::cout << iq + 1 << ", " << std::flush;
             if ((iq + 1) % 150 == 0) {
                 std::cout << std::endl;
             }
         }
 
-        std::cout << "\nDone. \nComputing the remaining Q2D dielectric function matrix elements in the BZ mesh... \n" << std::flush;
+        std::cout << "\nDone. \nComputing the remaining dielectric function matrix elements in the BZ mesh... \n" << std::flush;
         
         if (odd == 0){ // If Ncells is even, then q points at the boundaries of the BZ with no symmetric counterpart are computed seperately
             int i=0;
@@ -3268,17 +2525,6 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                 }
             }
 
-            // for (uint iq = 0; iq < Ncells; iq++){ // 1st BZ boundary, lower right block of the dielectric matrix
-            //     for (uint g = nGs_existing; g < nGs_new; g++){
-            //         for (uint g2 = g; g2 < nGs_new; g2++){
-            //             indecesqg.row(i)(0) = iq;
-            //             indecesqg.row(i)(1) = g;
-            //             indecesqg.row(i)(2) = g2;
-            //             i++;
-            //         }
-            //     }
-            // }
-
             for (uint iq = 1; iq < Ncells; iq++){ // 2nd BZ boundary, right block the dielectric matrix
                 for (uint g = nGs_existing; g < nGs_new; g++){
                     for (uint g2 = 0; g2 <= g; g2++){
@@ -3289,17 +2535,6 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                     }
                 }
             }
-
-            // for (uint iq = 1; iq < Ncells; iq++){ // 2nd BZ boundary, lower right block of the dielectric matrix
-            //     for (uint g = nGs_existing; g < nGs_new; g++){
-            //         for (uint g2 = g; g2 < nGs_new; g2++){
-            //             indecesqg.row(i)(0) = iq*Ncells;
-            //             indecesqg.row(i)(1) = g;
-            //             indecesqg.row(i)(2) = g2;
-            //             i++;
-            //         }
-            //     }
-            // }
 
             for (uint iq = 1; iq < Ncells/2; iq++){ // Centro-symmetric submesh of the full BZ mesh, right block the dielectric matrix
                 for (uint iq2 = 1; iq2 < Ncells; iq2++){    
@@ -3314,19 +2549,6 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                 }
             }
 
-            // for (uint iq = 1; iq < Ncells/2; iq++){ // Centro-symmetric submesh of the full BZ mesh, lower right block of the dielectric matrix
-            //     for (uint iq2 = 1; iq2 < Ncells; iq2++){    
-            //         for (uint g = nGs_existing; g < nGs_new; g++){
-            //             for (uint g2 = g; g2 < nGs_new; g2++){
-            //                 indecesqg.row(i)(0) = iq2 + iq*Ncells;
-            //                 indecesqg.row(i)(1) = g;
-            //                 indecesqg.row(i)(2) = g2;
-            //                 i++;
-            //             }
-            //         }
-            //     }
-            // }
-
             for (uint iq = 0; iq < Ncells/2; iq++){ // Centro-symmetric submesh of the full BZ mesh, right block of the dielectric matrix
                 for (uint g = nGs_existing; g < nGs_new; g++){
                         for (uint g2 = 0; g2 <= g; g2++){
@@ -3338,16 +2560,6 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                 }
             }
 
-            // for (uint iq = 0; iq < Ncells/2; iq++){ // Centro-symmetric submesh of the full BZ mesh, lower right block of the dielectric matrix
-            //     for (uint g = nGs_existing; g < nGs_new; g++){
-            //         for (uint g2 = g; g2 < nGs_new; g2++){
-            //             indecesqg.row(i)(0) = 1 + iq + Ncells*Ncells/2;
-            //             indecesqg.row(i)(1) = g;
-            //             indecesqg.row(i)(2) = g2;
-            //             i++;
-            //         }
-            //     }
-            // }
         } else if (odd == 1) { // If Ncells is odd, the full BZ mesh is automatically center-symmetric
             int i=0;
             
@@ -3361,32 +2573,12 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                     }
                 }
             }
-
-            // for (uint iq = 0; iq < nq; iq++){
-            //     for (uint g = nGs_existing; g < nGs_new; g++){
-            //         for (uint g2 = g; g2 < nGs_new; g2++){
-            //             indecesqg.row(i)(0) = iq;
-            //             indecesqg.row(i)(1) = g;
-            //             indecesqg.row(i)(2) = g2;
-            //             i++;
-            //         }
-            //     }
-            // }
         }
 
-        std::cout << "Calculation of dielectric matrix at " << std::endl;
-
-        double percentage = 0;
-        double percentage_aux = 0;
-        uint nq_count = 0;
         if (odd == 0){
 
-            std::cout << " (Number of k points is even. Computing the dielectric matrix at the nonsymmetric part of the BZ... )" << std::endl;
             uint iq_test = 0;
             arma::rowvec q_test = q_points.row(iq_test);
-
-            double percentage = 0;
-            double percentage_aux = 0;
             
             for (uint ik = 0; ik < (2 * Ncells - 1); ik++)
             {
@@ -3401,48 +2593,30 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                 {
                     uint g  = indecesqg.row(ig)(1);
                     uint g2 = indecesqg.row(ig)(2);                    
-                    
-                    // if (g > nGs_existing - 1){
+                                        
+                    arma::rowvec G = ReciprocalVectors.row(g);
+                    arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-                        arma::rowvec G = ReciprocalVectors.row(g);
-                        arma::rowvec G2 = ReciprocalVectors.row(g2);
+                    std::complex<double> Chi = 0.0;
 
-                        std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                    if (is_d_finite) {
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
+                    }
+                    else {
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
+                    }                        
+                    double potentialg =  std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));                    
 
-                        double potentialg =  std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
+                    double kroneckerdelta = g == g2 ? 1 : 0;
 
-                        this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
+                    std::complex<double> epsilon_gg2_element = kroneckerdelta - potentialg * Chi;
 
-                        double kroneckerdelta = g == g2 ? 1 : 0;
-
-                        std::complex<double> epsilon_gg2_element = kroneckerdelta - potentialg * Chi;
-
-                        this->epsilonmatrix_.slice(iq).row(g)(g2) = epsilon_gg2_element;
-                        this->epsilonmatrix_.slice(iq).row(g2)(g) = std::conj(epsilon_gg2_element);
-                    // } else {                        
-                    //     continue;
-                    // }                    
-                }
-
-                percentage = ((double)ik + 1)*100./(double)Nqpoints;
-
-                // if ((int) percentage % 5 == 0 && (int) percentage_aux != (int) percentage)
-                // {
-                //     std::cout << (int) percentage << "%%, " << std::flush;
-                //     percentage_aux = percentage;
-                // }
-
-                std::cout  << nq_count << ", " <<std::flush;
-
-                if (nq_count % 50 ==0){
-                    std::cout << std::endl;
-                }
-                nq_count++;
+                    this->epsilonmatrix_.slice(iq).row(g)(g2) = epsilon_gg2_element;
+                    this->epsilonmatrix_.slice(iq).row(g2)(g) = std::conj(epsilon_gg2_element);                           
+                }               
             }
 
-            // Computes the dielectric matrix at the centrosymmetric submesh of the BZ
-
-            std::cout << " (Computing the dielectric matrix at the centrosymmetric part of the BZ... )" << std::endl;
+            // Computes the dielectric matrix at the centrosymmetric submesh of the BZ            
 
             uint iq_i = (2 * Ncells - 1);
             uint ik_f = (Ncells - 1)*(Ncells - 2)/2 + Ncells/2;
@@ -3469,54 +2643,41 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                 for (uint ig = 0; ig < nGs_new_combinations; ig++)
                 {                    
                     uint g  = indecesqg.row(ig)(1);
-                    uint g2 = indecesqg.row(ig)(2);                    
+                    uint g2 = indecesqg.row(ig)(2);                                       
 
-                    //if (ig > nGs_existing - 1){
+                    arma::rowvec G = ReciprocalVectors.row(g);
+                    arma::rowvec G2 = ReciprocalVectors.row(g2);
+                    
+                    uint negativeG = fetchReciprocalLatticeVector(-G);
+                    uint negativeG2 = fetchReciprocalLatticeVector(-G2);
 
-                        arma::rowvec G = ReciprocalVectors.row(g);
-                        arma::rowvec G2 = ReciprocalVectors.row(g2);
-                        
-                        uint negativeG = fetchReciprocalLatticeVector(-G);
-                        uint negativeG2 = fetchReciprocalLatticeVector(-G2);
+                    std::complex<double> Chi = 0.0;
+                    if (is_d_finite) {
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
+                    }
+                    else {
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
+                    }        
+                    
+                    double potentialg  = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));
+                    double potentialg2 = potentialg;
 
-                        std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);                       
+                    double potentialnegativeG  = std::sqrt(coulomb_2D_FT(system->kpoints.row(negativeqindex) - G)) * std::sqrt(coulomb_2D_FT(system->kpoints.row(negativeqindex) - G2));
+                    double potentialnegativeG2 = potentialnegativeG;
+                    
+                    double kroneckerdelta = g == g2 ? 1 : 0;
 
-                        double potentialg  = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // coulombFT(g, g, q);
-                        double potentialg2 = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q)); // std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
+                    this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * Chi;
+                    this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
 
-                        double potentialnegativeG  = std::sqrt(coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex))) * std::sqrt(coulombFT(negativeG2, negativeG2, system->kpoints.row(negativeqindex))); // coulombFT(negativeG, negativeG, system->kpoints.row(negativeqindex));
-                        double potentialnegativeG2 = potentialnegativeG;
-                        double kroneckerdelta = g == g2 ? 1 : 0;
-
-                        this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg * Chi;
-                        this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg2 * std::conj(Chi);
-
-                        this->epsilonmatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * Chi;
-                        this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
-                    // } else {                       
-                    //     continue;
-                    // }                                   
-                }
-
-                percentage = ((double)ik + 1)*100./(double)Nqpoints;
-
-                // if ((int) percentage % 5 == 0) {
-                //     std::cout << (int) percentage << "%" << std::endl;
-                // }
-
-                std::cout  << nq_count << ", " <<std::flush;
-
-                if (nq_count % 50 ==0){
-                    std::cout << std::endl;
-                }
-                nq_count++;
+                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * Chi;
+                    this->epsilonmatrix_.slice(negativeqindex).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);                             
+                }               
             }
         }
         
         if (odd == 1){
-
-            double percentage = 0;
-            double percentage_aux = 0;
+            
             for (uint ik = 0; ik < nq; ik++)
             {
                 uint iq = indecesqg.row(ik*nGs_new_combinations)(0); 
@@ -3541,7 +2702,13 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                     this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
                     this->eigveckqStack_ = this->eigveckqStack_test[iq];
 
-                    std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);
+                    std::complex<double> Chi = 0.0;
+                    if (is_d_finite) {
+                        Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
+                    }
+                    else {
+                        Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
+                    }
 
                     this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                     this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
@@ -3549,10 +2716,10 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
                     this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = Chi;
                     this->Chimatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = std::conj(Chi);
 
-                    double potentialg = std::sqrt(coulombFT(g, g, q)) * std::sqrt(coulombFT(g2, g2, q));
+                    double potentialg = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2));
                     double potentialg2 = potentialg;
 
-                    double potentialnegativeG = std::sqrt(coulombFT(negativeG, negativeG, q_points.row(Nktotal - iq - 1))) * std::sqrt(coulombFT(negativeG2, negativeG2, q_points.row(Nktotal - iq - 1)));
+                    double potentialnegativeG = std::sqrt(coulomb_2D_FT(q_points.row(Nktotal - iq - 1) - G)) * std::sqrt(coulomb_2D_FT(q_points.row(Nktotal - iq - 1) - G2));
                     double potentialnegativeG2 = potentialnegativeG;
                     
                     double kroneckerdelta = g == g2 ? 1 : 0;
@@ -3562,13 +2729,7 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
 
                     this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG2)(negativeG) = kroneckerdelta - potentialnegativeG2 * Chi;
                     this->epsilonmatrix_.slice(Nktotal - iq - 1).row(negativeG)(negativeG2) = kroneckerdelta - potentialnegativeG * std::conj(Chi);
-                }
-
-                percentage = ((double)ik + 1) * 100 / (double)nq;
-
-                if ((int) percentage % 5 == 0) {
-                    std::cout << (int) percentage << "%" << std::endl;
-                }
+                }                
             }
         }
     }
@@ -3576,9 +2737,8 @@ void ExcitonTB::augment_quasi2D_DielectricMatrix(double Gcutoff){
     auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
 
-    std::cout << "Done. \nCalculation of dielectric matrix done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
+    std::cout << "Done. \nCalculation of dielectric matrix completed in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
 }
-
 
 /**
  * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
@@ -3590,7 +2750,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 
     if (this->mode == "realspace"){
 
-        std::cout << "Implementation of the exciton in real space in progress. Exiting." << std::endl;
+        std::cout << "Numerical screening in real space not implemented. Terminating." << std::endl;
 
         std::exit(0);
     }
@@ -3607,6 +2767,9 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
         std::string line;
         double qx, qy, qz;
         arma::mat q_points;
+
+        double d = this->d;
+        bool is_d_finite = std::abs(d) > 1E-4;
 
         try{
             while(std::getline(inputfile, line)){
@@ -3625,9 +2788,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 
         uint Nqpoints = q_points.n_rows;
 
-        std::cout << "Nqpoints = " << Nqpoints << std::endl;
-
-        std::cout << "Computing dielectric matrix in the specified q points... \n" << std::flush;
+        std::cout << "Computing 2D dielectric matrix in the specified q points... \n" << std::flush;
 
         uint nk = this->nk_aux;
         uint basisdim = system->basisdim;
@@ -3655,40 +2816,24 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
 
         arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
 
-        // Generates all the combinations of (k,G,G') indices
+        // Generates all the combinations of (G,G') indices
         uint i = 0;
-        //for (uint iq = 0; iq < Nqpoints; iq++){
-            for (uint g = 0; g < nGs; g++){
-                for (uint g2 = g; g2 < nGs; g2++){
-                    //indecesqg.row(i)(0) = iq;
-                    indecesqg.row(i)(0) = g;
-                    indecesqg.row(i)(1) = g2;
-                    i++;
-                }
+        for (uint g = 0; g < nGs; g++){
+            for (uint g2 = g; g2 < nGs; g2++){
+                indecesqg.row(i)(0) = g;
+                indecesqg.row(i)(1) = g2;
+                i++;
             }
-        //}
-
-        printReciprocalLattice();
+        }
 
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
         vec auxEigVal(basisdim);
         arma::cx_mat auxEigvec(basisdim, basisdim);
 
-        std::cout << "Computation at\n" << std::flush;
-
-        // These lines are temporary
-        // if (this->Invepsilonmatrix_.is_empty()) {
-        //     this->Invepsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
-        // } else {
-        //     this->Invepsilonmatrix_.reshape(nGs,nGs,Nqpoints);
-        // }
-
-        for (uint iq = 0; iq < Nqpoints; iq++){  
+        for (uint iq = 0; iq < Nqpoints; iq++){
 
             arma::rowvec q = q_points.row(iq);
-
-            //std::cout << iq << ", " << std::flush;
 
             for (uint ik = 0; ik < nk; ik++){
                 arma::rowvec kq = this->kpoints_aux.row(ik) + q;
@@ -3707,198 +2852,25 @@ void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
                 arma::rowvec G = ReciprocalVectors.row(g);                
                 arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-                std::complex<double> Chi = this->compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                std::complex<double> Chi = 0.0;
 
+                if (is_d_finite) {
+                    Chi = compute_quasi2D_PolarizabilityMatrixElement(q, G, G2, d);
+                }
+                else {
+                    Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
+                }
+                
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                 this->Chimatrix_.slice(iq).row(g2)(g) = std::conj(Chi);
 
                 double potentialg = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2)); // double potentialg = coulomb_2D_FT(q + G);
-                double potentialg2 = coulomb_2D_FT(q + G2);
                 double kroneckerdelta = g == g2? 1 : 0;
 
                 this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
                 this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
             }
 
-            // These lines are temporary
-            // std::cout << "Inverting matrix and printing it to file..." << std::endl;
-
-            // std::string aux_file_name = "q_point_" + std::to_string(iq) + "_" + kpointsfile;
-
-            // FILE* textfile = fopen(aux_file_name.c_str(), "w");
-
-            // if (textfile == NULL){
-            //     std::cout << "File for inverse of the dielectric matrix failed to open. Exiting" << std::endl;
-            //     exit(1);
-            // }
-
-            // this->Invepsilonmatrix_.slice(iq) = arma::solve(this->epsilonmatrix_.slice(iq),auxvec);
-            // int nGs_cut = 100;
-            // //for(uint i = 0; i < Nqp; i++){
-            //     for (uint g = 0; g < nGs_cut; g++){
-            //         for (uint g2 = 0; g2 < nGs_cut; g2++){
-            //             std::complex<double> aux = this->Invepsilonmatrix_.slice(iq).at(g,g2);
-            //             fprintf(textfile, "%11.7lf%11.7lf", real(aux), imag(aux));
-            //         }
-            //         fprintf(textfile, "\n");
-            //     }
-            // //}
-
-            // fclose(textfile);
-
-            double percentage = ((double)iq + 1.0) / (double)Nqpoints * 100;
-            std::cout << percentage << "%" << std::flush;
-        }
-        // Comment is temporary
-        std::cout << "Done.\n" << std::endl;
-
-    }
-
-    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
-    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
-
-    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
-}
-
-/**
- * Method to compute the quasi 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
- * @return void
-*/
-void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
-
-    auto start = high_resolution_clock::now();
-
-    if (this->mode == "realspace"){
-
-        std::cout << "Implementation of the exciton in real space in progress. Exiting." << std::endl;
-
-        std::exit(0);
-    }
-    
-    if (this->mode == "reciprocalspace"){
-
-        // Reads q points from file
-        std::ifstream inputfile(kpointsfile);
-        if (!inputfile) {
-            std::cout << "File for k points failed to open or does not exist. Exiting" << std::endl;
-            exit(1);
-        }
-
-        std::string line;
-        double qx, qy, qz;
-        arma::mat q_points;
-        double d = this->d;
-
-        if(d <= 1E-4){
-            d = 0.1;
-        }
-
-        try{
-            while(std::getline(inputfile, line)){
-                std::istringstream iss(line);
-                iss >> qx >> qy >> qz;
-                arma::rowvec qpoint{qx, qy, qz};
-                q_points.insert_rows(q_points.n_rows,qpoint);
-            }
-            inputfile.close();
-        }
-        catch(const std::exception& e){
-            std::cerr << e.what() << std::endl;
-        }
-
-        setq_points_list(q_points);
-
-        uint Nqpoints = q_points.n_rows;
-
-        std::cout << "Nqpoints = " << Nqpoints << std::endl;
-
-        std::cout << "Computing quasi 2D dielectric matrix at the specified q points... \n" << std::flush;
-
-        uint nk = this->nk_aux;
-        uint basisdim = system->basisdim;
-
-        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        uint nGs = ReciprocalVectors.n_rows;
-
-        // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
-        if (this->Chimatrix_.is_empty()) {
-            this->Chimatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
-        } else {
-            this->Chimatrix_.reshape(nGs,nGs,Nqpoints);
-        }
-
-        if (this->epsilonmatrix_.is_empty()) {
-            this->epsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
-        } else {
-            this->epsilonmatrix_.reshape(nGs,nGs,Nqpoints);
-        }
-
-        arma::cx_cube epsilonmatrix(Nqpoints,nGs,nGs,arma::fill::zeros);
-        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
-
-        arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
-
-        // Generates all the combinations of (G,G') indices
-        uint i = 0;
-        for (uint g = 0; g < nGs; g++){
-            for (uint g2 = g; g2 < nGs; g2++){
-                indecesg.row(i)(0) = g;
-                indecesg.row(i)(1) = g2;
-                i++;
-            }
-        }
-
-        printReciprocalLattice();
-
-        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-        this->eigvalkqStack_ = arma::mat(basisdim, nk);
-        vec auxEigVal(basisdim);
-        arma::cx_mat auxEigvec(basisdim, basisdim);        
-
-        std::cout << "Computation at\n" << std::flush;
-
-        for (uint iq = 0; iq < Nqpoints; iq++){  
-
-            arma::rowvec q = q_points.row(iq);
-
-            for (uint ik = 0; ik < nk; ik++){
-                arma::rowvec kq = this->kpoints_aux.row(ik) + q;
-                system->solveBands(kq, auxEigVal, auxEigvec);
-
-                auxEigvec = fixGlobalPhase(auxEigvec);
-                this->eigvalkqStack_.col(ik) = auxEigVal;
-                this->eigveckqStack_.slice(ik) = auxEigvec;
-            };
-
-            #pragma omp parallel for 
-            for (uint ig = 0; ig < nGs*(nGs+1)/2; ig++){
-                uint g  = indecesg.row(ig)(0);
-                uint g2 = indecesg.row(ig)(1);
-
-                arma::rowvec G = ReciprocalVectors.row(g);                
-                arma::rowvec G2 = ReciprocalVectors.row(g2);
-
-                std::complex<double> Chi = this->compute_quasi2D_PolarizabilityMatrixElement(G, G2, q, d);                
-
-                double potentialg = std::sqrt(coulomb_2D_FT(q + G))*std::sqrt(coulomb_2D_FT(q + G2)); // double potentialg = coulomb_2D_FT(q + G);
-
-                double kroneckerdelta = g == g2? 1 : 0;
-
-                if (arma::norm(q + G) < 1e-6 || arma::norm(q + G2) < 1e-6){
-                    potentialg = 0;
-                }
-
-                this->epsilonmatrix_.slice(iq).row(g)(g2) = kroneckerdelta - potentialg*Chi;
-                this->epsilonmatrix_.slice(iq).row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
-            }
-
-
-            double percentage = ((double)iq + 1.0) / (double)Nqpoints * 100;
-
-            if ((int) percentage % 10 == 0)
-            {
-                std::cout << (int)percentage << "%" << std::endl;
-            }
         }
 
         std::cout << "Done.\n" << std::endl;
@@ -3917,13 +2889,11 @@ void ExcitonTB::compute_quasi2D_DielectricMatrix(std::string kpointsfile){
  */
 void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
 {
-
     auto start = high_resolution_clock::now();
 
     if (this->mode == "realspace")
     {
-
-        std::cout << "Implementation of the exciton in real space in progress. Exiting." << std::endl;
+        std::cout << "Screening in real space not implemented. Terminating." << std::endl;
 
         std::exit(0);
     }
@@ -3960,8 +2930,6 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
         }
 
         uint Nqpoints = q_points.n_rows;
-
-        std::cout << "Nqpoints = " << Nqpoints << std::endl;
 
         std::cout << "Computing polarizability matrix in the specified q points... \n" << std::flush;
 
@@ -4000,15 +2968,9 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
             }
         }
 
-        printReciprocalLattice();
-
-        std::cout << "iq = ";
-
         for (uint iq = 0; iq < Nqpoints; iq++)
         {
             arma::rowvec q = q_points.row(iq);
-
-            std::cout << iq << ", " << std::flush;
 
             for (uint i = 0; i < nk; i++)
             {
@@ -4029,7 +2991,7 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
                 arma::rowvec G = ReciprocalVectors.row(g);
                 arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-                std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
+                std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(q, G, G2);
 
                 this->Chimatrix_.slice(iq).row(g)(g2) = Chi;
                 this->Chimatrix_.slice(iq).row(g2)(g) = Chi;
@@ -4043,111 +3005,6 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
 
     std::cout << "Done in " << duration_dielectric_matrix_mesh.count() / 1000.0 << " s." << std::endl;
-}
-
-/**
- * Method to compute the strictly 2D static polarizability matrix and dielectric matrix at a specific q point from the list of q points. More useful for isotropic systems.
- * @return void
-*/
-void ExcitonTB::compute_2D_DielectricMatrix_at_q(const arma::rowvec& q){
-
-    uint nk = this->nk_aux;
-    int basisdim = system->basisdim;
-
-    arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    uint nGs = ReciprocalVectors.n_rows;
-
-    this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
-    this->eigvalkqStack_ = arma::mat(basisdim, nk);
-    vec auxEigVal(basisdim);
-    arma::cx_mat auxEigvec(basisdim, basisdim);
-
-    arma::cx_mat Chi0_GG(nGs, nGs, arma::fill::zeros);
-    arma::cx_mat epsilon_GG(nGs, nGs, arma::fill::zeros);
-
-    arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
-    uint Nq_points = 1;
-    uint iq = 0;
-
-    // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
-    if (this->Chimatrix_.is_empty()) {
-        this->Chimatrix_ = arma::cx_cube(nGs, nGs, Nq_points, arma::fill::zeros);
-    }
-    else {
-        this->Chimatrix_.reshape(nGs, nGs, Nq_points);
-    }
-
-    if (this->epsilonmatrix_.is_empty()) {
-        this->epsilonmatrix_ = arma::cx_cube(nGs, nGs, Nq_points, arma::fill::zeros);
-    } else {
-        this->epsilonmatrix_.reshape(nGs, nGs, Nq_points);
-    }
-
-    // Generates all the combinations of (G,G') indices
-    uint i = 0;
-    
-    for (uint g = 0; g < nGs; g++){
-        for (uint g2 = g; g2 < nGs; g2++){
-            indecesg.row(i)(0) = g;
-            indecesg.row(i)(1) = g2;
-            i++;
-        }
-    }
-
-    // In case the kq stack at q is empty, diagonalize H(k + q) for every point k
-    if (this->eigvalkqStack_test.is_empty() || this->eigveckqStack_test.size() == 0)
-    {
-        this->eigvalkqStack_test = arma::cube(basisdim, nk, Nq_points, arma::fill::zeros);
-        //this->eigvalkqStack_test.slice(iq) = arma::mat(basisdim, nk, arma::fill::zeros);
-
-        std::vector<arma::cx_cube> vector_aux;
-        vector_aux.resize(Nq_points);
-
-        this->eigveckqStack_test.resize(Nq_points);
-        this->eigveckqStack_test[iq] = arma::cx_cube(basisdim, basisdim, nk, arma::fill::zeros);
-
-        std::cout << "Diagonalizing H(k+q) for every point k... " << Nq_points << " points.\n" << std::flush;
-        for (uint i = 0; i < nk; i++)
-        {
-            arma::rowvec kq = this->kpoints_aux.row(i) + q;
-            system->solveBands(kq, auxEigVal, auxEigvec);
-            auxEigvec = fixGlobalPhase(auxEigvec);
-            this->eigvalkqStack_test.slice(iq).col(i) = auxEigVal;
-            this->eigveckqStack_test[iq].slice(i) = auxEigvec;
-        }
-        std::cout << "Done.\n" << std::flush;
-    }
-
-    this->eigvalkqStack_ = this->eigvalkqStack_test.slice(iq);
-    this->eigveckqStack_ = this->eigveckqStack_test[iq];
-
-    #pragma omp parallel for 
-    for (uint i = 0; i < nGs*(nGs+1)/2; i++){
-        int g  = indecesg.row(i)(0);
-        int g2 = indecesg.row(i)(1);
-
-        arma::rowvec G = ReciprocalVectors.row(g);                
-        arma::rowvec G2 = ReciprocalVectors.row(g2);
-
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q);
-
-        Chi0_GG.row(g)(g2) = Chi;
-        Chi0_GG.row(g2)(g) = std::conj(Chi);
-
-        double potentialg = std::sqrt(coulomb_2D_FT(q + G)) * std::sqrt(coulomb_2D_FT(q + G2)); // double potentialg = coulomb_2D_FT(q + G);
-        double potentialg2 = coulomb_2D_FT(q + G2);
-        double kroneckerdelta = g == g2? 1 : 0;
-
-        if (arma::norm(q) < 1e-6 && arma::norm(G) < 1e-6){ // At q=0, wing elements (0,G2) are/have to be treated with a regularization at another time, Head element (0,0) is set to 1
-            potentialg = 0;
-        }
-
-        epsilon_GG.row(g)(g2) = kroneckerdelta - potentialg*Chi;
-        epsilon_GG.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
-    }
-
-    this->Chimatrix_.slice(iq) = Chi0_GG;
-    this->epsilonmatrix_.slice(iq) = epsilon_GG;
 }
 
 /**
@@ -4197,20 +3054,17 @@ void ExcitonTB::invertDielectricMatrix(){
 
 /**
  * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
- * @details Computes the purely 2D version.
+ * @details Computes the 2D version.
  * @return void
 */
-void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
-    auto start = high_resolution_clock::now();
+std::complex<double> ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
     if(mode == "realspace"){
-        std::cout << "Numerical screening in real space not available yet. Terminating." << std::endl;
+        std::cout << "Numerical screening in real space not implemented. Terminating." << std::endl;
         std::exit(0);
     }
 
     if(mode == "reciprocalspace"){
-
-        printReciprocalLattice();
 
         std::complex<double> Chi;
         double d = this->d;
@@ -4221,8 +3075,32 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
         arma::rowvec g2 = this->trunreciprocalLattice_.row(this->Gs_(1)); // Sets G'
 
         uint nk = this->nk_aux;
+        uint nk_aux = this->nk_aux;
         int basisdim = system->basisdim;
-        arma::mat k_points = this->kpoints_aux;     
+
+        if (this->kpoints_aux.is_empty()) {
+            std::cout << "Creating the coarser BZ mesh... " << std::flush;
+
+            uint ndim = 2;
+            arma::mat kpoints(pow(ncell_aux, ndim), 3);
+            arma::mat combinations = system->generateCombinations(ncell_aux, ndim);
+            if (ncell_aux % 2 == 1)
+            {
+                combinations += 1. / 2;
+            }
+
+            for (uint i = 0; i < nk_aux; i++)
+            {
+                arma::rowvec kpoint = arma::zeros<arma::rowvec>(3);
+                for (uint j = 0; j < ndim; j++)
+                {
+                    kpoint += (2 * combinations.row(i)(j) - ncell_aux) / (2 * ncell_aux) * system->reciprocalLattice_.row(j);
+                }
+                kpoints.row(i) = kpoint;
+            }
+            this->kpoints_aux_ = kpoints;
+        }    
+        arma::mat k_points = this->kpoints_aux_;
 
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
@@ -4245,26 +3123,26 @@ void ExcitonTB::computesingleDielectricFunctionMatrixElement() {
 
         double potential = std::sqrt(coulomb_2D_FT(q + g))*std::sqrt(coulomb_2D_FT(q + g2));
 
-        double kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1 : 0;
+        std::complex<double> kroneckerdelta = this->Gs_(0) == this->Gs_(1) ? 1. : 0.;
 
-        std::complex<long double> epsilon =  kroneckerdelta - potential*Chi;
+        std::complex<double> epsilon =  kroneckerdelta - potential*Chi;
+
+        double d = this->d;
+
+        std::complex<double> epsilon_Q2D =  kroneckerdelta - potential*compute_quasi2D_PolarizabilityMatrixElement(q, g, g2, d);
 
         std::cout << "\nepsilon_2D(q = " << std::setprecision(10) << q(0) << "," << q(1) << "," << q(2) << ") = " << std::setprecision(30) << std::real(epsilon) << " + i" << std::imag(epsilon) << std::endl;
 
-        std::cout << "\nepsilon_Q2D(d = " << d << ") = " << std::setprecision(17) << this->compute_quasi2D_DielectricMatrixElement(g, g2, q, d) << std::endl;
-    }
+        std::cout << "\nepsilon_Q2D(d = " << d << ") = " << std::setprecision(17) << std::real(epsilon_Q2D) << " + i" << std::imag(epsilon_Q2D) << std::endl;
     
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<milliseconds>(stop - start);
-
-    std::cout << "Done in " << duration.count()/1000.0 << " s." << std::endl;
+        return epsilon;
+    }  
+    
+    return 0.0;
 }
 
 /**
- * Method to compute the (G,G') matrix element of the static dielectric function at the specified momentum vector q.
- * @details It creates a file with the name "[systemName].screening" where the dielectric function matrix elements are stored.
- * @param kpointsfile File with the kpoints where we want to obtain the bands. If empty or not specified, then the set of 
- * kpoints coincides with the kmesh
+ * Method to compute the inverse static dielectric function matrix at the specified momentum vector q.
  * @return void
 */
 void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
@@ -4272,7 +3150,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     auto start = high_resolution_clock::now();
 
     if(mode == "realspace"){
-        std::cout << "Real space dielectric function not implemented yet. Exiting." << std::endl;
+        std::cout << "Real space dielectric function not implemented. Exiting." << std::endl;
 
         std::exit(0);
     }
@@ -4280,10 +3158,6 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
     uint nGs = ReciprocalVectors.n_rows;
     std::string to_continue = "_";
-
-    printReciprocalLattice();
-
-    //continueprompt("The number of reciprocal vectors included is: " + std::to_string(nGs) + ". Do you wish to procceed?[y/n]\n");
 
     std::string filename_dielectric = label + "_invepsilon.dat";
     FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
@@ -4297,7 +3171,6 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
     arma::rowvec q_aux = this->q_;
 
-    //int iq = system_->findEquivalentPointBZ(this->q_, this->ncell);//system_->findEquivalentPointBZ(arma::rowvec(3,arma::fill::zeros), this->ncell); // this has to be changed after when I find the time
     std::cout << "Computing inverse of dielectric matrix at momentum: q = " << this->q_ << std::endl;  
     arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
     arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
@@ -4316,24 +3189,21 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
     uint basisdim = system->basisdim;
     vec auxEigVal(basisdim);
     arma::cx_mat auxEigvec(basisdim, basisdim);
-    int nk = this->nk_aux;
+    int nk = (int) this->nk_aux;
 
-    double d = this->d;
-
-    // If the eigvalkqStack_ and eigveckqStack_ are empty, reshape them
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty())
     {
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
     }
-    else if ((this->eigveckqStack_.n_slices != nk || this->eigvalkqStack_.n_rows != basisdim || this->eigvalkqStack_.n_cols != basisdim) || (this->eigvalKQStack_.n_rows != basisdim || this->eigvalKQStack_.n_cols != nk))
+    else if (((int) this->eigveckqStack_.n_slices != nk || (uint) this->eigvalkqStack_.n_rows != basisdim || (uint) this->eigvalkqStack_.n_cols != basisdim) || ((uint) this->eigvalKQStack_.n_rows != basisdim || (int) this->eigvalKQStack_.n_cols != nk))
     {
         this->eigveckqStack_.reshape(basisdim, basisdim, nk);
         this->eigvalkqStack_.reshape(basisdim, nk);
     }
 
     std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
-        for (uint i = 0; i < nk; i++)
+        for (uint i = 0; i < (uint) nk; i++)
         {
             arma::rowvec kq = this->kpoints_aux.row(i) + q_aux;
             system->solveBands(kq, auxEigVal, auxEigvec);
@@ -4341,7 +3211,10 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
             this->eigvalkqStack_.col(i) = auxEigVal;
             this->eigveckqStack_.slice(i) = auxEigvec;
         }
-        std::cout << "Done.\n" << std::flush;    
+        std::cout << "Done.\n" << std::flush;
+
+    double d = this->d;
+    bool is_d_finite = std::abs(d) > 1E-4;
         
     #pragma omp parallel for
     for (uint i = 0; i < iGmax; i++){
@@ -4352,10 +3225,15 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
         arma::rowvec G = ReciprocalVectors.row(g);                
         arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        // std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q_aux);
-        std::complex<double> Chi = compute_quasi2D_PolarizabilityMatrixElement(G, G2, q_aux, d);
-        
-        double potentialg = std::sqrt(coulombFT(g, g, q_aux))*std::sqrt(coulombFT(g2, g2, q_aux));        
+        std::complex<double> Chi = 0.0;
+        if (is_d_finite) {
+            Chi = compute_quasi2D_PolarizabilityMatrixElement(q_aux, G, G2, d);
+        }
+        else {
+            Chi = compute_2D_PolarizabilityMatrixElement(q_aux, G, G2);
+        }
+
+        double potentialg = std::sqrt(coulomb_2D_FT(q_aux + G))*std::sqrt(coulomb_2D_FT(q_aux + G2));
         double kroneckerdelta = g == g2? 1 : 0;
         
         dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
@@ -4373,12 +3251,6 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
     fclose(textfile_dielectric);
 
-    // for (unsigned int g = 0; g < nGs; g++){
-    //     for (unsigned int g2 = g; g2 < nGs; g2++){
-    //         std::cout << "W(" << g << "," << g2 << ") = " << auxvecsol.row(g)(g2)*coulombFT(g2,g2,system->kpoints.row(iq)) << " ?=? " << auxvecsol.row(g2)(g)*coulombFT(g,g,system->kpoints.row(iq)) << std::endl; 
-    //     }
-    // }
-
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
 
@@ -4387,7 +3259,7 @@ void ExcitonTB::computesingleInverseDielectricMatrix(std::string label) {
 
 /**
  * Method to compute the regularization of the screened potential W_00(q) at q = 0
- * @details Computes numerically the head element of the dielectric matrix at q = 0
+ * @details Computes numerically the head element of the inverse dielectric matrix at q = 0
  */
 void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropic)
 {
@@ -4402,21 +3274,27 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
     uint basisdim = this->system->basisdim;
     uint nk = this->nk_aux;
 
-    uint Nqpoints = this->qpoints_list_.n_rows;
-    int origin_index = -1;
-
     double q0_norm = arma::norm(q0);
     arma::rowvec null_vector = {0., 0., 0.};
 
-    std::cout << "\nchosen percentage = " << this->percentage << "." <<std::endl;
-    std::cout << "regularization radius q0 = " << q0_norm << "." << std::endl;
+    std::cout << "\nchosen percentage = " << this->percentage << " " <<std::endl;
+    std::cout << "regularization radius q0 = " << q0_norm << " " << std::endl;
 
     arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-    uint nGs = ReciprocalVectors.n_rows;
 
     if (this->percentage == 0.0) {
         this->W00_at_0_ = 0.0;
-        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
+        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV " << std::endl;
+        return;
+    }
+
+    if (this->potential_ == "coulomb"){
+
+        this->W00_at_0_ = 2 * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
+
+        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV " << std::endl;
+
+        std::cout << "Done.\n" << std::endl;
         return;
     }
 
@@ -4424,32 +3302,45 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
 
         this->W00_at_0_ = (2 + this->r0*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
 
-        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
+        std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV " << std::endl;
 
         std::cout << "Done.\n" << std::endl;
         return;
     }
 
-    // Calculates the head element of the dielectric matrix at q = 0 infinitesimal
+    // Calculates the head element of the dielectric matrix at q = q_0
+
+    arma::cx_mat auxvecsol(nGs,nGs,arma::fill::zeros);
+    arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+    arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
+
+    arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
+    
+    int i = 0;
+    for (uint g = 0; g < nGs; g++){
+        for (uint g2 = g; g2 < nGs; g2++){
+            indecesg.row(i)(0) = g;
+            indecesg.row(i)(1) = g2;
+            i++;
+        }
+    }
 
     vec auxEigVal(basisdim);
-    arma::cx_mat auxEigvec(basisdim, basisdim);
+    arma::cx_mat auxEigvec(basisdim, basisdim);    
 
-    // If the eigvalkqStack_ and eigveckqStack_ are empty, reshape them
     if (this->eigveckqStack_.is_empty() && this->eigvalkqStack_.is_empty())
     {
         this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
         this->eigvalkqStack_ = arma::mat(basisdim, nk);
     }
-    else if ((this->eigveckqStack_.n_slices != nk || this->eigvalkqStack_.n_rows != basisdim || this->eigvalkqStack_.n_cols != basisdim) || (this->eigvalKQStack_.n_rows != basisdim || this->eigvalKQStack_.n_cols != nk))
+    else if ((this->eigveckqStack_.n_slices != nk || (uint) this->eigvalkqStack_.n_rows != basisdim || (uint) this->eigvalkqStack_.n_cols != basisdim) || ((uint) this->eigvalKQStack_.n_rows != basisdim || this->eigvalKQStack_.n_cols != nk))
     {
         this->eigveckqStack_.reshape(basisdim, basisdim, nk);
         this->eigvalkqStack_.reshape(basisdim, nk);
     }
 
-    std::cout << "Diagonalizing H(k+q0) for every point k... " << std::flush;
-
-    for (uint i = 0; i < nk; i++)
+    std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
+    for (uint i = 0; i < (uint) nk; i++)
     {
         arma::rowvec kq = this->kpoints_aux.row(i) + q0;
         system->solveBands(kq, auxEigVal, auxEigvec);
@@ -4458,67 +3349,46 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
         this->eigveckqStack_.slice(i) = auxEigvec;
     }
 
-    std::cout << "done, " << std::flush;
+    double d = this->d;
+    bool is_d_finite = std::abs(d) > 1E-4;
+        
+    #pragma omp parallel for
+    for (uint i = 0; i < nGs*(nGs+1)/2; i++){
 
-    std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, null_vector, q0);
+        int g = indecesg.row(i)(0);
+        int g2 = indecesg.row(i)(1);
 
-    double potentialg = coulomb_2D_FT(null_vector + q0);
+        arma::rowvec G = ReciprocalVectors.row(g);                
+        arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-    // Calculates the inverse dielectric matrix at q0 infinitesimal, to regularize W_00(0)
-    // The screening parameter can be estimated from the head element of the direct dielectric matrix
-    // arma::cx_mat dielectric_matrix(nGs, nGs, arma::fill::zeros);
-    // arma::cx_mat auxvecsol(nGs, nGs, arma::fill::zeros);
-    // arma::cx_mat auxvec(nGs, nGs, arma::fill::eye);
+        std::complex<double> Chi = 0.0;
+        if (is_d_finite) {
+            Chi = compute_quasi2D_PolarizabilityMatrixElement(q0, G, G2, d);
+        }
+        else {
+            Chi = compute_2D_PolarizabilityMatrixElement(q0, G, G2);
+        }
 
-    // arma::imat indecesg(nGs*(nGs + 1)/2, 2, arma::fill::zeros);
+        double potentialg = std::sqrt(coulomb_2D_FT(q0 + G))*std::sqrt(coulomb_2D_FT(q0 + G2));
+        double kroneckerdelta = g == g2? 1 : 0;
+        
+        dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+        dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
+    }
 
-    // int i = 0;
-    // for (uint g = 0; g < nGs; g++)
-    // {
-    //     for (uint g2 = g; g2 < nGs; g2++)
-    //     {
-    //         indecesg.row(i)(0) = g;
-    //         indecesg.row(i)(1) = g2;
-    //         i++;
-    //     }
-    // }
+    auxvecsol = arma::solve(dielectric_matrix,auxvec);
 
-    
-    // #pragma omp parallel for
-    // for (uint i = 0; i < nGs*(nGs + 1)/2; i++)
-    // {
-    //     int g = indecesg.row(i)(0);
-    //     int g2 = indecesg.row(i)(1);
-
-    //     arma::rowvec G = ReciprocalVectors.row(g);
-    //     arma::rowvec G2 = ReciprocalVectors.row(g2);
-
-    //     std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0);
-
-    //     double potentialg = std::sqrt(coulombFT(g, g, q0)) * std::sqrt(coulombFT(g2, g2, q0)); // coulombFT(g, g, q0);
-    //     // double potentialg2 = coulombFT(g2, g2, q0);
-    //     double kroneckerdelta = g == g2 ? 1 : 0;
-
-    //     dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
-    //     dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
-    // }
-
-    // auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
-
-    std::complex<double> head_element = 1.0 - potentialg*Chi; // auxvecsol(0, 0);
+    std::complex<double> head_element = 1.0/auxvecsol.row(0)(0);
 
     double Re_head_element = std::real(head_element);
-    double slope = (Re_head_element - 1.)/q0_norm;
-    this->slope_ = slope;
-
     double Re_head_element_perp = Re_head_element;
 
     if (!is_system_isotropic) { // If system is anisotropic, repeat the calculation for a vector perpendicular to q0 with same norm
 
         arma::rowvec q0_perpendicular = {-q0(1), q0(0), 0};
 
-        std::cout << "diagonalizing H(k+q0_perpendicular) for every point k... " << std::flush;
-        for (uint i = 0; i < nk; i++)
+        std::cout << "Diagonalizing H(k+q) for every point k... " << std::flush;
+        for (uint i = 0; i < (uint) nk; i++)
         {
             arma::rowvec kq = this->kpoints_aux.row(i) + q0_perpendicular;
             system->solveBands(kq, auxEigVal, auxEigvec);
@@ -4526,45 +3396,41 @@ void ExcitonTB::compute_ScreenedPotential_regularization(bool is_system_isotropi
             this->eigvalkqStack_.col(i) = auxEigVal;
             this->eigveckqStack_.slice(i) = auxEigvec;
         }
-        std::cout << "done, finishing computing the regularization... " << std::flush;
 
-        std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(null_vector, null_vector, q0_perpendicular);
 
-        double potentialg = coulomb_2D_FT(null_vector + q0_perpendicular); // coulombFT(g, g, q0);
+        #pragma omp parallel for
+        for (uint i = 0; i < nGs*(nGs+1)/2; i++){
 
-        // The screening parameter can be estimated from the head element of the direct dielectric matrix
-        // #pragma omp parallel for
-        // for (uint i = 0; i < nGs * (nGs + 1) / 2; i++)
-        // {
-        //     int g = indecesg.row(i)(0);
-        //     int g2 = indecesg.row(i)(1);
+            int g = indecesg.row(i)(0);
+            int g2 = indecesg.row(i)(1);
 
-        //     arma::rowvec G = ReciprocalVectors.row(g);
-        //     arma::rowvec G2 = ReciprocalVectors.row(g2);
+            arma::rowvec G = ReciprocalVectors.row(g);                
+            arma::rowvec G2 = ReciprocalVectors.row(g2);
 
-        //     std::complex<double> Chi = compute_2D_PolarizabilityMatrixElement(G, G2, q0_perpendicular);
+            std::complex<double> Chi = 0.0;
+            if (is_d_finite) {
+                Chi = compute_quasi2D_PolarizabilityMatrixElement(q0_perpendicular, G, G2, d);
+            }
+            else {
+                Chi = compute_2D_PolarizabilityMatrixElement(q0_perpendicular, G, G2);
+            }
 
-        //     double potentialg = std::sqrt(coulombFT(g, g, q0_perpendicular)) * std::sqrt(coulombFT(g2, g2, q0_perpendicular)); // coulombFT(g, g, q0);
-        //     // double potentialg2 = coulombFT(g2, g2, q0);
-        //     double kroneckerdelta = g == g2 ? 1 : 0;
+            double potentialg = std::sqrt(coulomb_2D_FT(q0_perpendicular + G))*std::sqrt(coulomb_2D_FT(q0_perpendicular + G2));
+            double kroneckerdelta = g == g2? 1 : 0;
+            
+            dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg*Chi;
+            dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg*std::conj(Chi);
+        }
 
-        //     dielectric_matrix.row(g)(g2) = kroneckerdelta - potentialg * Chi;
-        //     dielectric_matrix.row(g2)(g) = kroneckerdelta - potentialg * std::conj(Chi);
-        // }
+        auxvecsol = arma::solve(dielectric_matrix,auxvec);
 
-        // auxvecsol = arma::solve(dielectric_matrix, auxvec); // Inverts the dielectric matrix
+        std::complex<double> head_element = 1.0/auxvecsol.row(0)(0);
 
-        std::complex<double> head_element = 1.0 - potentialg * Chi; // auxvecsol(0, 0);
-
-        Re_head_element_perp = std::real(head_element);
-        this->slope_perp_ = (Re_head_element_perp - 1.) / q0_norm;
-    } else {
-        this->slope_perp_ = this->slope_;
+        Re_head_element_perp = std::real(head_element);       
     }
 
     this->W00_at_0_ = (2 + 0.5*(Re_head_element + Re_head_element_perp - 2)) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
     std::cout << "W00(q = 0) = " << this->W00_at_0_ << " eV." << std::endl;
-    std::cout << "regularization computed with success." << std::endl;
 }
 
 /**
@@ -4610,13 +3476,11 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
 
         uint nGs = system->truncateReciprocalSupercell(this->Gc_exciton_).n_rows;
         
-        if (this->nReciprocalVectors != nGs) {
+        if ((uint) this->nReciprocalVectors != nGs) {
             std::cout << "The number of G vectors to compute the exciton " << this->nReciprocalVectors << " does not match with the number of G vectors in the reciprocal sublattice " << nGs  << " for the cutoff " << this->Gc_exciton_  << " angstrom^{-1}." << std::endl; 
         }
 
-        // if (this->Invepsilonmatrix_.is_empty()) {
-            this->compute_ScreenedPotential_regularization(this->isotropic);
-        // }
+        this->compute_ScreenedPotential_regularization(this->isotropic);
     }
     std::cout << "this->nReciprocalVectors: " << this->nReciprocalVectors << std::endl;
     std::cout << "Initializing Bethe-Salpeter matrix... " << std::flush;
@@ -4671,12 +3535,10 @@ void ExcitonTB::BShamiltonian(const arma::imat& basis){
             }            
         }
         else if (mode == "reciprocalspace"){
-            recpotptr directPotential = selectReciprocalPotential(this->potential_);
             arma::rowvec k = system->kpoints.row(k_index);
             arma::rowvec k2 = system->kpoints.row(k2_index);
             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k + Q, k2 + Q, this->potential_, this->nReciprocalVectors);
             if(this->exchange){
-                recpotptr exchangePotential = selectReciprocalPotential(this->exchangePotential_);
                 X = reciprocalInteractionTerm(coefsK2Q, coefsK2, coefsKQ, coefsK, k2 + Q, k2, k + Q, k, this->exchangePotential_, this->nReciprocalVectors);
             }
         }
@@ -4724,7 +3586,7 @@ ResultTB* ExcitonTB::diagonalizeRaw(std::string method, int nstates){
         std::cout << "Lanczos method..." << std::flush;
 
         arma::cx_vec cx_eigval;
-        //arma::eigs_gen(cx_eigval, eigvec, arma::sp_cx_mat(HBS), nstates, "sr");
+        arma::eigs_gen(cx_eigval, eigvec, arma::sp_cx_mat(HBS), nstates, "sr");
         eigval = arma::real(cx_eigval);
     }
     
@@ -4822,7 +3684,7 @@ cx_vec ExcitonTB::ehPairCoefs(double energy, const vec& gapEnergy, std::string s
     std::cout << "Selected k: " << system->kpoints(closestKindex) << "\t" << closestKindex << std::endl;
     std::cout << "Closest gap energy: " << gapEnergy(closestKindex) << std::endl;
     // By virtue of band symmetry, we expect n < nk/2
-    double dispersion = PI/(16*system->a);
+
     if(side == "left"){
         coefs(closestKindex) = 1.;
     }
@@ -4898,7 +3760,6 @@ double ExcitonTB::fermiGoldenRule(const ExcitonTB& targetExciton,
             else if (mode == "reciprocalspace"){
                 arma::rowvec k = system->kpoints.row(kf_index);
                 arma::rowvec k2 = system->kpoints.row(ki_index);
-                recpotptr potential = selectReciprocalPotential(this->potential_); // Not sure at this point the effect of the chosen potential on this calculation
                 D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
                 X = 0;
             }
@@ -5110,7 +3971,6 @@ double ExcitonTB::edgeFermiGoldenRule(const ExcitonTB& targetExciton,
         }
         else if (mode == "reciprocalspace"){
             arma::rowvec k2 = system->kpoints.row(ki_index);
-            recpotptr potential = selectReciprocalPotential(this->potential_); // Not sure at this point the effect of the chosen potential on this calculation
             D = reciprocalInteractionTerm(coefsK, coefsK2, coefsKQ, coefsK2Q, k, k2, k, k2, this->potential_, this->nReciprocalVectors);
             X = 0;
         }
@@ -5183,13 +4043,8 @@ void ExcitonTB::printInformation(){
             }
 
             if (this->mode == "realspace"){
-                arma::rowvec vector(this->trunLattice_.row(this->Gs_(0)));
-                arma::rowvec vectorprime(this->trunLattice_.row(this->Gs_(1)));
-
-                std::cout << std::left << std::setw(0) << "Selected R(" << std::setw(0) << this->Gs_(0) << "): " << vector(0) << " " << vector(1) << " " << vector(2) << std::endl;
-                std::cout << std::left << std::setw(0) << "Selected R'(" << std::setw(0) << this->Gs_(1) << "): " << vectorprime(0) << " " << vectorprime(1) << " " << vectorprime(2) << std::endl;
-                std::cout << std::left << std::setw(0) << "Selected t_i = " << std::setw(0) << system->motif.row(ts(0)).subvec(0,2) << std::endl;
-                std::cout << std::left << std::setw(0) << "Selected t_j = " << std::setw(0) << system->motif.row(ts(1)).subvec(0,2) << std::endl;
+                std::cout << "Numerical screening in real space not implemented. Terminating." << std::endl;
+                exit(0);
             }
            
         } else if (this->function_ == "none" || this->function_ == "inversedielectric") {
@@ -5203,8 +4058,7 @@ void ExcitonTB::printInformation(){
  * @return void 
  */
 void ExcitonTB::printReciprocalLattice() {
-    double cutoff = this->Gcutoff_;
-    uint nGs_to_print = this->trunreciprocalLattice_.n_rows;
+    double cutoff = this->Gc_exciton;
     uint nGs_total = this->trunreciprocalLattice_.n_rows;
 
     std::cout << "Reciprocal lattice vectors within cutoff |G| <= " << cutoff << " (angstrom^-1):" << std::endl;
@@ -5267,7 +4121,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) {
 
     if (this->mode == "reciprocalspace"){
 
-        uint ngs = this->epsilonmatrix_.slice(0).n_rows;         // The number of G vectors can in general be different from the number of generated G vectors
+        uint ngs = this->epsilonmatrix_.slice(0).n_rows; // The number of G vectors can in general be different from the number of generated G vectors
         uint nqs = this->epsilonmatrix_.n_slices; // The number of q points can in general be different from the size of the BZ mesh 
 
         if (ngs == 0 || nqs == 0){
@@ -5298,9 +4152,7 @@ void ExcitonTB::writeInverseDielectricMatrix(std::string filename_dielectric) {
                 }
                 fprintf(textfile, "\n");
             }
-        }
-
-        fprintf(textfile, "%11.7lf %11.7lf %11.7lf %11.7lf %11.7lf", this->q0_(0), this->q0_(1), this->q0_(2), this->slope_, this->slope_perp_);
+        }        
     }
     
     fclose(textfile);
@@ -5388,7 +4240,7 @@ void ExcitonTB::writePolarizabilityMatrix(std::string filename_dielectric) const
     fclose(textfile);
 }
 
-/* Method to read the inverse of the dielectric matrix from a pre-existent file.
+/* Method to read the inverse of the dielectric matrix from a pre-existent one stored in a file.
  * @return void 
  */
 void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
@@ -5406,13 +4258,8 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
     std::cout << "Reading inverse of dielectric matrix from file: " << filename_screening << std::endl;
 
-    if (this->mode == "realspace"){
-        uint n_atoms = this->system->motif.n_rows;
-        uint n_R_vectors = this->system->bravaisLattice.n_rows;
-        uint n_positions = n_R_vectors*n_atoms - 1;
-
-        std::cout << "Exciton computed with real space screening not implemented yet. Terminating." << std::endl;
-
+    if (this->mode == "realspace"){        
+        std::cout << "Exciton computed with real space screening not implemented. Terminating." << std::endl;
         exit(0);
     }
 
@@ -5447,9 +4294,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
 
         file.clear(); // clear the error state
 
-        int total_lines = line_counter;
-
-        int read_nqs = (line_counter-1)/ngs; // Last line stores info for W_00(0) regularization
+        int read_nqs = line_counter/ngs;
 
         if (nqs != read_nqs) {
             std::cout << "The number of k points read from data file  (" + std::to_string(read_nqs) + ")  and from the exciton configuration file (" + std::to_string(nqs) + ") do not coincide!\n The exciton can not be computed with the provided screening data file. Terminating." << std::endl;
@@ -5471,129 +4316,7 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
             double Re_part = 0;
             double Im_part = 0;
             double aux;
-            column_counter = 0;
-            int pair_counter = 0;
-
-            if (line_counter + 1 == total_lines) {
-                column_counter = 0;
-                while(ss >> aux) {   
-                    if (column_counter == 0) {
-                        this->q0_(0) = aux;
-                    } else if (column_counter == 1) {
-                        this->q0_(1) = aux;
-                    } else if (column_counter == 2) {
-                        this->q0_(2) = aux;
-                    } else if (column_counter == 3) {
-                        this->slope_ = aux;
-                    } else if (column_counter == 4) {
-                        this->slope_perp_= aux;
-                    }
-                    column_counter++;
-                }
-                break;
-            }
-
-            while(ss >> aux) {   
-                if (column_counter%2 == 0) {
-                    Re_part = aux;
-                } else {
-                    Im_part = aux;
-                    this->Invepsilonmatrix_.slice(k_counter)(line_counter%ngs, (column_counter - 1)/2) = Re_part + imag*Im_part;
-                }
-                column_counter++;
-            }
-
-            //std::cout << "\n";
-            ++line_counter;
-            if (line_counter%ngs == 0){
-                k_counter++;
-            } 
-        }
-
-        double q0_norm = arma::norm(this->q0_);
-        this->W00_at_0_ = (2 + 0.5*(this->slope_ + this->slope_perp_)*q0_norm) * ec * 1E10 / (2 * eps0 * q0_norm * system->unitCellArea);
-    }
-
-    std::cout << "Inverse of dielectric matrix read from file with success." << std::endl;
-
-    file.close();
-}
-
-
-/* Method to read the inverse of the dielectric matrix from a pre-existent file.
- * @return void 
- */
-void ExcitonTB::read_single_InverseDielectricMatrix(std::string filename_screening) {
-
-    std::complex<double> imag(0,1);
-    
-    std::ifstream file;
-
-    file.open(filename_screening);
-
-    if (!file.is_open()){
-        std::cout << "File for inverse of the dielectric matrix failed to open or does not exist. Terminating." << std::endl;
-        exit(0);
-    }
-
-    std::cout << "Reading inverse of dielectric matrix from file: " << filename_screening << std::endl;
-
-    if (this->mode == "reciprocalspace"){
-
-        uint ngs = this->trunreciprocalLattice_.n_rows;
-        uint nqs = 1;
-        int line_counter = 0;
-        uint column_counter = 0;
-
-        std::string line;
-
-        std::string fl;
-        std::getline(file, fl); // get first line
-
-        std::istringstream iss(fl);
-        double m_element;
-        while(iss >> m_element) {
-            column_counter++;
-        }
-
-        if (ngs != column_counter/2){
-            std::cout << "The number of reciprocal vectors read from file and from the configuration do not coincide! Terminating." << std::endl;
-            exit(0); 
-        }
-
-        file.seekg(0); // go back to the beginning of the file
-
-        while (std::getline(file, line)) {
-            ++line_counter;
-        }
-
-        file.clear(); // clear the error state
-
-        int total_lines = line_counter;
-
-        if (ngs != line_counter){
-            std::cout << "The number of lines read from file and the number of reciprocal vectorsfrom the configuration do not coincide! Terminating." << std::endl;
-            exit(0); 
-        }
-
-
-        file.seekg(0);
-
-        if (this->Invepsilonmatrix_.is_empty()) {
-            this->Invepsilonmatrix_ = arma::cx_cube(ngs,ngs,nqs,arma::fill::zeros);
-        } else {
-        
-            this->Invepsilonmatrix_.reshape(ngs,ngs,nqs);
-        }
-
-        line_counter = 0;
-        while (std::getline(file, line)) {
-            std::istringstream ss(line);
-            double Re_part = 0;
-            double Im_part = 0;
-            double aux;
-            column_counter = 0;
-            int pair_counter = 0;
+            column_counter = 0;           
 
             while(ss >> aux) {   
                 if (column_counter%2 == 0) {
@@ -5605,8 +4328,10 @@ void ExcitonTB::read_single_InverseDielectricMatrix(std::string filename_screeni
                 column_counter++;
             }
 
-            //std::cout << "\n";
             ++line_counter;
+            if (line_counter%ngs == 0){
+                k_counter++;
+            } 
         }        
     }
 

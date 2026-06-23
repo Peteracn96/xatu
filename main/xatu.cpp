@@ -25,6 +25,7 @@ int main(int argc, char* argv[]){
     TCLAP::ValueArg<int>    precisionArg("p", "precision", "Desired energy precision. Used to compute degeneracies.", false, 6, "No. decimals", cmd);
     TCLAP::SwitchArg        spinArg("s", "spin", "Compute exciton spin and write it to file.", cmd, false);
     TCLAP::ValueArg<int>    dftArg("d", "dft", "Indicates that the system file is a .outp CRYSTAL file.", false, -1, "No. Fock matrices", cmd);
+    TCLAP::ValueArg<int>    w90Arg("w", "w90", "Indicates that the system file is a tb.dat Wannier90 file.", false, -1, "No. electrons  ", cmd);
     TCLAP::SwitchArg        absorptionArg("a", "absorption", "Computes the absorption spectrum.", cmd, false);
     TCLAP::ValueArg<std::string> formatArg("f", "format", "Format of the input system file.", false, "model", "model or hdf5", cmd);
 
@@ -40,7 +41,7 @@ int main(int argc, char* argv[]){
     std::vector<std::string> methods = {"diag", "davidson", "sparse"};
     TCLAP::ValuesConstraint<std::string> allowedMethods(methods);
     TCLAP::ValueArg<std::string> methodArg("m", "method", "Method to solve the Bethe-Salpeter equation.", false, "diag", &allowedMethods, cmd);
-    TCLAP::ValueArg<std::string> bandsArg("b", "bands", "Computes the bands of the system on the specified kpoints.", false, "dummy.txt", "Filename", cmd);
+    TCLAP::ValueArg<std::string> bandsArg("b", "bands", "Computes the bands of the system on the specified kpoints.", false, "kpoints.txt", "Filename", cmd);
     TCLAP::ValueArg<std::string> screeningArg("z", "screening", "Provides input parameters for computing the screening.", false, "model.screening", "Filename", cmd);
     TCLAP::UnlabeledValueArg<std::string> systemArg("systemfile", "System file", true, "system.txt", "filename", cmd);
     TCLAP::UnlabeledValueArg<std::string> excitonArg("excitonfile", "Exciton file", false, "exciton.txt", "filename", cmd);
@@ -49,6 +50,7 @@ int main(int argc, char* argv[]){
     // Extract information from parsed CLI options
     int nstates        = statesArg.getValue();
     int ncells         = dftArg.getValue();
+    int electronNum    = w90Arg.getValue();
     int decimals       = precisionArg.getValue();
     std::string method = methodArg.getValue();
     std::vector<int> rsInfo = realspaceArg.getValue();
@@ -76,6 +78,10 @@ int main(int argc, char* argv[]){
 
     if (dftArg.isSet()){
         systemConfig.reset(new xatu::CRYSTALConfiguration(systemfile, ncells));
+    } else if (w90Arg.isSet()){
+        cout << "Parsing w90 file..." << std::endl;
+        systemConfig.reset(new xatu::Wannier90Configuration(systemfile, electronNum));
+        cout << "Parsed Wannier90 _tb.out" << std::endl;
     }
     else{
         if (format == "hdf5"){
@@ -158,11 +164,13 @@ int main(int argc, char* argv[]){
 
     bulkExciton.initializeHamiltonian();
 
-    // If screening flag is present, computes the static dielectric function and exits.
+    // If screening flag is present, computes the static dielectric function first
     if(screeningArg.isSet()){
 
         if (screeningConfig->screeningInfo.function == "dielectric") {
-            bulkExciton.computesingleDielectricFunctionMatrixElement();
+            
+            std::complex<double> epsilon = bulkExciton.computesingleDielectricFunctionMatrixElement();            
+            
             return 0;
         } else if (screeningConfig->screeningInfo.function == "polarizability") {
 
@@ -184,7 +192,7 @@ int main(int argc, char* argv[]){
 
         } else if (screeningConfig->screeningInfo.function == "exciton"){
             
-            std::cout << "Proceeding with computation of the permittivity matrix...\n" << std::endl;
+            std::cout << "Proceeding with computation of the permittivity matrix..." << std::endl;
 
             if (bulkExciton.mode == "reciprocalspace")
             {
@@ -197,8 +205,8 @@ int main(int argc, char* argv[]){
             
             std::string filename_dielectric = excitonConfig->excitonInfo.label;
 
-            bulkExciton.writeInverseDielectricMatrix(filename_dielectric + "_invepsilon.dat");        
-        
+            bulkExciton.writeInverseDielectricMatrix(filename_dielectric + "_invepsilon.dat");
+
         } else {
             std::cout << "\nThe value '" + screeningConfig->screeningInfo.function + "' assigned to 'function' not recognized. Terminating program.\n" << std::endl;
             return 0;
@@ -293,15 +301,6 @@ int main(int argc, char* argv[]){
         std::cout << "Writing excitons spin fo file: " << filename_spin << std::endl;
         results->writeSpin(nstates, textfile_spin);
     }
-
-    // bool writeInverseDielectricMatrix = screeningArg.isSet();
-    // if(writeInverseDielectricMatrix){
-        // std::string filename_dielectric = output + ".dat";
-        // FILE* textfile_dielectric = fopen(filename_dielectric.c_str(), "w");
-
-        // std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
-        // bulkExciton.writeInverseDielectricMatrix(textfile_dielectric);
-    // }
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);

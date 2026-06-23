@@ -34,7 +34,11 @@ class ExcitonConfiguration : public ConfigurationBase{
         arma::vec eps = {};
         // Screening length
         double r0;
-        // Thickness of layer
+        // Screening length
+        double ry;
+        // Screening length
+        double rz;
+        // Thickness of the 2D system
         double d;
         // Calculation mode (either 'realspace' or 'reciprocalspace')
         std::string mode = "realspace";

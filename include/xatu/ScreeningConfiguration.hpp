@@ -41,12 +41,10 @@ class ScreeningConfiguration : public ConfigurationBase{
         bool spin = "true";
         // Number of k points in each direction for the auxiliary coarser BZ mesh
         int ncell_aux = 17;
-        // Percentage of norm of k0, where k0 is the k point in the BZ mesh closer to the origin, for regularization
-        // double percentage = 0.5;
         // Thickness of the 2D system
-        double d = 1.0;
+        double d = 0.0;
         // Is system isotropic
-        bool isotropic = true;
+        bool isotropic = false;
     };
 
     public:

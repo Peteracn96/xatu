@@ -5,20 +5,7 @@
 
 using namespace std::chrono;
 
-
-double my_coulomb(double r) {
-    
-    double a = 0.000001;
-    double v_c_regularization =ec/(4E-10*PI*eps0*a);
-    
-    if (r < 1E-7){
-        //return 0;
-        return v_c_regularization;
-    }
-
-    return ec/(4E-10*PI*eps0*r);    
-    //return 1/r;
-}
+// run command: ./read_screening ../examples/material_models/DFT/hBN_base_HSE06.outp ../examples/excitonconfig/hBN_reciprocal.txt ../examples/screeningconfig/hBN_DFT_screening.txt <name_of_inv_dielectric_matrix_file>.dat
 
 int main(int argc, char* argv[]){
 
@@ -26,7 +13,7 @@ int main(int argc, char* argv[]){
     int n_args = 5;
 
     if (argc != n_args){
-		throw std::invalid_argument("Error: Two input files are expected");
+		throw std::invalid_argument("Error: Four input files are expected");
 	}
     else if (argc < n_args){
         throw std::invalid_argument("Error: At least two input file are required (system config, exciton config, screening config and screening data file).");
@@ -58,7 +45,6 @@ int main(int argc, char* argv[]){
 
 
     xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig, *screeningConfig);
-    // xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *excitonConfig);
 
     exciton.setMode(excitonConfig->excitonInfo.mode);
     
