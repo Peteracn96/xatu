@@ -3198,7 +3198,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, co
             for (uint iw = 0; iw < Nws; iw++){
                 double w = w_vec(iw);
 
-                //#pragma omp parallel for 
+                #pragma omp parallel for 
                 for (uint ig = 0; ig < nGs*(nGs+1)/2; ig++){
                     uint g  = indecesg.row(ig)(0);
                     uint g2 = indecesg.row(ig)(1);
@@ -3227,6 +3227,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, co
                 fprintf(textfile, "%11.7lf%11.7lf", real(epsilon), imag(epsilon));
             }
             fprintf(textfile, "\n");
+            std::cout << "q point " << iq + 1 << " of " << Nqpoints << ", " << std::endl;
         }
 
         std::cout << "Done.\n" << std::endl;
