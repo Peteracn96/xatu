@@ -56,6 +56,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Internals for dielectric function
         double FermiEnergy_ = 0.0;
         double temperature_ = 0.0;
+        double eta_ = 1E-3;
         std::string function_;
         arma::ivec Gs_ = {0, 0};
         arma::rowvec q_ = {0.2, 0., 0.};
@@ -119,6 +120,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         uint& g_s = g_s_;
         // Returns thickness
         double& d = d_;
+        double& eta = eta_;
         
         // Return momentum to compute the dielectric matrix at
         const arma::rowvec& q = q_;
@@ -182,6 +184,9 @@ class ExcitonTB : public Exciton<SystemTB> {
         void setq_points_list(arma::mat);
         void setPercentage(double);
         void setThickness(double);
+        void setTemperature(double);
+        void setFermiEnergy(double);
+        void setBroadening(double);
 
         // Getters
         int getNGs() const;

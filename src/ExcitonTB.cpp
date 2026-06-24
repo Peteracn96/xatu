@@ -779,6 +779,33 @@ void ExcitonTB::setThickness(double d){
     this->d_ = d;
 }
 
+/**
+ * Sets the temperature
+ * @param temperature Temperature
+ * @return void
+*/
+void ExcitonTB::setTemperature(double temperature){
+    this->temperature_ = temperature;
+}
+
+/**
+ * Sets the FermiEnergy
+ * @param fermiEnergy Fermi energy
+ * @return void
+*/
+void ExcitonTB::setFermiEnergy(double fermiEnergy){
+    this->FermiEnergy_ = fermiEnergy;
+}
+
+/**
+ * Sets the broadening parameter eta=0^+
+ * @param eta Broadening parameter
+ * @return void
+*/
+void ExcitonTB::setBroadening(double eta){
+    this->eta_ = eta;
+}
+
 /* ------------------------------ Getters ------------------------------ */
 int ExcitonTB::getNGs() const {
 
