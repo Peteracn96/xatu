@@ -120,6 +120,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         uint& g_s = g_s_;
         // Returns thickness
         double& d = d_;
+        // Returns broadening parameter
         double& eta = eta_;
         
         // Return momentum to compute the dielectric matrix at
@@ -251,6 +252,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         std::complex<double> compute_2D_PolarizabilityMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, const double);        
         std::complex<double> compute_2D_DielectricMatrixElement(const arma::rowvec&, const arma::rowvec&, const arma::rowvec&);
         std::complex<double> compute_quasi2D_DielectricMatrixElement(const arma::rowvec &G, const arma::rowvec &G2, const arma::rowvec &q, const double);
+        std::complex<double> compute_quasi2D_DielectricMatrixElement(const double, const arma::rowvec&, const arma::rowvec&, const arma::rowvec&, const double, const float);
 
         public:
         // Static dielectric function, BSE initialization and energies
@@ -262,6 +264,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         void PolarizabilityMesh();
         void compute_2D_DielectricMatrix();
         void compute_2D_DielectricMatrix(std::string);
+        void compute_2D_DielectricMatrix(const double, const double, const uint, const arma::mat&, const std::string);
         void augment_2D_DielectricMatrix(double);
         void compute_ScreenedPotential_regularization(bool);
         void compute_2D_PolarizabilityMatrix(std::string);

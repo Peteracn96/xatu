@@ -1967,9 +1967,9 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
         exit(0);
     }
 
-    for (int n = 0; n < nbands; n++){        
+    for (uint n = 0; n < nbands; n++){        
 
-        for (int n2 = nvbands; n2 <= upperindexcband; n2++){
+        for (uint n2 = 0; n2 <= nbands; n2++){
 
             for (uint ik = 0; ik < nk; ik++){
 
@@ -1999,6 +1999,26 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     }
 
     return g_s*term_aux/((std::complex<double>)nk);
+}
+
+/**
+ * Method to compute the (G,G') matrix element of the dynamic Q2D polarizability at the specified momentum q.
+ * @details The Q2D polarizability computed has meaning only when multiplied by the Coulomb potential
+ * @param w Frequency w (eV)
+ * @param q Momentum vector q
+ * @param G Reciprocal lattice vector G
+ * @param G2 Reciprocal lattice vector G2
+ * @param d Thickness of the 2D system
+ * @param eta Broadening parameter (eV)
+ * @return Polarizability
+*/
+inline std::complex<double> ExcitonTB::compute_quasi2D_DielectricMatrixElement(const double w, const arma::rowvec& q, const arma::rowvec& G, const arma::rowvec& G2, const double d, const float eta) {
+
+    double kroneckerdelta = arma::norm(G - G2) < 10E-4 ? 1 : 0;
+
+    std::complex<double> epsilon = kroneckerdelta - std::sqrt(coulomb_2D_FT(q + G))*compute_quasi2D_PolarizabilityMatrixElement(w, q, G, G2, d, eta)*std::sqrt(coulomb_2D_FT(q + G2));
+
+    return epsilon;
 }
 
 /**
@@ -2826,7 +2846,7 @@ void ExcitonTB::augment_2D_DielectricMatrix(double Gcutoff){
 }
 
 /**
- * Method to compute the strictly 2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
+ * Method to compute the 2D/Q2D static polarizability matrix and dielectric matrix in a set of user specified q points. More useful for isotropic systems.
  * @return void
 */
 void ExcitonTB::compute_2D_DielectricMatrix(std::string kpointsfile){
@@ -3090,6 +3110,151 @@ void ExcitonTB::compute_2D_PolarizabilityMatrix(std::string kpointsfile)
     auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
 
     std::cout << "Done in " << duration_dielectric_matrix_mesh.count() / 1000.0 << " s." << std::endl;
+}
+
+/**
+ * Method to compute the 2D/Q2D dynamic dielectric matrix in a set of user specified q points and in a grid of frequencies. More useful for isotropic systems.
+ * @return void
+*/
+void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, const uint Nws, const arma::mat& q_points, const std::string filename_dielectric){
+
+    auto start = high_resolution_clock::now();
+
+    if (this->mode == "realspace"){
+
+        std::cout << "Numerical screening in real space not implemented. Terminating." << std::endl;
+
+        std::exit(0);
+    }
+    
+    if (this->mode == "reciprocalspace"){
+
+        double d = this->d;
+        bool is_d_finite = std::abs(d) > 1E-4;
+        std::complex<double> imag_eta(0.0,this->eta);
+        
+        uint Nqpoints = q_points.n_rows;
+        setq_points_list(q_points);
+        
+
+        FILE* textfile = fopen(filename_dielectric.c_str(), "w");
+
+        if (textfile == NULL){
+            std::cout << "File for inverse dielectric matrix failed to open. Exiting" << std::endl;
+            exit(0);
+        }
+
+        std::cout << "Writing inverse of dielectric matrix fo file: " << filename_dielectric << std::endl;
+  
+        std::cout << "Computing 2D dielectric matrix in the specified q points and for the speficied frequencies... \n" << std::flush;
+
+        uint nk = this->nk_aux;
+        uint basisdim = system->basisdim;
+
+        arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
+        uint nGs = ReciprocalVectors.n_rows;
+
+        arma::vec w_vec = arma::linspace(wi, wf, Nws);
+
+        for (uint iw = 0; iw < Nws; iw++){
+            double w = w_vec(iw);            
+            fprintf(textfile, "%11.7lf", w);
+        }
+
+        fprintf(textfile, "\n");
+
+        // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
+        if (this->Chimatrix_.is_empty()) {
+            this->Chimatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
+        } else {
+            this->Chimatrix_.reshape(nGs,nGs,Nqpoints);
+        }
+
+        if (this->epsilonmatrix_.is_empty()) {
+            this->epsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
+        } else {
+            this->epsilonmatrix_.reshape(nGs,nGs,Nqpoints);
+        }
+
+        arma::cx_cube epsilonmatrix(Nqpoints,nGs,nGs,arma::fill::zeros);
+        arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
+
+        arma::imat indecesqg(Nqpoints*nGs*(nGs+1)/2,3,arma::fill::zeros);
+
+        arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
+
+        // Generates all the combinations of (G,G') indices
+        uint i = 0;
+        for (uint g = 0; g < nGs; g++){
+            for (uint g2 = g; g2 < nGs; g2++){
+                indecesqg.row(i)(0) = g;
+                indecesqg.row(i)(1) = g2;
+                i++;
+            }
+        }
+
+        this->eigveckqStack_ = arma::cx_cube(basisdim, basisdim, nk);
+        this->eigvalkqStack_ = arma::mat(basisdim, nk);
+        vec auxEigVal(basisdim);
+        arma::cx_mat auxEigvec(basisdim, basisdim);
+
+        for (uint iq = 0; iq < Nqpoints; iq++){
+
+            arma::rowvec q = q_points.row(iq);
+
+            for (uint ik = 0; ik < nk; ik++){
+                arma::rowvec kq = this->kpoints_aux.row(ik) + q;
+                system->solveBands(kq, auxEigVal, auxEigvec);
+
+                auxEigvec = fixGlobalPhase(auxEigvec);
+                this->eigvalkqStack_.col(ik) = auxEigVal;
+                this->eigveckqStack_.slice(ik) = auxEigvec;
+            }
+
+            fprintf(textfile, "%11.7lf%11.7lf%11.7lf", q(0), q(1), q(2));
+
+            for (uint iw = 0; iw < Nws; iw++){
+                double w = w_vec(iw);
+
+                #pragma omp parallel for 
+                for (uint ig = 0; ig < nGs*(nGs+1)/2; ig++){
+                    uint g  = indecesqg.row(ig)(0);
+                    uint g2 = indecesqg.row(ig)(1);
+
+                    arma::rowvec G = ReciprocalVectors.row(g);                
+                    arma::rowvec G2 = ReciprocalVectors.row(g2);
+
+                    std::complex<double> epsilon = 0.0;
+
+                    if (is_d_finite) {
+                        epsilon = compute_quasi2D_DielectricMatrixElement(w, q, G, G2, d, eta);
+                    }
+                    else {
+                        epsilon = compute_quasi2D_DielectricMatrixElement(w, q, G, G2, 1E-4, eta);
+                    }                                                    
+
+                    this->epsilonmatrix_.slice(iq).row(g)(g2) = epsilon;
+                    this->epsilonmatrix_.slice(iq).row(g2)(g) = std::conj(epsilon);
+                }
+
+                arma::cx_mat inv_epsilon = arma::inv(this->epsilonmatrix_.slice(iq));
+                std::complex<double> inv_epsilon_00 = inv_epsilon.at(0,0);           
+
+                std::complex<double> epsilon = 1.0/inv_epsilon_00;
+
+                fprintf(textfile, "%11.7lf%11.7lf", real(epsilon), imag(epsilon));
+            }
+            fprintf(textfile, "\n");
+        }
+
+        std::cout << "Done.\n" << std::endl;
+        fclose(textfile);
+    }
+
+    auto stop_dielectric_matrix_mesh = high_resolution_clock::now();
+    auto duration_dielectric_matrix_mesh = duration_cast<milliseconds>(stop_dielectric_matrix_mesh - start);
+
+    std::cout << "Done in " << duration_dielectric_matrix_mesh.count()/1000.0  << " s." << std::endl << std::flush;
 }
 
 /**
