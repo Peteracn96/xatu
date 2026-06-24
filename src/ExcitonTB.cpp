@@ -1946,13 +1946,6 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
     double T = this->temperature;
     double miu = this->FermiEnergy;
 
-    int nvbands = system->fermiLevel + 1;
-
-    int nvbandsincluded = this->nvalencebands_;
-    int ncbandsincluded = this->nconductionbands_;
-
-    int upperindexcband = nvbands + ncbandsincluded - 1;
-
     arma::cx_vec coefskq, coefsk;
 
     std::complex<double> term_aux = 0.;
@@ -4517,7 +4510,6 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
         int nqs = system->nk;
         int line_counter = 0;
         uint column_counter = 0;
-        int k_counter = 0;
         std::string line;
 
         std::string fl;
@@ -4577,9 +4569,6 @@ void ExcitonTB::readInverseDielectricMatrix(std::string filename_screening) {
             }
 
             ++line_counter;
-            if (line_counter%ngs == 0){
-                k_counter++;
-            } 
         }        
     }
 
