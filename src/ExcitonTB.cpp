@@ -1962,7 +1962,7 @@ inline std::complex<double> ExcitonTB::compute_quasi2D_PolarizabilityMatrixEleme
 
     for (uint n = 0; n < nbands; n++){        
 
-        for (uint n2 = 0; n2 <= nbands; n2++){
+        for (uint n2 = 0; n2 < nbands; n2++){
 
             for (uint ik = 0; ik < nk; ik++){
 
@@ -3146,33 +3146,22 @@ void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, co
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
         uint nGs = ReciprocalVectors.n_rows;
+        printReciprocalLattice();
 
-        arma::vec w_vec = arma::linspace(wi, wf, Nws);
+        arma::vec w_vec(Nws,arma::fill::zeros);
 
         for (uint iw = 0; iw < Nws; iw++){
-            double w = w_vec(iw);            
+            double w = wi + iw*(wf-wi)/(Nws-1);
+            w_vec(iw) = w;          
             fprintf(textfile, "%11.7lf", w);
         }
 
         fprintf(textfile, "\n");
 
         // In case the polarizability/dielectric matrix have been computed before with another routine, reshape to account for a different number of k points
-        if (this->Chimatrix_.is_empty()) {
-            this->Chimatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
-        } else {
-            this->Chimatrix_.reshape(nGs,nGs,Nqpoints);
-        }
-
-        if (this->epsilonmatrix_.is_empty()) {
-            this->epsilonmatrix_ = arma::cx_cube(nGs,nGs,Nqpoints,arma::fill::zeros);
-        } else {
-            this->epsilonmatrix_.reshape(nGs,nGs,Nqpoints);
-        }
-
-        arma::cx_cube epsilonmatrix(Nqpoints,nGs,nGs,arma::fill::zeros);
+    
+        arma::cx_mat epsilonmatrix(nGs,nGs,arma::fill::zeros);
         arma::cx_mat auxvec(nGs,nGs,arma::fill::eye);
-
-        arma::imat indecesqg(Nqpoints*nGs*(nGs+1)/2,3,arma::fill::zeros);
 
         arma::imat indecesg(nGs*(nGs+1)/2,2,arma::fill::zeros);
 
@@ -3180,8 +3169,8 @@ void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, co
         uint i = 0;
         for (uint g = 0; g < nGs; g++){
             for (uint g2 = g; g2 < nGs; g2++){
-                indecesqg.row(i)(0) = g;
-                indecesqg.row(i)(1) = g2;
+                indecesg.row(i)(0) = g;
+                indecesg.row(i)(1) = g2;
                 i++;
             }
         }
@@ -3209,10 +3198,10 @@ void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, co
             for (uint iw = 0; iw < Nws; iw++){
                 double w = w_vec(iw);
 
-                #pragma omp parallel for 
+                //#pragma omp parallel for 
                 for (uint ig = 0; ig < nGs*(nGs+1)/2; ig++){
-                    uint g  = indecesqg.row(ig)(0);
-                    uint g2 = indecesqg.row(ig)(1);
+                    uint g  = indecesg.row(ig)(0);
+                    uint g2 = indecesg.row(ig)(1);
 
                     arma::rowvec G = ReciprocalVectors.row(g);                
                     arma::rowvec G2 = ReciprocalVectors.row(g2);
@@ -3226,11 +3215,11 @@ void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, co
                         epsilon = compute_quasi2D_DielectricMatrixElement(w, q, G, G2, 1E-4, eta);
                     }                                                    
 
-                    this->epsilonmatrix_.slice(iq).row(g)(g2) = epsilon;
-                    this->epsilonmatrix_.slice(iq).row(g2)(g) = std::conj(epsilon);
+                    epsilonmatrix.row(g)(g2) = epsilon;
+                    epsilonmatrix.row(g2)(g) = std::conj(epsilon);
                 }
 
-                arma::cx_mat inv_epsilon = arma::inv(this->epsilonmatrix_.slice(iq));
+                arma::cx_mat inv_epsilon = arma::inv(epsilonmatrix);
                 std::complex<double> inv_epsilon_00 = inv_epsilon.at(0,0);           
 
                 std::complex<double> epsilon = 1.0/inv_epsilon_00;
