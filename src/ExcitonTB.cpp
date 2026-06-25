@@ -3224,7 +3224,7 @@ void ExcitonTB::compute_2D_DielectricMatrix(const double wi, const double wf, co
 
                 std::complex<double> epsilon = 1.0/inv_epsilon_00;
 
-                fprintf(textfile, "%11.7lf%11.7lf", real(epsilon), imag(epsilon));
+                fprintf(textfile, "%11.7lf %11.7lf ", real(epsilon), imag(epsilon));
             }
             fprintf(textfile, "\n");
             std::cout << "q point " << iq + 1 << " of " << Nqpoints << ", " << std::endl;
