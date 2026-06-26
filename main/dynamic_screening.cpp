@@ -74,11 +74,11 @@ int main(int argc, char* argv[]){
     }
 
     uint ncell = 20;
-    uint ncell_aux = 15;
+    uint ncell_aux = 700;
     uint nvbands = 1;
     uint ncbands = 1;
-    double Gcutoff = 3.0;
-    double d = 3.35;
+    double Gcutoff = 0.1;
+    double d = 3.22;
     bool spinfull = false;
     bool isotropic = true;
 
@@ -104,7 +104,8 @@ int main(int argc, char* argv[]){
     exciton.brillouinZoneMesh(exciton.ncell);
     exciton.initializeHamiltonian();    
 
-    exciton.compute_2D_DielectricMatrix(wi, wf, Nws, q_points, output_file);
+    // exciton.compute_2D_DielectricMatrix(wi, wf, Nws, q_points, output_file);
+    exciton.compute_2D_Polarizability(wi, wf, Nws, 0, 0, q_points, output_file);
 
     return 0;
 }
