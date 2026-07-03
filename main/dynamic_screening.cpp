@@ -74,16 +74,11 @@ int main(int argc, char* argv[]){
     }
 
     uint ncell = 20;
-    uint ncell_aux = 700;
-    uint nvbands = 1;
-    uint ncbands = 1;
+    arma::ivec bands = arma::ivec(2,arma::fill::zeros);
     double Gcutoff = 0.1;
-    double d = 3.22;
-    bool spinfull = false;
-    bool isotropic = true;
 
     screeningConfig.reset(new xatu::ScreeningConfiguration(screeningfile));
-    xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, ncell, 1, 0, {1., 1., 0.5}, {0., 0., 0.}, ncell_aux, nvbands, ncbands, Gcutoff, Gcutoff, d, spinfull, isotropic);
+    xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, *screeningConfig, ncell, bands, {1., 1., 0.5}, {0., 0., 0.}, Gcutoff);
     
     exciton.setMode("reciprocalspace");
     exciton.setTemperature(T);
@@ -104,7 +99,7 @@ int main(int argc, char* argv[]){
     exciton.brillouinZoneMesh(exciton.ncell);
     exciton.initializeHamiltonian();    
 
-    // exciton.compute_2D_DielectricMatrix(wi, wf, Nws, q_points, output_file);
+    //exciton.compute_2D_DielectricMatrix(wi, wf, Nws, q_points, output_file);
     exciton.compute_2D_Polarizability(wi, wf, Nws, 0, 0, q_points, output_file);
 
     return 0;

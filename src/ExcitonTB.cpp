@@ -342,6 +342,29 @@ ExcitonTB::ExcitonTB(const SystemConfiguration& config, int ncell, const arma::i
     this->bandList_ = arma::conv_to<arma::uvec>::from(arma::join_cols(valenceBands, conductionBands));
 };
 
+/**
+ * Exciton constructor from a SystemConfiguration object and a vector with the bands that form
+ * the exciton, as well as the other parameters.
+ * @param system_cfg SystemConfiguration object from config file.
+ * @param screening_cfg ScreeningConfiguration object from config file.
+ * @param ncell Number of unit cells along each axis.
+ * @param nbands Number of bands for exciton.
+ * @param parameters Vector with dielectric constants and screening length.
+ * @param Q Center-of-mass momentum.
+ * @param Gc_exciton Cutoff for G vectors in exciton calculation.
+ */
+ExcitonTB::ExcitonTB(const SystemConfiguration& system_cfg, const ScreeningConfiguration& screening_cfg, uint ncell, arma::ivec& bands,
+                  const arma::rowvec& parameters, const arma::rowvec& Q, const double Gc_exciton) {
+
+    system_.reset(new SystemTB(system_cfg));
+
+    this->initializeScreeningAttributes(screening_cfg);
+    this->setMode("reciprocalspace");
+
+    initializeExcitonAttributes(ncell, bands, parameters, Q);
+    this->Gc_exciton_ = Gc_exciton;
+}
+
 
 /**
  * Exciton constructor from a SystemConfiguration object. One specifies the number of valence and conduction
@@ -3341,13 +3364,13 @@ void ExcitonTB::compute_2D_Polarizability(const double wi, const double wf, cons
 
         std::cout << "Writing polarizability matrix element to file: " << filename_dielectric << std::endl;
   
-        std::cout << "Computing 2Dp olarizability matrix in the specified q points and for the speficied frequencies... \n" << std::flush;
+        std::cout << "Computing 2D polarizability matrix in the specified q points and for the speficied frequencies... \n" << std::flush;
 
         uint nk = this->nk_aux;
         uint basisdim = system->basisdim;
 
         arma::mat ReciprocalVectors = this->trunreciprocalLattice_;
-        uint nGs = ReciprocalVectors.n_rows;
+        // uint nGs = ReciprocalVectors.n_rows;
         printReciprocalLattice();
 
         arma::vec w_vec(Nws,arma::fill::zeros);

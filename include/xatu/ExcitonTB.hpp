@@ -154,6 +154,11 @@ class ExcitonTB : public Exciton<SystemTB> {
         // Use three files: the mandatory one for system config., one for the screening config. and one for exciton config.
         ExcitonTB(const SystemConfiguration&, const ExcitonConfiguration&, const ScreeningConfiguration&);
 
+        // Initialize exciton passing directly a System object and a Screening object without passing an exciton config file
+        ExcitonTB(const SystemConfiguration&, const ScreeningConfiguration&, uint ncell, arma::ivec& bands, 
+                  const arma::rowvec& parameters, const arma::rowvec& Q, const double Gc_exciton);
+
+
         // Initialize exciton passing directly a System object instead of a file using removed bands
         ExcitonTB(std::shared_ptr<SystemTB>, int ncell = 20, int nbands = 1, int nrmbands = 0, 
                  const arma::rowvec& parameters = {1, 5, 1, 1, 1}, const arma::rowvec& Q = {0., 0., 0.});
@@ -162,7 +167,7 @@ class ExcitonTB : public Exciton<SystemTB> {
         ExcitonTB(std::shared_ptr<SystemTB>, int ncell = 20, const arma::ivec& bands = {0, 1}, 
                  const arma::rowvec& parameters = {1, 5, 1, 1, 1}, const arma::rowvec& Q = {0., 0., 0.});
 
-        // Initialize exciton passing directly a System object instead of a screening
+        // Initialize exciton passing directly a System object without passing a screening config file
         ExcitonTB(const SystemConfiguration&, int ncell, int nbands, int nrmbands,
                   const arma::rowvec& parameters, const arma::rowvec& Q, const uint ncell_aux, const uint nvbands, const uint ncbands, const double Gcutoff, const double Gc_exciton, const double d, const bool spin = true, const bool isotropic = false);
 
