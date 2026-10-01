@@ -2,10 +2,10 @@
 
 <div align=center>
 
-![GitHub release (with filter)](https://img.shields.io/github/v/release/alejandrojuria/xatu)
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/alejandrojuria/tightbinder/issues)
+![GitHub release (with filter)](https://img.shields.io/github/v/release/Peteracn96/xatu)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/Peteracn96/xatu/issues)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![arXiv](https://img.shields.io/badge/arXiv-2307.01572-red.svg)](https://arxiv.org/abs/2307.01572)
+[![arXiv](https://img.shields.io/badge/arXiv-2603.10966-red.svg)](https://arxiv.org/abs/2603.10966)
 [![Documentation Status](https://readthedocs.org/projects/xatu-documentation/badge/?version=latest&style=flat)](https://xatu-documentation.readthedocs.io/en/latest/)
 
 </div>  
