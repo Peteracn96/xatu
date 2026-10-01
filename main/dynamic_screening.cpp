@@ -99,8 +99,30 @@ int main(int argc, char* argv[]){
     exciton.brillouinZoneMesh(exciton.ncell);
     exciton.initializeHamiltonian();    
 
-    //exciton.compute_2D_DielectricMatrix(wi, wf, Nws, q_points, output_file);
+    exciton.compute_2D_DielectricMatrix(wi, wf, Nws, q_points, output_file);
     exciton.compute_2D_Polarizability(wi, wf, Nws, 0, 0, q_points, output_file);
+
+    
+    arma::ivec ncell_aux_array = {10, 20, 30, 40, 50};
+    
+    for (uint i = 0; i < ncell_aux_array.n_elem; i++) {
+        
+        xatu::ExcitonTB exciton = xatu::ExcitonTB(*systemConfig, 20, 1, 0,
+                     {1.0 ,1.0, 5.0}, {0., 0., 0.}, ncell_aux_array(i), 22, 0.2, 0.2, 0.0, false, true);
+        
+        exciton.setMode("reciprocalspace");
+        exciton.setTemperature(T);
+        exciton.setFermiEnergy(FermiEnergy);
+        exciton.setBroadening(eta);
+
+        if (modelfile.find(".outp") != std::string::npos){
+            exciton.system->setAU(true); // if input model is CRYSTAL
+        }
+        
+        exciton.brillouinZoneMesh(exciton.ncell);
+        exciton.initializeHamiltonian();
+        exciton.compute_2D_DielectricMatrix(wi, wf, Nws, q_points, output_file);
+    }
 
     return 0;
 }
